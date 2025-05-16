@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Consulta SIGAA</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+
+  <h1>Consulta de Horários - SIGAA</h1>
+
+  <form id="sigaa-form">
+    <label for="user">CPF (sem pontos ou traços):</label>
+    <input type="text" id="user" name="user" required />
+
+    <label for="pass">Senha:</label>
+    <input type="password" id="pass" name="pass" required />
+
+    <button type="submit">Consultar</button>
+    <div class="error" id="error"></div>
+  </form>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-button active" data-tab="tab-home">Horários Simplificados</button>
+    <button class="tab-button" data-tab="tab-horarios">Horários</button>
+    <button class="tab-button" data-tab="tab-frequencias">Frequências</button>
+    <button class="tab-button" data-tab="tab-notas">Notas</button>
+  </div>
+
+  <!-- Conteúdo das abas -->
+    <div class="tab-content active" id="tab-home">
+        <div id="dados-institucionais"></div>
+
+        <table id="tabela-horarios" style="display:none;">
+            <thead>
+                <tr>
+                <th>Semestre</th>
+                <th>Disciplina</th>
+                <th>Turma</th>
+                <th>Dia</th>
+                <th>Período</th>
+                <th>Horário</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="tab-content" id="tab-horarios">
+        <table id="tabela-horarios-detalhados" style="display:none;">
+            <thead>
+            <tr>
+                <th>Disciplina</th>
+                <th>Turma</th>
+                <th>Dia</th>
+                <th>Período</th>
+                <th>Slot</th>
+                <th>Horário</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+
+  <div class="tab-content" id="tab-frequencias">
+    <p>Seção de frequências em desenvolvimento.</p>
+  </div>
+
+  <div class="tab-content" id="tab-notas">
+    <p>Seção de notas em desenvolvimento.</p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  background: #f0f2f5;
+  font-size: 16px;
+}
+
+form {
+  margin-bottom: 20px;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.1);
+}
+
+label, input {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input {
+  padding: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  margin-top: 20px;
+}
+
+th, td {
+  padding: 10px;
+  border: 1px solid #ccc;
+  font-size: 15px;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+.error {
+  color: red;
+  margin-top: 10px;
+  font-size: 15px;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  cursor: pointer;
+  background-color: #eee;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: background-color 0.2s;
+  font-size: 15px;
+}
+
+.tab-button.active {
+  background-color: #ccc;
+}
+
+.tab-content {
+  display: none;
+  margin-top: 20px;
+}
+
+.tab-content.active {
+    display: flex;
+    flex-wrap: nowrap;  /* Não quebra os botões em várias linhas */
+    overflow-x: auto;   /* Ativa scroll horizontal se ultrapassar a largura */
+    -webkit-overflow-scrolling: touch; /* Scroll suave em iOS */
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* ===== Mobile adjustments ===== */
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+    font-size: 18px;
+  }
+
+  form {
+    padding: 15px;
+  }
+
+  label, input {
+    font-size: 18px;
+  }
+
+  input {
+    padding: 10px;
+  }
+
+  th, td {
+    padding: 8px;
+    font-size: 16px;
+  }
+
+  .tabs {
+    display: flex;
+    flex-wrap: nowrap;  /* Não quebra os botões em várias linhas */
+    overflow-x: auto;   /* Ativa scroll horizontal se ultrapassar a largura */
+    -webkit-overflow-scrolling: touch; /* Scroll suave em iOS */
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .tab-button {
+    flex: 0 0 auto;   /* Faz o botão ter largura fixa, não crescer */
+    white-space: nowrap; /* Não quebra o texto do botão */
+    font-size: 16px;
+    padding: 10px 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Esconde colunas 1 (Semestre), 3 (Turma) e 5 (Período) da tabela #tabela-horarios */
+  #tabela-horarios th:nth-child(1),
+  #tabela-horarios td:nth-child(1),
+  #tabela-horarios th:nth-child(3),
+  #tabela-horarios td:nth-child(3),
+  #tabela-horarios th:nth-child(5),
+  #tabela-horarios td:nth-child(5) {
+    display: none;
+  }
+  #tabela-horarios{
+    font-size: 11px;
+    overflow: hidden !important;
+  }
+}
