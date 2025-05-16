@@ -112,12 +112,14 @@ th {
   }
 
   .tabs {
-    display: flex;
-    flex-wrap: nowrap;  /* Não quebra os botões em várias linhas */
-    overflow-x: auto;   /* Ativa scroll horizontal se ultrapassar a largura */
-    -webkit-overflow-scrolling: touch; /* Scroll suave em iOS */
-    gap: 10px;
-    margin-top: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: unset;
+        gap: 10px;
+        margin-top: 20px;
+        overflow: auto;
+        flex-direction: row;
   }
 
   .tab-button {
