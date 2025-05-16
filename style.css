@@ -77,11 +77,12 @@ th {
 
 .tab-content.active {
     display: flex;
-    flex-wrap: nowrap;  /* Não quebra os botões em várias linhas */
-    overflow-x: auto;   /* Ativa scroll horizontal se ultrapassar a largura */
-    -webkit-overflow-scrolling: touch; /* Scroll suave em iOS */
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     gap: 10px;
     margin-top: 20px;
+    flex-direction: column;
 }
 
 /* ===== Mobile adjustments ===== */
@@ -138,5 +139,29 @@ th {
   #tabela-horarios{
     font-size: 11px;
     overflow: hidden !important;
+  }
+}
+
+#loading {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #333;
+}
+
+#loading::after {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border: 2px solid #333;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }

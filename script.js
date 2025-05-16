@@ -5,7 +5,12 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     const pass = document.getElementById('pass').value.trim();
 
     const errorDiv = document.getElementById('error');
+    const dadosDiv = document.getElementById('dados-institucionais');
+    const loadingDiv = document.getElementById('loading');
+
     errorDiv.textContent = '';
+    dadosDiv.innerHTML = '';
+    loadingDiv.style.display = 'block';
 
     try {
         const response = await fetch('https://sigaa-api-backend.vercel.app/api/scraper', {
@@ -20,20 +25,28 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
             throw new Error(data.error || 'Erro ao buscar dados');
         }
 
-        // Horários simplificados
-        preencherTabelaSimplificada(data.horariosSimplificados);
+        if (data.dadosInstitucionais) {
+            const inst = data.dadosInstitucionais;
+            dadosDiv.innerHTML = '<h2>Dados Institucionais</h2><ul>' +
+                Object.entries(inst).map(([chave, valor]) =>
+                    `<li><strong>${chave}:</strong> ${valor}</li>`).join('') +
+                '</ul>';
+        }
 
-        // Horários detalhados
+        preencherTabelaSimplificada(data.horariosSimplificados);
         preencherTabelaDetalhada(data.horariosDetalhados);
 
-        // Mostra as tabelas
         document.getElementById('tabela-horarios').style.display = '';
         document.getElementById('tabela-horarios-detalhados').style.display = '';
 
     } catch (error) {
         errorDiv.textContent = error.message;
+    } finally {
+        loadingDiv.style.display = 'none';
     }
 });
+
+
 
 // Função para preencher a aba de horários simplificados
 function preencherTabelaSimplificada(horarios) {
