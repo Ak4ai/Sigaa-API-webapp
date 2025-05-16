@@ -53,6 +53,8 @@ th {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 20px;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab-button {
@@ -164,4 +166,11 @@ th {
   to {
     transform: rotate(360deg);
   }
+}
+
+
+button {
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 1rem;
 }
