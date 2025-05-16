@@ -174,3 +174,15 @@ button {
     border-radius: 6px;
     font-size: 1rem;
 }
+
+#tab-novidades table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#tab-novidades th,
+#tab-novidades td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}

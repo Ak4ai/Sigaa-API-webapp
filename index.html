@@ -28,6 +28,8 @@
     <button class="tab-button" data-tab="tab-horarios">Horários</button>
     <button class="tab-button" data-tab="tab-frequencias">Frequências</button>
     <button class="tab-button" data-tab="tab-notas">Notas</button>
+    <!-- Novo botão da aba -->
+    <button class="tab-button" data-tab="tab-novidades">Novidades</button>
   </div>
 
   <!-- Conteúdo das abas -->
@@ -72,6 +74,20 @@
 
   <div class="tab-content" id="tab-notas">
     <p>Seção de notas em desenvolvimento.</p>
+  </div>
+
+  <!-- Conteúdo da nova aba -->
+  <div class="tab-content" id="tab-novidades">
+    <table id="tabela-novidades" style="display: none;">
+      <thead>
+        <tr>
+          <th>Disciplina</th>
+          <th>Data</th>
+          <th>Descrição</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <script src="script.js"></script>
