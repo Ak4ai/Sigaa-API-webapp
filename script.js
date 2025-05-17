@@ -51,6 +51,10 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
             );
 
             preencherTabelaNovidades(novidadesFormatadas);
+            preencherTabelaFrequencias(data.avisosPorDisciplina);
+            frequenciasGlobais = data.avisosPorDisciplina;
+            preencherSelectorFrequencias(frequenciasGlobais);
+            preencherTabelaFrequencias(frequenciasGlobais);
         }
 
         document.getElementById('tabela-horarios').style.display = '';
@@ -63,7 +67,62 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     }
 });
 
+// ...existing code...
 
+// Salva os dados para filtrar depois
+let frequenciasGlobais = [];
+
+function preencherSelectorFrequencias(avisosPorDisciplina) {
+  const select = document.getElementById('select-disciplina-frequencia');
+  select.innerHTML = '<option value="todas">Todas</option>';
+  avisosPorDisciplina.forEach(disc => {
+    const nome = disc.disciplina;
+    if (![...select.options].some(opt => opt.value === nome)) {
+      const option = document.createElement('option');
+      option.value = nome;
+      option.textContent = nome;
+      select.appendChild(option);
+    }
+  });
+}
+
+function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
+  const tbody = document.querySelector('#tabela-frequencias tbody');
+  tbody.innerHTML = '';
+
+  avisosPorDisciplina.forEach(disc => {
+    if (filtro !== "todas" && disc.disciplina !== filtro) return;
+    const { disciplina, turma, frequencia = [], numeroAulasDefinidas = '', porcentagemFrequencia = '' } = disc;
+    frequencia.forEach(f => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${disciplina}</td>
+        <td>${turma}</td>
+        <td>${porcentagemFrequencia ? porcentagemFrequencia + '%' : ''}</td>
+        <td>${numeroAulasDefinidas}</td>
+        <td>${f.data}</td>
+        <td>${f.status}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+
+  document.getElementById('tabela-frequencias').style.display = avisosPorDisciplina.length > 0 ? '' : 'none';
+}
+
+// Ao receber os dados da API:
+if (data.avisosPorDisciplina) {
+  frequenciasGlobais = data.avisosPorDisciplina;
+  preencherSelectorFrequencias(frequenciasGlobais);
+  preencherTabelaFrequencias(frequenciasGlobais, "todas");
+}
+
+// Evento de filtro
+document.getElementById('select-disciplina-frequencia').addEventListener('change', function() {
+  preencherTabelaFrequencias(frequenciasGlobais, this.value);
+});
+
+// ...existing code...
 
 // Função para preencher a aba de horários simplificados
 function preencherTabelaSimplificada(horarios) {

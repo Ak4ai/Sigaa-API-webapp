@@ -69,7 +69,23 @@
 
 
   <div class="tab-content" id="tab-frequencias">
-    <p>Seção de frequências em desenvolvimento.</p>
+    <label for="select-disciplina-frequencia"><strong>Filtrar disciplina:</strong></label>
+    <select id="select-disciplina-frequencia">
+      <option value="todas">Todas</option>
+    </select>
+    <table id="tabela-frequencias" style="display: none;">
+      <thead>
+        <tr>
+          <th>Disciplina</th>
+          <th>Turma</th>
+          <th>Porcentagem</th>
+          <th>Nº Aulas</th>
+          <th>Data</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <div class="tab-content" id="tab-notas">

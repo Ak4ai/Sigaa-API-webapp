@@ -188,3 +188,13 @@ button {
   padding: 8px;
   text-align: left;
 }
+
+#tabela-frequencias {
+  width: 100%;
+  border-collapse: collapse;
+}
+#tabela-frequencias th, #tabela-frequencias td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
