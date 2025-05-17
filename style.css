@@ -130,6 +130,12 @@ button:hover {
     overflow: auto !important;
   }
 
+  .resumo-frequencia {
+    font-size: 12px;
+    margin: 0px !important;
+    overflow: auto !important;
+  }
+
   body {
     padding: 10px;
     font-size: 18px;

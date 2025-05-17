@@ -175,7 +175,6 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
             </tr>
           </tbody>
         </table>
-        <br>
       `;
 
       const maxFaltas = Math.ceil(nAulas * 0.25); // 25% de faltas permitidas
