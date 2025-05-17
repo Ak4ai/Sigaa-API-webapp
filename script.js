@@ -385,10 +385,15 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
 
   dadosDiv.innerHTML = html;
 
-  // Mobile: toggle ao clicar
+  // Sempre permite expandir/colapsar ao toque/click
   dadosDiv.onclick = function (e) {
-    // Só expande se for mobile e não clicar em link
-    if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
+    // Evita toggle se clicar em link ou botão dentro do bloco
+    if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+    // Em mobile, sempre faz toggle; em desktop, só se não estiver com hover
+    if (
+      window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    ) {
       dadosDiv.classList.toggle('expanded');
     }
   };

@@ -388,6 +388,8 @@ progress.custom-bar.vermelho::-moz-progress-bar {
   transition: box-shadow 0.2s;
   cursor: pointer;
   position: relative;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 #dados-institucionais h2 {
