@@ -36,11 +36,14 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
         }
 
         if (data.dadosInstitucionais) {
-            const inst = data.dadosInstitucionais;
-            dadosDiv.innerHTML = '<h2>Dados Institucionais</h2><ul>' +
-                Object.entries(inst).map(([chave, valor]) =>
-                    `<li><strong>${chave}:</strong> ${valor}</li>`).join('') +
-                '</ul>';
+            const inst = { ...data.dadosInstitucionais };
+
+            // Adiciona o semestre do primeiro horário simplificado, se existir
+            if (data.horariosSimplificados && data.horariosSimplificados.length > 0) {
+                inst['Semestre'] = data.horariosSimplificados[0].semestre;
+            }
+
+            renderizarDadosInstitucionais(inst, data.horariosSimplificados[0]?.semestre);
 
             dadosDiv.innerHTML += `<p><strong>Tempo de resposta da API:</strong> ${duracaoSegundos}s</p>`;
         }
@@ -98,7 +101,9 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
   barraDiv.innerHTML = '';
 
   if (filtro === "todas") {
-    resumoDiv.innerHTML = '';
+    // Esconde resumo e barra de progresso
+    resumoDiv.style.display = "none";
+    barraDiv.style.display = "none";
     thead.innerHTML = `
       <tr>
         <th>Disciplina</th>
@@ -135,7 +140,9 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
     });
     barraDiv.innerHTML = '';
   } else {
-    // Mostra o resumo acima da tabela detalhada
+    // Mostra resumo e barra de progresso
+    resumoDiv.style.display = "";
+    barraDiv.style.display = "";
     const disc = avisosPorDisciplina.find(d => d.disciplina === filtro);
     if (disc) {
       const { disciplina, numeroAulasDefinidas = 0, frequencia = [], porcentagemFrequencia = '' } = disc;
@@ -239,7 +246,7 @@ function preencherTabelaSimplificada(horarios) {
     horarios.forEach(({ semestre, disciplina, turma, dia, período, horário }) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${semestre}</td>
+            <!-- <td>${semestre}</td> --> <!-- Remova ou comente esta linha -->
             <td>${disciplina}</td>
             <td>${turma}</td>
             <td>${dia}</td>
@@ -310,11 +317,14 @@ window.addEventListener('DOMContentLoaded', () => {
       // Preenche os dados institucionais
       if (data.dadosInstitucionais) {
         const dadosDiv = document.getElementById('dados-institucionais');
-        const inst = data.dadosInstitucionais;
-        dadosDiv.innerHTML = '<h2>Dados Institucionais</h2><ul>' +
-          Object.entries(inst).map(([chave, valor]) =>
-            `<li><strong>${chave}:</strong> ${valor}</li>`).join('') +
-          '</ul>';
+        const inst = { ...data.dadosInstitucionais };
+
+        // Adiciona o semestre do primeiro horário simplificado, se existir
+        if (data.horariosSimplificados && data.horariosSimplificados.length > 0) {
+            inst['Semestre'] = data.horariosSimplificados[0].semestre;
+        }
+
+        renderizarDadosInstitucionais(inst, data.horariosSimplificados[0]?.semestre);
       }
 
       // Preenche tabelas
@@ -338,4 +348,49 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
+
+function renderizarDadosInstitucionais(dados, semestre) {
+  const dadosDiv = document.getElementById('dados-institucionais');
+  if (!dadosDiv) return;
+
+  // Campos principais
+  const principais = ['Matrícula', 'Email', 'Curso'];
+  // Garante que as chaves estejam com a primeira letra maiúscula
+  const dadosFormatados = {};
+  Object.entries(dados).forEach(([k, v]) => {
+    const key = k.charAt(0).toUpperCase() + k.slice(1);
+    dadosFormatados[key] = v;
+  });
+  if (semestre) dadosFormatados['Semestre'] = semestre;
+
+  let html = '<h2 style="background:#f2f2f2;margin:0;padding:12px 16px;font-size:1.1em;border-bottom:1px solid #e0e0e0;">Dados Institucionais do Usuário  </h2><ul>';
+
+  // Mostra só principais
+  principais.forEach(chave => {
+    if (dadosFormatados[chave]) {
+      html += `<li><strong>${chave}:</strong> ${dadosFormatados[chave]}</li>`;
+    }
+  });
+
+  // Extras
+  html += `<div class="extra-info">`;
+  Object.entries(dadosFormatados).forEach(([chave, valor]) => {
+    if (!principais.includes(chave)) {
+      html += `<li><strong>${chave}:</strong> ${valor}</li>`;
+    }
+  });
+  html += `</div></ul>`;
+
+  dadosDiv.innerHTML = html;
+
+  // Mobile: toggle ao clicar
+  dadosDiv.onclick = function () {
+    if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
+      dadosDiv.classList.toggle('expanded');
+    }
+  };
+}
+
+// Exemplo de uso após obter os dados:
+renderizarDadosInstitucionais(data.dadosInstitucionais, data.horariosSimplificados?.[0]?.semestre);
 

@@ -29,7 +29,6 @@ table {
   width: 100%;
   border-collapse: collapse;
   background: white;
-  margin-top: 20px;
 }
 
 th, td {
@@ -98,6 +97,10 @@ button:hover {
     flex-direction: column;
 }
 
+#tabela-horarios {
+  margin: 0;
+}
+
 /* ===== Mobile adjustments ===== */
 @media (max-width: 1040px) {
 
@@ -116,6 +119,27 @@ button:hover {
     overflow: auto;
     border: 1px solid #1f1f1f;
     border-radius: 8px;
+  }
+
+  #select-disciplina-frequencia {
+    font-size: 12px;
+    margin: 0px;
+    overflow: auto !important;
+    border: 1px solid #1f1f1f !important;
+  }
+
+  .tab-novidades {
+    font-size: 12px;
+    margin: 0px;
+    overflow: auto !important;
+    border: 1px solid #1f1f1f !important;
+    border-radius: 8px;
+  }
+
+  #tabela-novidades {
+    font-size: 12px;
+    margin: 0px;
+    overflow: auto !important;
   }
 
   div#tabela-frequencias-container {
@@ -179,18 +203,20 @@ button:hover {
 }
 
 @media (max-width: 1040px) {
-  /* Esconde colunas 1 (Semestre), 3 (Turma) e 5 (Período) da tabela #tabela-horarios */
-  #tabela-horarios th:nth-child(1),
-  #tabela-horarios td:nth-child(1),
-  #tabela-horarios th:nth-child(3),
-  #tabela-horarios td:nth-child(3),
-  #tabela-horarios th:nth-child(5),
-  #tabela-horarios td:nth-child(5) {
+  #tabela-horarios th:nth-child(2), /* Turma */
+  #tabela-horarios th:nth-child(4), /* Período */
+  #tabela-horarios td:nth-child(2),
+  #tabela-horarios td:nth-child(4) {
     display: none;
   }
-  #tabela-horarios{
-    font-size: 11px;
-    overflow: hidden !important;
+  #tabela-horarios th, #tabela-horarios td {
+    font-size: 13px;
+    padding: 6px 4px;
+  }
+  #tabela-horarios-container {
+    overflow: auto;
+    border: 1px solid #1f1f1f;
+    border-radius: 8px;
   }
 }
 
@@ -359,13 +385,16 @@ progress.custom-bar.vermelho::-moz-progress-bar {
   padding: 0;
   overflow: hidden;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s;
+  cursor: pointer;
+  position: relative;
 }
 
 #dados-institucionais h2 {
   background: #f2f2f2;
   margin: 0;
   padding: 12px 16px;
-  font-size: 1.1em;
+  font-size: 15px;
   border-bottom: 1px solid #e0e0e0;
 }
 
@@ -373,13 +402,12 @@ progress.custom-bar.vermelho::-moz-progress-bar {
   list-style: none;
   margin: 0;
   padding: 0;
-  overflow-x: auto;
 }
 
 #dados-institucionais li {
   padding: 10px 16px;
   border-bottom: 1px solid #eee;
-  font-size: 3.5vw;
+  font-size: 15px;
   display: flex;
   gap: 8px;
 }
@@ -390,7 +418,31 @@ progress.custom-bar.vermelho::-moz-progress-bar {
 
 #dados-institucionais strong {
   min-width: 120px;
-  color: #2b2b2b;
+  color: #1976d2;
   font-weight: 600;
-  font-size: 3.6vw;
+  font-size: 15px;
+}
+
+/* Esconde extras por padrão */
+#dados-institucionais .extra-info {
+  display: none;
+}
+
+/* Mostra extras ao hover (desktop) */
+@media (hover: hover) and (pointer: fine) {
+  #dados-institucionais:hover .extra-info {
+    display: block;
+    animation: fadeIn 0.2s;
+  }
+}
+
+/* Mostra extras ao expandir (mobile) */
+#dados-institucionais.expanded .extra-info {
+  display: block;
+  animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
