@@ -69,16 +69,28 @@
 
 
   <div class="tab-content" id="tab-frequencias">
+    <div class="frequencia-aviso" style="margin-bottom: 10px; background: #f8f8e1; border: 1px solid #e2e2b0; padding: 10px;">
+      <strong>Aviso:</strong><br>
+      Caro discente,<br>
+      Segundo as normas vigentes do regulamento de graduação, o aluno será considerado aprovado, no que diz respeito à assiduidade, se satisfizer a condição a seguir:
+      <ul style="margin: 5px 0 5px 20px;">
+        <li>Possuir frequência mínima às atividades da disciplina correspondente a <strong>75.0% da carga horária prevista</strong>.</li>
+      </ul>
+      A porcentagem é calculada levando em consideração que uma aula dura 60 minutos.
+    </div>
     <label for="select-disciplina-frequencia"><strong>Filtrar disciplina:</strong></label>
     <select id="select-disciplina-frequencia">
       <option value="todas">Todas</option>
     </select>
+    <!-- Adicione logo acima da tabela -->
+    <div id="resumo-frequencia-disciplina"></div>
+    <div id="barra-progresso-faltas" style="margin: 10px 0;"></div>
     <table id="tabela-frequencias" style="display: none;">
       <thead>
         <tr>
           <th>Disciplina</th>
           <th>Turma</th>
-          <th>Porcentagem</th>
+          <th>Porcentagem - Sigaa</th>
           <th>Nº Aulas</th>
           <th>Data</th>
           <th>Status</th>
@@ -86,6 +98,17 @@
       </thead>
       <tbody></tbody>
     </table>
+    <!-- Informações de cálculo -->
+    <div class="frequencia-info" style="margin-top: 16px; font-size: 0.95em; color: #444;">
+      <strong>Como são calculadas as tabelas:</strong>
+      <ul style="margin: 5px 0 5px 20px;">
+        <li><strong>% Presença</strong>: <code>(Nº Aulas - Total de Faltas) / Nº Aulas × 100</code></li>
+        <li><strong>Faltas Restantes (horários)</strong>: <code>Nº Aulas - (Nº Aulas × 0.75 arredondado para cima) - Total de Faltas</code></li>
+        <li><strong>Faltas Restantes (Aulas)</strong>: <code>Faltas Restantes (horários) / 2</code></li>
+        <li>O campo <strong>Porcentagem - Sigaa</strong> é o valor oficial informado pelo sistema SIGAA.</li>
+      </ul>
+      <em>Observação: Para aprovação por frequência, é necessário ter pelo menos 75% de presença em cada disciplina.</em>
+    </div>
   </div>
 
   <div class="tab-content" id="tab-notas">

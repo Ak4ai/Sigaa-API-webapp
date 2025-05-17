@@ -72,6 +72,18 @@ th {
   background-color: #ccc;
 }
 
+.tab-button:hover {
+  background-color: #e0e0e0;
+  color: #1976d2;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+button:hover {
+  background-color: #2196f3;
+  color: #fff;
+  transition: background-color 0.2s, color 0.2s;
+}
+
 .tab-content {
   display: none;
   margin-top: 20px;
@@ -197,4 +209,150 @@ button {
   border: 1px solid #ccc;
   padding: 8px;
   text-align: left;
+}
+
+.resumo-frequencia {
+  margin-bottom: 10px;
+  border-collapse: collapse;
+  width: 100%;
+}
+.resumo-frequencia th, .resumo-frequencia td {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.frequencia-aviso {
+  background: #f8f8e1;
+  border: 1px solid #e2e2b0;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.frequencia-info {
+  margin-top: 16px;
+  font-size: 0.95em;
+  color: #444;
+}
+
+/* Fallback para navegadores que não suportam pseudo-elementos */
+progress.custom-bar.amarelo {
+  background-color: #ffeb3b !important;
+}
+progress.custom-bar.vermelho {
+  background-color: #f44336 !important;
+}
+progress.custom-bar {
+    background-color: #eee;
+    border-radius: 8px;
+    width: 100%;
+    height: 10px;
+    border: none;
+    appearance: none;
+    display: flex;
+    align-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin-bottom: 6px;
+    border: 1px solid;
+}
+/* Chrome/Edge/Safari */
+progress.custom-bar::-webkit-progress-bar {
+  background-color: #eee;
+  border-radius: 8px;
+}
+progress.custom-bar::-webkit-progress-value {
+  background-color: #2196f3;
+  border-radius: 8px;
+  transition: background-color 0.3s;
+}
+progress.custom-bar.amarelo::-webkit-progress-value {
+  background-color: #ffeb3b !important;
+}
+progress.custom-bar.vermelho::-webkit-progress-value {
+  background-color: #f44336 !important;
+}
+
+/* Firefox */
+progress.custom-bar::-moz-progress-bar {
+  background-color: #2196f3;
+  border-radius: 8px;
+  transition: background-color 0.3s;
+}
+progress.custom-bar.amarelo::-moz-progress-bar {
+  background-color: #ffeb3b !important;
+}
+progress.custom-bar.vermelho::-moz-progress-bar {
+  background-color: #f44336 !important;
+}
+
+/* Estilo para o select de filtro de disciplina */
+#select-disciplina-frequencia {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fafbfc;
+  font-size: 16px;
+  color: #333;
+  margin: 8px 0 16px 0;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  min-width: 180px;
+  max-width: 100%;
+  appearance: none;
+  cursor: pointer;
+}
+
+#select-disciplina-frequencia:focus {
+  border-color: #000000;
+  box-shadow: 0 0 0 2px #00000055;
+}
+
+#select-disciplina-frequencia option {
+  background: #fff;
+  color: #222;
+  font-size: 16px;
+}
+
+#dados-institucionais {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  margin-top: 10px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+#dados-institucionais h2 {
+  background: #f2f2f2;
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 1.1em;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+#dados-institucionais ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#dados-institucionais li {
+  padding: 10px 16px;
+  border-bottom: 1px solid #eee;
+  font-size: 15px;
+  display: flex;
+  gap: 8px;
+}
+
+#dados-institucionais li:last-child {
+  border-bottom: none;
+}
+
+#dados-institucionais strong {
+  min-width: 120px;
+  color: #2b2b2b;
+  font-weight: 600;
 }

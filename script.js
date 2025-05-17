@@ -28,6 +28,9 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
         console.log('Resposta da API:', data);
         console.log(`⏱ Tempo de resposta da API: ${duracaoSegundos}s`);
 
+        // Salva os dados no localStorage
+        localStorage.setItem('sigaaUltimaConsulta', JSON.stringify(data));
+
         if (!response.ok) {
             throw new Error(data.error || 'Erro ao buscar dados');
         }
@@ -51,10 +54,9 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
             );
 
             preencherTabelaNovidades(novidadesFormatadas);
-            preencherTabelaFrequencias(data.avisosPorDisciplina);
             frequenciasGlobais = data.avisosPorDisciplina;
             preencherSelectorFrequencias(frequenciasGlobais);
-            preencherTabelaFrequencias(frequenciasGlobais);
+            preencherTabelaFrequencias(frequenciasGlobais, "todas");
         }
 
         document.getElementById('tabela-horarios').style.display = '';
@@ -87,34 +89,141 @@ function preencherSelectorFrequencias(avisosPorDisciplina) {
 }
 
 function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
+  const thead = document.querySelector('#tabela-frequencias thead');
   const tbody = document.querySelector('#tabela-frequencias tbody');
+  const resumoDiv = document.getElementById('resumo-frequencia-disciplina');
+  const barraDiv = document.getElementById('barra-progresso-faltas');
   tbody.innerHTML = '';
+  resumoDiv.innerHTML = '';
+  barraDiv.innerHTML = '';
 
-  avisosPorDisciplina.forEach(disc => {
-    if (filtro !== "todas" && disc.disciplina !== filtro) return;
-    const { disciplina, turma, frequencia = [], numeroAulasDefinidas = '', porcentagemFrequencia = '' } = disc;
-    frequencia.forEach(f => {
+  if (filtro === "todas") {
+    resumoDiv.innerHTML = '';
+    thead.innerHTML = `
+      <tr>
+        <th>Disciplina</th>
+        <th>Nº Aulas</th>
+        <th>Total de Faltas</th>
+        <th>% Presença</th>
+        <th>Faltas Restantes (horários)</th>
+        <th>Faltas Restantes (Aulas)</th>
+      </tr>
+    `;
+    avisosPorDisciplina.forEach(disc => {
+      const { disciplina, numeroAulasDefinidas = 0, frequencia = [] } = disc;
+      let totalFaltas = 0;
+      frequencia.forEach(f => {
+        const match = f.status.match(/(\d+)\s*Falta/);
+        if (match) totalFaltas += parseInt(match[1]);
+      });
+      const nAulas = Number(numeroAulasDefinidas) || 0;
+      const presenca = nAulas > 0 ? (((nAulas - totalFaltas) / nAulas) * 100).toFixed(1) : '';
+      const frequenciasNecessarias = Math.ceil(0.75 * nAulas);
+      const faltasRestantes = nAulas - frequenciasNecessarias - totalFaltas;
+      const faltasRestantesAulas = (faltasRestantes / 2).toFixed(1);
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${disciplina}</td>
-        <td>${turma}</td>
-        <td>${porcentagemFrequencia ? porcentagemFrequencia + '%' : ''}</td>
-        <td>${numeroAulasDefinidas}</td>
-        <td>${f.data}</td>
-        <td>${f.status}</td>
+        <td>${nAulas}</td>
+        <td>${totalFaltas}</td>
+        <td>${presenca ? presenca + '%' : ''}</td>
+        <td>${faltasRestantes}</td>
+        <td>${faltasRestantesAulas}</td>
       `;
       tbody.appendChild(tr);
     });
-  });
+    barraDiv.innerHTML = '';
+  } else {
+    // Mostra o resumo acima da tabela detalhada
+    const disc = avisosPorDisciplina.find(d => d.disciplina === filtro);
+    if (disc) {
+      const { disciplina, numeroAulasDefinidas = 0, frequencia = [], porcentagemFrequencia = '' } = disc;
+      let totalFaltas = 0;
+      frequencia.forEach(f => {
+        const match = f.status.match(/(\d+)\s*Falta/);
+        if (match) totalFaltas += parseInt(match[1]);
+      });
+      const nAulas = Number(numeroAulasDefinidas) || 0;
+      const presenca = nAulas > 0 ? (((nAulas - totalFaltas) / nAulas) * 100).toFixed(1) : '';
+      const frequenciasNecessarias = Math.ceil(0.75 * nAulas);
+      const faltasRestantes = nAulas - frequenciasNecessarias - totalFaltas;
+      const faltasRestantesAulas = (faltasRestantes / 2).toFixed(1);
+
+      resumoDiv.innerHTML = `
+        <table class="resumo-frequencia">
+          <thead>
+            <tr>
+              <th>Disciplina</th>
+              <th>Nº Aulas</th>
+              <th>Total de Faltas</th>
+              <th>% Presença</th>
+              <th>% Porcentagem - Sigaa</th>
+              <th>Faltas Restantes (horários)</th>
+              <th>Faltas Restantes (Aulas)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${disciplina}</td>
+              <td>${nAulas}</td>
+              <td>${totalFaltas}</td>
+              <td>${presenca ? presenca + '%' : ''}</td>
+              <td>${porcentagemFrequencia ? porcentagemFrequencia + '%' : ''}</td>
+              <td>${faltasRestantes}</td>
+              <td>${faltasRestantesAulas}</td>
+            </tr>
+          </tbody>
+        </table>
+        <br>
+      `;
+
+      const maxFaltas = Math.ceil(nAulas * 0.25); // 25% de faltas permitidas
+      const maxFrequencias = Math.ceil(nAulas * 0.75); // 75% de presença obrigatória
+
+      // Barra de progresso
+      const percentual = maxFaltas > 0 ? totalFaltas / maxFaltas : 0;
+      let corClasse = "custom-bar";
+      if (percentual >= 0.8) {
+        corClasse += " vermelho";
+      } else if (percentual >= 0.5) {
+        corClasse += " amarelo";
+      }
+
+      barraDiv.innerHTML = `
+        <div style="margin-bottom:4px;"><strong>Progresso de faltas:</strong> ${totalFaltas} / ${maxFaltas} faltas permitidas</div>
+        <progress class="${corClasse}" value="${totalFaltas}" max="${maxFaltas}" style="width:100%;"></progress>
+        <div style="font-size:0.9em;color:#666;">Limite: ${maxFaltas} faltas (${nAulas} aulas, mínimo ${maxFrequencias} presenças)</div>
+      `;
+    } else {
+      barraDiv.innerHTML = '';
+    }
+
+    thead.innerHTML = `
+      <tr>
+        <th>Aula</th>
+        <th>Disciplina</th>
+        <th>Data</th>
+        <th>Status</th>
+      </tr>
+    `;
+    avisosPorDisciplina.forEach(disc => {
+      if (disc.disciplina !== filtro) return;
+      const { disciplina, frequencia = [] } = disc;
+      frequencia.forEach((f, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${disciplina}</td>
+          <td>${f.data}</td>
+          <td>${f.status}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+  }
 
   document.getElementById('tabela-frequencias').style.display = avisosPorDisciplina.length > 0 ? '' : 'none';
-}
-
-// Ao receber os dados da API:
-if (data.avisosPorDisciplina) {
-  frequenciasGlobais = data.avisosPorDisciplina;
-  preencherSelectorFrequencias(frequenciasGlobais);
-  preencherTabelaFrequencias(frequenciasGlobais, "todas");
 }
 
 // Evento de filtro
@@ -191,5 +300,43 @@ document.querySelectorAll('.tab-button').forEach(button => {
     const tabId = button.getAttribute('data-tab');
     document.getElementById(tabId).classList.add('active');
   });
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  const dadosSalvos = localStorage.getItem('sigaaUltimaConsulta');
+  if (dadosSalvos) {
+    try {
+      const data = JSON.parse(dadosSalvos);
+
+      // Preenche os dados institucionais
+      if (data.dadosInstitucionais) {
+        const dadosDiv = document.getElementById('dados-institucionais');
+        const inst = data.dadosInstitucionais;
+        dadosDiv.innerHTML = '<h2>Dados Institucionais</h2><ul>' +
+          Object.entries(inst).map(([chave, valor]) =>
+            `<li><strong>${chave}:</strong> ${valor}</li>`).join('') +
+          '</ul>';
+      }
+
+      // Preenche tabelas
+      preencherTabelaSimplificada(data.horariosSimplificados || []);
+      preencherTabelaDetalhada(data.horariosDetalhados || []);
+
+      if (data.avisosPorDisciplina) {
+        const novidadesFormatadas = data.avisosPorDisciplina.flatMap(({ disciplina, avisos }) =>
+          avisos.map(({ data, descricao }) => ({ disciplina, data, descricao }))
+        );
+        preencherTabelaNovidades(novidadesFormatadas);
+        frequenciasGlobais = data.avisosPorDisciplina;
+        preencherSelectorFrequencias(frequenciasGlobais);
+        preencherTabelaFrequencias(frequenciasGlobais, "todas");
+      }
+
+      document.getElementById('tabela-horarios').style.display = '';
+      document.getElementById('tabela-horarios-detalhados').style.display = '';
+    } catch (e) {
+      console.warn('Erro ao carregar dados salvos:', e);
+    }
+  }
 });
 
