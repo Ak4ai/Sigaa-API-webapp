@@ -444,3 +444,63 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
   };
 }
 
+// Aviso colapsável, timer e preferências
+(function () {
+  const aviso = document.getElementById('home-aviso');
+  const avisoContent = document.getElementById('home-aviso-content');
+  const fecharBtn = document.getElementById('fechar-aviso');
+  const naoMostrarBtn = document.getElementById('nao-mostrar-aviso');
+  const STORAGE_KEY = 'sigaa_nao_mostrar_aviso';
+  let timerId = null;
+
+  // Não mostrar se usuário já escolheu não mostrar mais
+  if (localStorage.getItem(STORAGE_KEY) === '1') {
+    aviso.style.display = 'none';
+    return;
+  }
+
+  // Timer para mover aviso para o fim da tab após 30 segundos
+  timerId = setTimeout(() => {
+    const tabHome = document.getElementById('tab-home');
+    if (tabHome && aviso) {
+      tabHome.appendChild(aviso); // move para o fim da tab
+      aviso.style.marginTop = "24px";
+    }
+  }, 30000);
+
+  // Começa collapsed por padrão
+  aviso.classList.add('home-aviso-collapsed');
+
+  // Colapsar/expandir ao clicar (exceto nos botões)
+  aviso.addEventListener('click', function (e) {
+    if (e.target === fecharBtn || e.target === naoMostrarBtn) return;
+    aviso.classList.toggle('home-aviso-collapsed');
+  });
+
+  // Expande ao hover (desktop)
+  aviso.addEventListener('mouseenter', function () {
+    if (window.matchMedia("(hover: hover)").matches) {
+      aviso.classList.remove('home-aviso-collapsed');
+    }
+  });
+  aviso.addEventListener('mouseleave', function () {
+    if (window.matchMedia("(hover: hover)").matches) {
+      aviso.classList.add('home-aviso-collapsed');
+    }
+  });
+
+  // Botão fechar: esconde só até recarregar
+  fecharBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    aviso.style.display = 'none';
+    clearTimeout(timerId);
+  });
+
+  // Botão não mostrar mais: nunca mais mostra
+  naoMostrarBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    localStorage.setItem(STORAGE_KEY, '1');
+    aviso.style.display = 'none';
+    clearTimeout(timerId);
+  });
+})();
