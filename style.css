@@ -376,6 +376,23 @@ progress.custom-bar.vermelho::-moz-progress-bar {
   font-size: 16px;
 }
 
+.password-info {
+    display: flex
+;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-content: center;
+}
+
+input#manter-logado {
+    display: flex
+;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    width: auto;
+}
+
 #dados-institucionais {
   background: #fff;
   border: 1px solid #ccc;

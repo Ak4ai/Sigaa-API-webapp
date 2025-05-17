@@ -3,11 +3,46 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
 
     const user = document.getElementById('user').value.trim();
     const pass = document.getElementById('pass').value.trim();
+    const manterLogado = document.getElementById('manter-logado').checked;
 
     const errorDiv = document.getElementById('error');
     const dadosDiv = document.getElementById('dados-institucionais');
     const loadingDiv = document.getElementById('loading');
+    errorDiv.textContent = '';
+    loadingDiv.style.display = 'block';
 
+    try {
+        // 1. Login e salva token
+        const resp = await fetch('https://sigaa-api-backend.vercel.app/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user, pass })
+        });
+        if (!resp.ok) throw new Error('Usuário ou senha inválidos');
+        const { token } = await resp.json();
+
+        if (manterLogado) {
+            sessionStorage.removeItem('sigaa_token');
+            localStorage.setItem('sigaa_token', token);
+        } else {
+            localStorage.removeItem('sigaa_token');
+            sessionStorage.setItem('sigaa_token', token);
+        }
+
+        // 2. Usa token para buscar dados
+        await consultarComToken(token);
+    } catch (error) {
+        console.error('Erro no login:', error);
+        errorDiv.textContent = error.message;
+    } finally {
+        loadingDiv.style.display = 'none';
+    }
+});
+
+async function consultarComToken(token) {
+    const errorDiv = document.getElementById('error');
+    const dadosDiv = document.getElementById('dados-institucionais');
+    const loadingDiv = document.getElementById('loading');
     errorDiv.textContent = '';
     dadosDiv.innerHTML = '';
     loadingDiv.style.display = 'block';
@@ -18,7 +53,7 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
         const response = await fetch('https://sigaa-api-backend.vercel.app/api/scraper', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user, pass })
+            body: JSON.stringify({ token })
         });
 
         const fim = performance.now();
@@ -27,14 +62,12 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
         const data = await response.json();
         console.log('Resposta da API:', data);
         console.log(`⏱ Tempo de resposta da API: ${duracaoSegundos}s`);
+        if (!response.ok) throw new Error(data.error || 'Erro ao buscar dados');
 
-        // Salva os dados no localStorage
+        // Salva os dados no localStorage (opcional)
         localStorage.setItem('sigaaUltimaConsulta', JSON.stringify(data));
 
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro ao buscar dados');
-        }
-
+        // ...preencher tabelas e dados institucionais...
         if (data.dadosInstitucionais) {
             const inst = { ...data.dadosInstitucionais };
 
@@ -64,13 +97,27 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
         document.getElementById('tabela-horarios-detalhados').style.display = '';
 
     } catch (error) {
+        console.error('Erro ao consultar com token:', error);
         errorDiv.textContent = error.message;
     } finally {
         loadingDiv.style.display = 'none';
     }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('sigaa_token') || sessionStorage.getItem('sigaa_token');
+    if (token) {
+        console.log('Token encontrado, realizando consulta automática...');
+        consultarComToken(token);
+    }
 });
 
-// ...existing code...
+// Botão de logout/apagar informações
+document.getElementById('logout-btn').addEventListener('click', () => {
+    localStorage.removeItem('sigaa_token');
+    sessionStorage.removeItem('sigaa_token');
+    location.reload();
+});
 
 // Salva os dados para filtrar depois
 let frequenciasGlobais = [];
@@ -234,8 +281,6 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
 document.getElementById('select-disciplina-frequencia').addEventListener('change', function() {
   preencherTabelaFrequencias(frequenciasGlobais, this.value);
 });
-
-// ...existing code...
 
 // Função para preencher a aba de horários simplificados
 function preencherTabelaSimplificada(horarios) {

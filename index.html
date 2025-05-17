@@ -17,8 +17,16 @@
 
     <label for="pass">Senha:</label>
     <input type="password" id="pass" name="pass" required />
-
-    <button type="submit">Consultar</button>
+    <div class="password-info">
+      <button type="submit">Consultar</button>
+      <label style="margin-left:10px; font-size:0.95em; width: auto;">
+        <input type="checkbox" id="manter-logado" />
+        Manter logado
+      </label>
+      <button type="button" id="logout-btn" style="margin-left:10px; font-size:0.95em;">
+        Sair
+      </button>
+    </div>
     <div class="error" id="error"></div>
     <div id="loading" style="display:none;">Carregando...</div>
   </form>
