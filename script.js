@@ -44,8 +44,6 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
             }
 
             renderizarDadosInstitucionais(inst, data.horariosSimplificados[0]?.semestre, duracaoSegundos);
-
-            dadosDiv.innerHTML += `<p><strong>Tempo de resposta da API:</strong> ${duracaoSegundos}s</p>`;
         }
 
         preencherTabelaSimplificada(data.horariosSimplificados);

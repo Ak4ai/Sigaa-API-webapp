@@ -452,7 +452,9 @@ progress.custom-bar.vermelho::-moz-progress-bar {
   transition: transform 0.2s;
 }
 
-#dados-institucionais.expanded::after,
+#dados-institucionais.expanded::after {
+  transform: rotate(180deg);
+}
 @media (hover: hover) and (pointer: fine) {
   #dados-institucionais:hover::after {
     transform: rotate(180deg);
