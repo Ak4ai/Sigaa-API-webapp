@@ -284,19 +284,95 @@ document.getElementById('select-disciplina-frequencia').addEventListener('change
 
 // Função para preencher a aba de horários simplificados
 function preencherTabelaSimplificada(horarios) {
-    const tbody = document.querySelector('#tabela-horarios tbody');
-    tbody.innerHTML = '';
-    horarios.forEach(({ semestre, disciplina, turma, dia, período, horário }) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <!-- <td>${semestre}</td> --> <!-- Remova ou comente esta linha -->
-            <td>${disciplina}</td>
-            <td>${turma}</td>
-            <td>${dia}</td>
-            <td>${período}</td>
-            <td>${horário}</td>
-        `;
-        tbody.appendChild(tr);
+    // Mapear dias para ids das tabelas
+    const diasMap = {
+        'Segunda-feira': 'tabela-horarios-segunda',
+        'Terça-feira': 'tabela-horarios-terca',
+        'Quarta-feira': 'tabela-horarios-quarta',
+        'Quinta-feira': 'tabela-horarios-quinta',
+        'Sexta-feira': 'tabela-horarios-sexta'
+    };
+
+    // Limpar todos os tbodys e esconder as tabelas
+    Object.values(diasMap).forEach(id => {
+        const table = document.getElementById(id);
+        if (table) {
+            table.style.display = 'none';
+            const tbody = table.querySelector('tbody');
+            if (tbody) tbody.innerHTML = '';
+        }
+    });
+
+    // Limpar tabela "Hoje"
+    const tabelaHoje = document.getElementById('tabela-horarios-hoje');
+    const tbodyHoje = tabelaHoje ? tabelaHoje.querySelector('tbody') : null;
+    if (tabelaHoje && tbodyHoje) {
+        tabelaHoje.style.display = 'none';
+        tbodyHoje.innerHTML = '';
+    }
+
+    // Remover aviso anterior se existir
+    let avisoHoje = document.getElementById('aviso-hoje-fds');
+    if (avisoHoje) avisoHoje.remove();
+
+    // Agrupar horários por dia
+    const horariosPorDia = {};
+    horarios.forEach(item => {
+        const dia = item.dia;
+        if (!horariosPorDia[dia]) horariosPorDia[dia] = [];
+        horariosPorDia[dia].push(item);
+    });
+
+    // Preencher tabela "Hoje" ou mostrar aviso se sábado/domingo
+    const diasSemana = [
+        'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'
+    ];
+    const hojeIdx = new Date().getDay();
+    const hojeNome = diasSemana[hojeIdx];
+    const tabelaHojeContainer = document.getElementById('tabela-hoje-container');
+
+    if ((hojeNome === 'Sábado' || hojeNome === 'Domingo') && tabelaHojeContainer) {
+        // Adiciona aviso
+        const aviso = document.createElement('div');
+        aviso.id = 'aviso-hoje-fds';
+        aviso.style = 'background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 12px; border-radius: 6px; margin-bottom: 8px;';
+        aviso.innerHTML = `<strong>Hoje é ${hojeNome}.</strong> Não há horários cadastrados para finais de semana.`;
+        tabelaHojeContainer.insertBefore(aviso, tabelaHojeContainer.querySelector('h3').nextSibling);
+        if (tabelaHoje) tabelaHoje.style.display = 'none';
+    } else if (diasMap[hojeNome] && horariosPorDia[hojeNome] && horariosPorDia[hojeNome].length > 0 && tabelaHoje && tbodyHoje) {
+        tabelaHoje.style.display = '';
+        horariosPorDia[hojeNome].forEach(({ disciplina, turma, dia, período, horário }) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${disciplina}</td>
+                <td>${turma}</td>
+                <td>${dia}</td>
+                <td>${período}</td>
+                <td>${horário}</td>
+            `;
+            tbodyHoje.appendChild(tr);
+        });
+    }
+
+    // Preencher cada tabela dos dias da semana
+    Object.entries(diasMap).forEach(([dia, id]) => {
+        const table = document.getElementById(id);
+        const tbody = table.querySelector('tbody');
+        const lista = horariosPorDia[dia] || [];
+        if (lista.length > 0) {
+            table.style.display = '';
+            lista.forEach(({ disciplina, turma, dia, período, horário }) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${disciplina}</td>
+                    <td>${turma}</td>
+                    <td>${dia}</td>
+                    <td>${período}</td>
+                    <td>${horário}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
     });
 }
 
