@@ -392,6 +392,9 @@ function preencherTabelaDetalhada(horarios) {
         `;
         tbody.appendChild(tr);
     });
+    // Mostra a tabela se houver dados
+    const tabela = document.getElementById('tabela-horarios-detalhados');
+    tabela.style.display = horarios.length > 0 ? '' : 'none';
 }
 
 // Função para preencher a aba de novidades

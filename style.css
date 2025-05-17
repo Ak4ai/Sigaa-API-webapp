@@ -104,6 +104,12 @@ button:hover {
 /* ===== Mobile adjustments ===== */
 @media (max-width: 1040px) {
 
+  .tabela-wrapper {
+    border: 1px solid #1f1f1f;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
   #tab-horarios {
     font-size: 12px;
     overflow: auto !important;
@@ -212,11 +218,6 @@ button:hover {
   #tabela-horarios th, #tabela-horarios td {
     font-size: 13px;
     padding: 6px 4px;
-  }
-  #tabela-horarios-container {
-    overflow: auto;
-    border: 1px solid #1f1f1f;
-    border-radius: 8px;
   }
 }
 
@@ -548,11 +549,11 @@ span#fechar-aviso-span {
     border-radius: 4px;
     cursor: pointer;
     padding: 6px 14px;
-    font-size: 0.5em !important;
+    font-size: 4vw !important;
     margin: 0 !important;
     transition: background 0.2s, color 0.2s;
     display: flex;
-    width: 10vw;
+    width: 18vw;
     text-align: center;
     align-items: center;
     align-content: center;
