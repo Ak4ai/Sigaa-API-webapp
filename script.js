@@ -43,7 +43,7 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
                 inst['Semestre'] = data.horariosSimplificados[0].semestre;
             }
 
-            renderizarDadosInstitucionais(inst, data.horariosSimplificados[0]?.semestre);
+            renderizarDadosInstitucionais(inst, data.horariosSimplificados[0]?.semestre, duracaoSegundos);
 
             dadosDiv.innerHTML += `<p><strong>Tempo de resposta da API:</strong> ${duracaoSegundos}s</p>`;
         }
@@ -349,7 +349,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function renderizarDadosInstitucionais(dados, semestre) {
+function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
   const dadosDiv = document.getElementById('dados-institucionais');
   if (!dadosDiv) return;
 
@@ -363,7 +363,7 @@ function renderizarDadosInstitucionais(dados, semestre) {
   });
   if (semestre) dadosFormatados['Semestre'] = semestre;
 
-  let html = '<h2 style="background:#f2f2f2;margin:0;padding:12px 16px;font-size:1.1em;border-bottom:1px solid #e0e0e0;">Dados Institucionais do Usuário  </h2><ul>';
+  let html = '<h2 style="background:#f2f2f2;margin:0;padding:12px 16px;font-size:1.1em;border-bottom:1px solid #e0e0e0;">Dados Institucionais do Usuário</h2><ul>';
 
   // Mostra só principais
   principais.forEach(chave => {
@@ -379,18 +379,20 @@ function renderizarDadosInstitucionais(dados, semestre) {
       html += `<li><strong>${chave}:</strong> ${valor}</li>`;
     }
   });
+  // Adiciona o tempo de resposta como extra-info
+  if (tempoResposta) {
+    html += `<li><strong>Tempo de resposta da API:</strong> ${tempoResposta}s</li>`;
+  }
   html += `</div></ul>`;
 
   dadosDiv.innerHTML = html;
 
   // Mobile: toggle ao clicar
-  dadosDiv.onclick = function () {
+  dadosDiv.onclick = function (e) {
+    // Só expande se for mobile e não clicar em link
     if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
       dadosDiv.classList.toggle('expanded');
     }
   };
 }
-
-// Exemplo de uso após obter os dados:
-renderizarDadosInstitucionais(data.dadosInstitucionais, data.horariosSimplificados?.[0]?.semestre);
 
