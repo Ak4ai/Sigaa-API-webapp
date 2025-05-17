@@ -93,7 +93,7 @@ async function consultarComToken(token) {
             preencherTabelaFrequencias(frequenciasGlobais, "todas");
         }
 
-        document.getElementById('tabela-horarios').style.display = '';
+        //document.getElementById('tabela-horarios').style.display = '';
         document.getElementById('tabela-horarios-detalhados').style.display = '';
 
     } catch (error) {
@@ -463,7 +463,7 @@ window.addEventListener('DOMContentLoaded', () => {
         preencherTabelaFrequencias(frequenciasGlobais, "todas");
       }
 
-      document.getElementById('tabela-horarios').style.display = '';
+      //document.getElementById('tabela-horarios').style.display = '';
       document.getElementById('tabela-horarios-detalhados').style.display = '';
     } catch (e) {
       console.warn('Erro ao carregar dados salvos:', e);

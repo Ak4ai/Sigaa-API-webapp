@@ -209,16 +209,44 @@ button:hover {
 }
 
 @media (max-width: 1040px) {
-  #tabela-horarios th:nth-child(2), /* Turma */
-  #tabela-horarios th:nth-child(4), /* Período */
-  #tabela-horarios td:nth-child(2),
-  #tabela-horarios td:nth-child(4) {
+  .tabela-horarios th:nth-child(3), /* Turma */
+  .tabela-horarios th:nth-child(4), /* Período */
+  .tabela-horarios td:nth-child(3),
+  .tabela-horarios td:nth-child(4) {
     display: none;
   }
-  #tabela-horarios th, #tabela-horarios td {
+  .tabela-horarios th, .tabela-horarios td {
     font-size: 13px;
     padding: 6px 4px;
   }
+}
+
+.tabela-horarios th:nth-child(3),
+.tabela-horarios td:nth-child(3) {
+  display: none;
+}
+
+/* Defina larguras estáticas para as colunas restantes */
+.tabela-horarios th:nth-child(1),
+.tabela-horarios td:nth-child(1) {
+  width: 55%; /* Exemplo: Código */
+  min-width: 55%;
+  max-width: 55%;
+}
+.tabela-horarios th:nth-child(2),
+.tabela-horarios td:nth-child(2) {
+  width: 25%; /* Exemplo: Nome da disciplina */
+  min-width: 25%;
+  max-width: 25%;
+  text-align: center;
+}
+.tabela-horarios th:nth-child(5),
+.tabela-horarios td:nth-child(5) {
+  width: 20%; /* Exemplo: Horário */
+  min-width: 20%;
+  max-width: 20%;
+  justify-content: center;
+  text-align: center;
 }
 
 #loading {
