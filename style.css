@@ -99,7 +99,37 @@ button:hover {
 }
 
 /* ===== Mobile adjustments ===== */
-@media (max-width: 600px) {
+@media (max-width: 1040px) {
+
+  #tab-horarios {
+    font-size: 12px;
+    overflow: auto !important;
+    border: 1px solid #1f1f1f;
+    border-radius: 8px;
+  }
+
+  #tabela-horarios-detalhados {
+    margin: 0px;
+  }
+
+  div#resumo-frequencia-disciplina {
+    overflow: auto;
+    border: 1px solid #1f1f1f;
+    border-radius: 8px;
+  }
+
+  div#tabela-frequencias-container {
+    overflow: auto;
+    border: 1px solid #1f1f1f;
+    border-radius: 8px;
+  }
+
+  #tabela-frequencias {
+    font-size: 12px;
+    margin: 0px;
+    overflow: auto !important;
+  }
+
   body {
     padding: 10px;
     font-size: 18px;
@@ -107,6 +137,7 @@ button:hover {
 
   form {
     padding: 15px;
+    border: 1px solid #1f1f1f
   }
 
   label, input {
@@ -141,7 +172,7 @@ button:hover {
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 1040px) {
   /* Esconde colunas 1 (Semestre), 3 (Turma) e 5 (Período) da tabela #tabela-horarios */
   #tabela-horarios th:nth-child(1),
   #tabela-horarios td:nth-child(1),
