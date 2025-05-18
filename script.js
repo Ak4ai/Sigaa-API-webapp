@@ -408,21 +408,25 @@ function preencherTabelaDetalhada(horarios) {
 
 // Função para preencher a aba de novidades
 function preencherTabelaNovidades(novidades) {
-  const tbody = document.querySelector('#tabela-novidades tbody');
-  tbody.innerHTML = '';
-  novidades.forEach(({ disciplina, data, descricao }) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${disciplina}</td>
-      <td>${data}</td>
-      <td>${descricao}</td>
-    `;
-    tbody.appendChild(tr);
+  // Home
+  const tabelaHome = document.getElementById('tabela-novidades-home');
+  // Novidades
+  const tabelaNovidades = document.getElementById('tabela-novidades-novidades');
+  [tabelaHome, tabelaNovidades].forEach(tabela => {
+    if (!tabela) return;
+    const tbody = tabela.querySelector('tbody');
+    tbody.innerHTML = '';
+    if (novidades.length > 0) {
+      tabela.style.display = '';
+      novidades.forEach(n => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${n.disciplina}</td><td>${n.data}</td><td>${n.descricao}</td>`;
+        tbody.appendChild(tr);
+      });
+    } else {
+      tabela.style.display = 'none';
+    }
   });
-
-  if (novidades.length > 0) {
-    document.getElementById('tabela-novidades').style.display = '';
-  }
 }
 
 // Controle de abas

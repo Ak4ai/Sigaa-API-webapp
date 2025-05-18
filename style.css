@@ -689,3 +689,9 @@ span#fechar-aviso-span {
   margin-bottom: 32px;
   min-width: 40vw;
 }
+
+@media (max-width: 1040px) {
+  #tabela-novidades-container {
+    display: none !important;
+  }
+}
