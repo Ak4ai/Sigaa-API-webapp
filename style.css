@@ -377,7 +377,7 @@ progress.custom-bar.vermelho::-moz-progress-bar {
 }
 
 /* Estilo para o select de filtro de disciplina */
-#select-disciplina-frequencia {
+select {
   padding: 8px 12px;
   border: 1px solid #ccc;
   border-radius: 6px;
@@ -388,19 +388,20 @@ progress.custom-bar.vermelho::-moz-progress-bar {
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-  min-width: 180px;
+  min-width: 100%;
   max-width: 100%;
   appearance: none;
   cursor: pointer;
 }
 
-#select-disciplina-frequencia:focus {
+select:focus {
   border-color: #000000;
   box-shadow: 0 0 0 2px #00000055;
 }
 
-#select-disciplina-frequencia option {
+select option {
   background: #fff;
+  background-color: #ccc;
   color: #222;
   font-size: 16px;
 }

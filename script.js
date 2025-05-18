@@ -83,14 +83,18 @@ async function consultarComToken(token) {
         preencherTabelaDetalhada(data.horariosDetalhados);
 
         if (data.avisosPorDisciplina) {
-            const novidadesFormatadas = data.avisosPorDisciplina.flatMap(({ disciplina, avisos }) =>
-                avisos.map(({ data, descricao }) => ({ disciplina, data, descricao }))
-            );
-
-            preencherTabelaNovidades(novidadesFormatadas);
-            frequenciasGlobais = data.avisosPorDisciplina;
-            preencherSelectorFrequencias(frequenciasGlobais);
-            preencherTabelaFrequencias(frequenciasGlobais, "todas");
+          const novidadesFormatadas = data.avisosPorDisciplina.flatMap(({ disciplina, avisos }) =>
+            avisos.map(({ data, descricao }) => ({ disciplina, data, descricao }))
+          );
+          preencherTabelaNovidades(novidadesFormatadas);
+          frequenciasGlobais = data.avisosPorDisciplina;
+          preencherSelectorFrequencias(frequenciasGlobais);
+          preencherTabelaFrequencias(frequenciasGlobais, "todas");
+        
+          // Adicione estas linhas para carregar as notas ao abrir a página
+          notasGlobais = data.avisosPorDisciplina;
+          preencherSelectorNotas(notasGlobais);
+          preencherTabelaNotas(notasGlobais, "todas");
         }
 
         //document.getElementById('tabela-horarios').style.display = '';
@@ -282,6 +286,10 @@ document.getElementById('select-disciplina-frequencia').addEventListener('change
   preencherTabelaFrequencias(frequenciasGlobais, this.value);
 });
 
+document.getElementById('select-disciplina-notas').addEventListener('change', function() {
+  preencherTabelaNotas(notasGlobais, this.value);
+});
+
 // Função para preencher a aba de horários simplificados
 function preencherTabelaSimplificada(horarios) {
     // Mapear dias para ids das tabelas
@@ -461,6 +469,11 @@ window.addEventListener('DOMContentLoaded', () => {
         frequenciasGlobais = data.avisosPorDisciplina;
         preencherSelectorFrequencias(frequenciasGlobais);
         preencherTabelaFrequencias(frequenciasGlobais, "todas");
+      
+        // Adicione estas linhas para carregar as notas ao abrir a página
+        notasGlobais = data.avisosPorDisciplina;
+        preencherSelectorNotas(notasGlobais);
+        preencherTabelaNotas(notasGlobais, "todas");
       }
 
       //document.getElementById('tabela-horarios').style.display = '';
@@ -583,3 +596,81 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
     clearTimeout(timerId);
   });
 })();
+
+let notasGlobais = [];
+
+function preencherSelectorNotas(avisosPorDisciplina) {
+  const select = document.getElementById('select-disciplina-notas');
+  select.innerHTML = '<option value="todas">Todas</option>';
+  avisosPorDisciplina.forEach(disc => {
+    const nome = disc.disciplina;
+    if (![...select.options].some(opt => opt.value === nome)) {
+      const option = document.createElement('option');
+      option.value = nome;
+      option.textContent = nome;
+      select.appendChild(option);
+    }
+  });
+}
+
+function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
+  const wrapper = document.getElementById('tabela-notas-wrapper');
+  wrapper.innerHTML = '';
+
+  let disciplinas = avisosPorDisciplina;
+  if (filtro !== "todas") {
+    disciplinas = avisosPorDisciplina.filter(d => d.disciplina === filtro);
+  }
+
+  disciplinas.forEach(disc => {
+    const { disciplina, turma, notas } = disc;
+    if (!notas || (!notas.headers.length && !notas.valores.length && !notas.avaliacoes.length)) return;
+
+    let html = `<h4>${disciplina}${turma ? ' - ' + turma : ''}</h4>`;
+
+    // Monta tabela organizada
+    if (notas.avaliacoes && notas.avaliacoes.length > 0 && notas.valores.length > 0) {
+      // Procura a linha do aluno (normalmente a primeira)
+      const linhaAluno = notas.valores[0];
+
+      html += `<table class="tabela-notas">
+        <thead>
+          <tr>
+            <th>Disciplina</th>
+            <th>Sigla</th>
+            <th>Descrição</th>
+            <th>Nota Total</th>
+            <th>Peso</th>
+            <th>Sua Nota</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      notas.avaliacoes.forEach((av, idx) => {
+        // Procura o índice da header correspondente à avaliação
+        let idxHeader = notas.headers.findIndex(h => h === av.abrev);
+        if (idxHeader === -1) idxHeader = idx;
+        // Sua nota pode estar na linha do aluno, na coluna correspondente
+        let suaNota = (linhaAluno && linhaAluno[idxHeader + 2]) ? linhaAluno[idxHeader + 2] : '';
+        html += `<tr>
+          <td>${disciplina}</td>
+          <td>${av.abrev}</td>
+          <td>${av.den}</td>
+          <td>${av.nota}</td>
+          <td>${av.peso}</td>
+          <td>${suaNota}</td>
+        </tr>`;
+      });
+
+      html += `</tbody></table>`;
+    } else {
+      html += `<div style="color:#888; margin-bottom:12px;">Nenhuma nota lançada.</div>`;
+    }
+
+    wrapper.innerHTML += html;
+  });
+
+  if (wrapper.innerHTML === '') {
+    wrapper.innerHTML = `<div style="color:#888;">Nenhuma nota encontrada para o filtro selecionado.</div>`;
+  }
+}
