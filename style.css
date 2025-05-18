@@ -219,6 +219,11 @@ button:hover {
     font-size: 13px;
     padding: 6px 4px;
   }
+  h1 {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 .tabela-horarios th:nth-child(3),
