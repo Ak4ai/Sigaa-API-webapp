@@ -480,12 +480,6 @@ window.addEventListener('DOMContentLoaded', () => {
     return; // Não tenta preencher tabelas
   }
 
-  const token = localStorage.getItem('sigaa_token') || sessionStorage.getItem('sigaa_token');
-  if (token) {
-    console.log('Token encontrado, realizando consulta automática...');
-    consultarComToken(token);
-  }
-
   if (dadosSalvos) {
     try {
       const data = JSON.parse(dadosSalvos);
