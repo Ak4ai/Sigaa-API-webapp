@@ -66,7 +66,8 @@ async function consultarComToken(token) {
 
         // Salva os dados no localStorage (opcional)
         localStorage.setItem('sigaaUltimaConsulta', JSON.stringify(data));
-
+        removerEstiloSemDados();
+        // Limpa dados anteriores
         // ...preencher tabelas e dados institucionais...
         if (data.dadosInstitucionais) {
             const inst = { ...data.dadosInstitucionais };
@@ -438,8 +439,49 @@ document.querySelectorAll('.tab-button').forEach(button => {
   });
 });
 
+function removerEstiloSemDados() {
+  const homeContent = document.getElementById('home-content');
+  const tabHome = document.getElementById('tab-home');
+  homeContent.classList.remove('sem-dados');
+  tabHome.classList.remove('sem-dados');
+  // Remove mensagem se existir
+  const msg = homeContent.querySelector('.mensagem-sem-dados');
+  if (msg) msg.remove();
+  document.getElementById('dados-institucionais').style.display = 'block';
+  document.getElementById('tabela-novidades-container').style.display = 'block';
+  document.getElementById('home-aviso').style.display = 'block';
+}
+
 window.addEventListener('DOMContentLoaded', () => {
+  const homeContent = document.getElementById('home-content');
+  const tabHome = document.getElementById('tab-home');
   const dadosSalvos = localStorage.getItem('sigaaUltimaConsulta');
+
+  if (!dadosSalvos) {
+    // Adapta a interface para novo usuário
+    homeContent.classList.add('sem-dados');
+    tabHome.classList.add('sem-dados');
+    if (!homeContent.querySelector('.mensagem-sem-dados')) {
+      homeContent.insertAdjacentHTML('beforeend', `
+        <div class="mensagem-sem-dados">
+          Nenhum dado encontrado.<br>
+          Faça login para visualizar suas informações.
+        </div>
+      `);
+    }
+    // Opcional: esconder dados institucionais e novidades
+    document.getElementById('dados-institucionais').style.display = 'none';
+    document.getElementById('tabela-novidades-container').style.display = 'none';
+    document.getElementById('home-aviso').style.display = 'none';
+    return; // Não tenta preencher tabelas
+  }
+
+  const token = localStorage.getItem('sigaa_token') || sessionStorage.getItem('sigaa_token');
+  if (token) {
+    console.log('Token encontrado, realizando consulta automática...');
+    consultarComToken(token);
+  }
+
   if (dadosSalvos) {
     try {
       const data = JSON.parse(dadosSalvos);
@@ -633,7 +675,8 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
       // Procura a linha do aluno (normalmente a primeira)
       const linhaAluno = notas.valores[0];
 
-      html += `<table class="tabela-notas">
+      // Apenas a tabela dentro da div, sem o título
+      html += `<div class="tabela-notas-wrapper"><table class="tabela-notas">
         <thead>
           <tr>
             <th>Disciplina</th>
@@ -647,10 +690,8 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
         <tbody>`;
 
       notas.avaliacoes.forEach((av, idx) => {
-        // Procura o índice da header correspondente à avaliação
         let idxHeader = notas.headers.findIndex(h => h === av.abrev);
         if (idxHeader === -1) idxHeader = idx;
-        // Sua nota pode estar na linha do aluno, na coluna correspondente
         let suaNota = (linhaAluno && linhaAluno[idxHeader + 2]) ? linhaAluno[idxHeader + 2] : '';
         html += `<tr>
           <td>${disciplina}</td>
@@ -662,7 +703,7 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
         </tr>`;
       });
 
-      html += `</tbody></table>`;
+      html += `</tbody></table></div>`;
     } else {
       html += `<div style="color:#888; margin-bottom:12px;">Nenhuma nota lançada.</div>`;
     }

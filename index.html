@@ -60,26 +60,40 @@
         </p>
       </div>
     </div>
-    <form id="sigaa-form">
-      <label for="user">CPF (sem pontos ou traços):</label>
-      <input type="text" id="user" name="user" required />
+    <div id="home-content">
+      <form id="sigaa-form">
+        <label for="user">CPF (sem pontos ou traços):</label>
+        <input type="text" id="user" name="user" required />
 
-      <label for="pass">Senha:</label>
-      <input type="password" id="pass" name="pass" required />
-      <div class="password-info">
-        <button type="submit">Consultar</button>
-        <label style="margin-left:10px; font-size:0.95em; width: auto;">
-          <input type="checkbox" id="manter-logado" />
-          Manter logado
-        </label>
-        <button type="button" id="logout-btn" style="margin-left:10px; font-size:0.95em;">
-          Sair
-        </button>
+        <label for="pass">Senha:</label>
+        <input type="password" id="pass" name="pass" required />
+        <div class="password-info">
+          <button type="submit">Consultar</button>
+          <label style="margin-left:10px; font-size:0.95em; width: auto;">
+            <input type="checkbox" id="manter-logado" />
+            Manter logado
+          </label>
+          <button type="button" id="logout-btn" style="margin-left:10px; font-size:0.95em;">
+            Sair
+          </button>
+        </div>
+        <div class="error" id="error"></div>
+        <div id="loading" style="display:none;">Carregando...</div>
+      </form>
+      <div id="dados-institucionais"></div>
+      <div id="tabela-novidades-container">
+        <table id="tabela-novidades" style="display: none;">
+          <thead>
+            <tr>
+              <th>Disciplina</th>
+              <th>Data</th>
+              <th>Descrição</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
-      <div class="error" id="error"></div>
-      <div id="loading" style="display:none;">Carregando...</div>
-    </form>
-    <div id="dados-institucionais"></div>
+    </div>
   </div>
 
   <div class="tab-content" id="tab-simplificada">

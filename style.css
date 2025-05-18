@@ -208,6 +208,56 @@ button:hover {
   }
 }
 
+.tabela-notas-wrapper {
+  overflow: auto;
+  border: 1px solid #1f1f1f;
+  border-radius: 8px;
+}
+
+@media (min-width: 1040px) {
+  #home-content {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "form novidades"
+      "dados novidades";
+    gap: 24px 32px;
+    align-items: start;
+    justify-items: stretch;
+    margin-top: 24px;
+    height: 100%; /* Garante altura total do grid */
+  }
+  #sigaa-form {
+    grid-area: form;
+    margin-bottom: 0;
+  }
+  #tabela-novidades-container {
+    border: 1px solid #1f1f1f;
+    border-radius: 8px;
+  }
+  #dados-institucionais {
+    grid-area: dados;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 1040px) {
+  #tabela-novidades-container {
+    grid-area: novidades;
+    align-self: stretch;
+    height: auto;
+    overflow: auto;
+    max-height: 486px;
+    transition: max-height 0.3s;
+  }
+  #dados-institucionais.expanded ~ #tabela-novidades-container,
+  #dados-institucionais:hover ~ #tabela-novidades-container {
+    max-height: 871px;
+  }
+}
+
 @media (max-width: 1040px) {
   .tabela-horarios th:nth-child(3), /* Turma */
   .tabela-horarios th:nth-child(4), /* Período */
@@ -601,4 +651,41 @@ span#fechar-aviso-span {
 #fechar-aviso:hover, #nao-mostrar-aviso:hover {
   background: #388e3c;
   color: #fff;
+}
+
+/* Estado visual para novo usuário sem dados */
+#tab-home.sem-dados,
+#home-content.sem-dados {
+  min-height: 320px;
+  min-width: 50vw;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border: 1px dashed #b2dfdb;
+  border-radius: 10px;
+  box-shadow: none;
+  padding: 48px 16px 32px 16px;
+  margin-top: 32px;
+}
+
+#tab-home.sem-dados .mensagem-sem-dados,
+#home-content.sem-dados .mensagem-sem-dados {
+  color: #888;
+  font-size: 1.15em;
+  text-align: center;
+  margin: 0 auto;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px 18px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+#tab-home.sem-dados form,
+#home-content.sem-dados form {
+  margin-bottom: 32px;
+  min-width: 40vw;
 }

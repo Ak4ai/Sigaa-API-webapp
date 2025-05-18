@@ -3,7 +3,7 @@
   "short_name": "SIGAA",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#094384",
   "theme_color": "#094384",
   "description": "Consulta rápida e segura ao SIGAA.",
   "icons": [
