@@ -216,17 +216,21 @@ button:hover {
 
 @media (min-width: 1040px) {
   #home-content {
-    display: grid;
+    display: flex;
     grid-template-columns: 340px 1fr;
     grid-template-rows: auto 1fr;
     grid-template-areas:
       "form novidades"
       "dados novidades";
     gap: 24px 32px;
-    align-items: start;
+    align-items: center;
     justify-items: stretch;
     margin-top: 24px;
     height: 100%; /* Garante altura total do grid */
+    justify-content: center;
+    align-content: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
   }
   #sigaa-form {
     grid-area: form;
@@ -245,16 +249,8 @@ button:hover {
 
 @media (min-width: 1040px) {
   #tabela-novidades-container {
-    grid-area: novidades;
-    align-self: stretch;
-    height: auto;
+    align-self: center;
     overflow: auto;
-    max-height: 486px;
-    transition: max-height 0.3s;
-  }
-  #dados-institucionais.expanded ~ #tabela-novidades-container,
-  #dados-institucionais:hover ~ #tabela-novidades-container {
-    max-height: 871px;
   }
 }
 
@@ -482,12 +478,13 @@ input#manter-logado {
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 8px;
-  margin-bottom: 20px;
+  /* margin-bottom: 20px; */
   margin-top: 10px;
   padding: 0;
   overflow: hidden;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   transition: box-shadow 0.2s;
+  transition: max-height 0.3s;
   cursor: pointer;
   position: relative;
   cursor: pointer;
@@ -537,6 +534,7 @@ input#manter-logado {
   #dados-institucionais:hover .extra-info {
     display: block;
     animation: fadeIn 0.2s;
+    transition: all 0.3s;
   }
 }
 
@@ -553,7 +551,8 @@ input#manter-logado {
   top: 18px;
   font-size: 13px;
   color: #888;
-  transition: transform 0.2s;
+  transition: transform 0.3s;
+  transition: max-height 0.3s;
 }
 
 #dados-institucionais.expanded::after {
@@ -694,4 +693,10 @@ span#fechar-aviso-span {
   #tabela-novidades-container {
     display: none !important;
   }
+}
+
+div#home-content-header {
+    align-self: center;
+    align-content: center;
+    grid-area: auto;
 }

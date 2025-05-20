@@ -22,7 +22,7 @@
   <!-- Tabs -->
   <div class="tabs">
     <button class="tab-button active" data-tab="tab-home">Home</button>
-    <button class="tab-button" data-tab="tab-simplificada">Tabela Simplificada</button>
+    <button class="tab-button" data-tab="tab-simplificada">Horários Simplificada</button>
     <button class="tab-button" data-tab="tab-horarios">Horários</button>
     <button class="tab-button" data-tab="tab-frequencias">Frequências</button>
     <button class="tab-button" data-tab="tab-notas">Notas</button>
@@ -61,26 +61,28 @@
       </div>
     </div>
     <div id="home-content">
-      <form id="sigaa-form">
-        <label for="user">CPF (sem pontos ou traços):</label>
-        <input type="text" id="user" name="user" required />
+      <div id="home-content-header">
+        <form id="sigaa-form">
+          <label for="user">CPF (sem pontos ou traços):</label>
+          <input type="text" id="user" name="user" required />
 
-        <label for="pass">Senha:</label>
-        <input type="password" id="pass" name="pass" required />
-        <div class="password-info">
-          <button type="submit">Consultar</button>
-          <label style="margin-left:10px; font-size:0.95em; width: auto;">
-            <input type="checkbox" id="manter-logado" />
-            Manter logado
-          </label>
-          <button type="button" id="logout-btn" style="margin-left:10px; font-size:0.95em;">
-            Sair
-          </button>
-        </div>
-        <div class="error" id="error"></div>
-        <div id="loading" style="display:none;">Carregando...</div>
-      </form>
-      <div id="dados-institucionais"></div>
+          <label for="pass">Senha:</label>
+          <input type="password" id="pass" name="pass" required />
+          <div class="password-info">
+            <button type="submit">Consultar</button>
+            <label style="margin-left:10px; font-size:0.95em; width: auto;">
+              <input type="checkbox" id="manter-logado" />
+              Manter logado
+            </label>
+            <button type="button" id="logout-btn" style="margin-left:10px; font-size:0.95em;">
+              Sair
+            </button>
+          </div>
+          <div class="error" id="error"></div>
+          <div id="loading" style="display:none;">Carregando o Sigaa é demorado...</div>
+        </form>
+        <div id="dados-institucionais"></div>
+      </div>
       <div id="tabela-novidades-container">
         <table id="tabela-novidades-home" style="display: none;">
           <thead>

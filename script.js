@@ -713,3 +713,58 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
     wrapper.innerHTML = `<div style="color:#888;">Nenhuma nota encontrada para o filtro selecionado.</div>`;
   }
 }
+
+// ...existing code...
+function ajustarMaxHeightNovidades() {
+  const loading = document.getElementById('loading');
+  const novidades = document.getElementById('tabela-novidades-container');
+  if (!novidades) return;
+  if (window.innerWidth < 1040) return; // só aplica em desktop
+
+  let maxHeight = 486;
+  let maxHeightExpanded = 871;
+
+  const dados = document.getElementById('dados-institucionais');
+  const expanded = dados && dados.classList.contains('expanded');
+  const hovered = dados && dados.matches(':hover');
+
+  if (expanded || hovered) {
+    maxHeight = maxHeightExpanded;
+  }
+
+  // Se loading está escondido, diminui 19px; se visível, soma 19px
+  if (loading && loading.style.display === 'none') {
+    novidades.style.maxHeight = (maxHeight - 19) + 'px';
+  } else {
+    novidades.style.maxHeight = maxHeight + 'px';
+  }
+}
+
+// Atualiza novidades ao passar mouse em dados institucionais
+const dadosDiv = document.getElementById('dados-institucionais');
+if (dadosDiv) {
+  dadosDiv.addEventListener('mouseenter', ajustarMaxHeightNovidades);
+  dadosDiv.addEventListener('mouseleave', ajustarMaxHeightNovidades);
+}
+// ...existing code...
+
+// Sempre que mostrar/esconder o loading, chame ajustarMaxHeightNovidades()
+function showLoading() {
+  document.getElementById('loading').style.display = '';
+  ajustarMaxHeightNovidades();
+}
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+  ajustarMaxHeightNovidades();
+}
+
+// Garante ajuste automático mesmo se display mudar por outros meios
+const loading = document.getElementById('loading');
+if (loading) {
+  const observer = new MutationObserver(ajustarMaxHeightNovidades);
+  observer.observe(loading, { attributes: true, attributeFilter: ['style'] });
+}
+
+// Também ajusta ao redimensionar ou carregar a página
+window.addEventListener('resize', ajustarMaxHeightNovidades);
+window.addEventListener('DOMContentLoaded', ajustarMaxHeightNovidades);
