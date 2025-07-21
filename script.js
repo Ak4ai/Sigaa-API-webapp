@@ -687,10 +687,42 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
         </thead>
         <tbody>`;
 
+      // Variáveis para calcular totais
+      let notaTotalSomada = 0;
+      let somaNotasAluno = 0;
+      let somaPesos = 0;
+
       notas.avaliacoes.forEach((av, idx) => {
         let idxHeader = notas.headers.findIndex(h => h === av.abrev);
         if (idxHeader === -1) idxHeader = idx;
         let suaNota = (linhaAluno && linhaAluno[idxHeader + 2]) ? linhaAluno[idxHeader + 2] : '';
+        
+        // Calcula totais para o rodapé
+        const notaTotal = parseFloat(av.nota) || 0;
+        let peso = parseFloat(av.peso) || 1;
+        const notaAluno = parseFloat(suaNota.replace(',', '.')) || 0; // Converte vírgula para ponto
+        
+        // Lógica inteligente para pesos
+        let notaCalculada = 0;
+        if (peso === 1) {
+          // Peso igual a 1: mantém o valor original da nota
+          notaCalculada = notaAluno;
+        } else if (peso > 1) {
+          // Peso maior que 1: trata como porcentagem
+          notaCalculada = (notaAluno * peso) / 100;
+        } else {
+          // Peso menor que 1: multiplica diretamente (fração)
+          notaCalculada = notaAluno * peso;
+        }
+        
+        notaTotalSomada += notaTotal;
+        somaPesos += peso;
+        
+        // Só conta no cálculo se o aluno tem nota lançada
+        if (suaNota && suaNota.trim() !== '' && !isNaN(notaAluno)) {
+          somaNotasAluno += notaCalculada;
+        }
+        
         html += `<tr>
           <td>${disciplina}</td>
           <td>${av.abrev}</td>
@@ -700,6 +732,15 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
           <td>${suaNota}</td>
         </tr>`;
       });
+
+      // Adiciona linha de rodapé com totais
+      html += `<tr class="tabela-notas-rodape">
+        <td><strong>${disciplina}</strong></td>
+        <td colspan="2"><strong>Totais</strong></td>
+        <td><strong>${notaTotalSomada.toFixed(2)}</strong></td>
+        <td><strong>${somaPesos.toFixed(2)}</strong></td>
+        <td><strong>${somaNotasAluno.toFixed(2)}</strong></td>
+      </tr>`;
 
       html += `</tbody></table></div>`;
     } else {

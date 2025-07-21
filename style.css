@@ -214,6 +214,16 @@ button:hover {
   border-radius: 8px;
 }
 
+.tabela-notas-rodape {
+  background-color: #f5f5f5;
+  border-top: 2px solid #094384;
+}
+
+.tabela-notas-rodape td {
+  font-weight: bold;
+  padding: 8px 12px;
+}
+
 @media (min-width: 1040px) {
   #home-content {
     display: flex;
