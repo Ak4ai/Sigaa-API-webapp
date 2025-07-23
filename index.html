@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#094384">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <script>
   if ('serviceWorker' in navigator) {
@@ -262,6 +264,7 @@
       <select id="select-disciplina-notas">
         <option value="todas">Todas</option>
       </select>
+      <button id="exportar-pdf-btn" style="margin: 12px 0 16px 0; display: block;">Exportar PDF (LaTeX)</button>
       <div id="tabela-notas-wrapper"></div>
     </div>
   </div>
@@ -281,6 +284,7 @@
       </table>
     </div>
   </div>
+  <script src="boletim.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

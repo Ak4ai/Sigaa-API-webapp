@@ -1,3 +1,54 @@
+// Importa a função de exportação do boletim
+// <script src="boletim.js"></script> deve estar incluído no index.html antes de script.js para garantir que a função esteja disponível
+
+document.addEventListener('DOMContentLoaded', function () {
+  var btnExportar = document.getElementById('exportar-pdf-btn');
+  if (btnExportar) {
+    btnExportar.addEventListener('click', function () {
+      // notasGlobais deve estar disponível no escopo global
+      if (typeof exportarBoletimPDF === 'function' && typeof notasGlobais !== 'undefined') {
+        // Busca dados institucionais do DOM, se possível, senão pega do localStorage
+        let dadosInstitucionais = null;
+        try {
+          const dadosDiv = document.getElementById('dados-institucionais');
+          if (dadosDiv && dadosDiv.innerText) {
+            // Extrai os dados exibidos no DOM
+            const linhas = Array.from(dadosDiv.querySelectorAll('li'));
+            dadosInstitucionais = {};
+            linhas.forEach(li => {
+              const txt = li.innerText;
+              const idx = txt.indexOf(':');
+              if (idx > 0) {
+                const chave = txt.slice(0, idx).trim();
+                const valor = txt.slice(idx + 1).trim();
+                dadosInstitucionais[chave] = valor;
+              }
+            });
+          }
+        } catch (e) { dadosInstitucionais = null; }
+        // Se não encontrou ou encontrou poucos campos, tenta pegar do localStorage
+        if (!dadosInstitucionais || Object.keys(dadosInstitucionais).length < 4) {
+          try {
+            const dadosSalvos = localStorage.getItem('sigaaUltimaConsulta');
+            if (dadosSalvos) {
+              const data = JSON.parse(dadosSalvos);
+              if (data && data.dadosInstitucionais) {
+                dadosInstitucionais = { ...data.dadosInstitucionais };
+                // Adiciona o semestre do primeiro horário simplificado, se existir
+                if (data.horariosSimplificados && data.horariosSimplificados.length > 0) {
+                  dadosInstitucionais['Semestre'] = data.horariosSimplificados[0].semestre;
+                }
+              }
+            }
+          } catch (e) { /* ignora erro */ }
+        }
+        exportarBoletimPDF(notasGlobais, dadosInstitucionais);
+      } else {
+        alert('Notas não encontradas ou função de exportação não disponível.');
+      }
+    });
+  }
+});
 document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
