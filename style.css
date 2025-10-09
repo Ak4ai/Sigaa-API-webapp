@@ -97,12 +97,21 @@ button:hover {
     flex-direction: column;
 }
 
+.mobile-fab { display: none; }
+
+
 #tabela-horarios {
   margin: 0;
 }
 
 /* ===== Mobile adjustments ===== */
 @media (max-width: 1040px) {
+
+  /* Esconder o título principal em mobile para economizar espaço */
+  h1 {
+    display: none;
+  }
+
 
   .tabela-wrapper {
     border: 1px solid #1f1f1f;
@@ -206,6 +215,83 @@ button:hover {
     font-size: 16px;
     padding: 10px 20px;
   }
+
+  /* Floating Action Button (FAB) para mobile */
+  .mobile-fab {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 1200;
+    /* manter o toggle no fluxo; o menu ficará posicionado de forma absoluta acima */
+    display: block; /* visível somente dentro deste bloco (mobile) */
+    width: auto;
+  }
+  .fab-toggle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fab-menu {
+    display: flex;
+    position: absolute;
+    right: 0;
+    /* coloca o menu acima do botão (botão tem 56px + 8px de gap) */
+    bottom: 72px;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+    transform-origin: bottom right;
+    /* container com a mesma cor do botão */
+    background: #1976d2;
+    padding: 8px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    /* animação de expansão (scale X e Y) */
+    transform: scale(0.6, 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 180ms ease;
+  }
+  .fab-menu.open {
+    transform: scale(1, 1);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* animação dos itens (staggered) */
+  .fab-item {
+    transform: translateY(6px) scale(0.98);
+    opacity: 0;
+    transition: transform 220ms cubic-bezier(.2,.9,.2,1), opacity 160ms ease;
+  }
+  .fab-menu.open .fab-item {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  .fab-menu.open .fab-item:nth-child(1) { transition-delay: 40ms; }
+  .fab-menu.open .fab-item:nth-child(2) { transition-delay: 80ms; }
+  .fab-item {
+    background: transparent; /* itens dentro do container colorido */
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+    color: #fff; /* texto branco sobre o fundo do container */
+    cursor: pointer;
+    text-align: right;
+    min-width: 150px;
+  }
+  .fab-item:hover {
+    background: rgba(255,255,255,0.06);
+  }
 }
 
 .tabela-notas-wrapper {
@@ -249,7 +335,7 @@ button:hover {
     align-self: stretch;
     height: auto;
     overflow: auto;
-    max-height: 486px;
+    max-height: 491px;
     transition: max-height 0.3s;
   }
   #dados-institucionais.expanded ~ #tabela-novidades-container,
@@ -326,6 +412,26 @@ button:hover {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Estilos para mensagem de scraping */
+.scrape-success {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  color: #2e7d32;
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-top: 8px;
+}
+.scrape-error {
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  color: #c62828;
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-top: 8px;
 }
 
 
@@ -482,8 +588,6 @@ input#manter-logado {
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 8px;
-  margin-bottom: 20px;
-  margin-top: 10px;
   padding: 0;
   overflow: hidden;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
@@ -695,3 +799,5 @@ span#fechar-aviso-span {
     display: none !important;
   }
 }
+
+/* Por padrão (desktop) esconde o FAB mobile - mantido via media queries */

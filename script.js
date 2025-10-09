@@ -21,13 +21,9 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
         if (!resp.ok) throw new Error('Usuário ou senha inválidos');
         const { token } = await resp.json();
 
-        if (manterLogado) {
-            sessionStorage.removeItem('sigaa_token');
-            localStorage.setItem('sigaa_token', token);
-        } else {
-            localStorage.removeItem('sigaa_token');
-            sessionStorage.setItem('sigaa_token', token);
-        }
+    // Salva token junto com informação de expiry (se disponível)
+    const storageType = manterLogado ? 'local' : 'session';
+    saveTokenWithExpiry(token, storageType);
 
         // 2. Usa token para buscar dados
         await consultarComToken(token);
@@ -47,8 +43,10 @@ async function consultarComToken(token) {
     dadosDiv.innerHTML = '';
     loadingDiv.style.display = 'block';
 
-    try {
-        const inicio = performance.now();
+  try {
+    // inicia contador visível no formulário
+    startScrapeCounter();
+    const inicio = performance.now();
 
         const response = await fetch('https://sigaa-api-backend.vercel.app/api/scraper', {
             method: 'POST',
@@ -101,27 +99,56 @@ async function consultarComToken(token) {
         //document.getElementById('tabela-horarios').style.display = '';
         document.getElementById('tabela-horarios-detalhados').style.display = '';
 
-    } catch (error) {
-        console.error('Erro ao consultar com token:', error);
-        errorDiv.textContent = error.message;
-    } finally {
-        loadingDiv.style.display = 'none';
-    }
+  } catch (error) {
+    console.error('Erro ao consultar com token:', error);
+    errorDiv.textContent = error.message;
+    // para contador com flag de erro
+    stopScrapeCounter(false);
+  } finally {
+    const fimGeral = performance.now();
+    const duracaoSegundosGeral = Math.max(1, Math.round((fimGeral - (typeof inicio !== 'undefined' ? inicio : fimGeral)) / 1000));
+    stopScrapeCounter(true, duracaoSegundosGeral);
+    loadingDiv.style.display = 'none';
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    const token = localStorage.getItem('sigaa_token') || sessionStorage.getItem('sigaa_token');
-    if (token) {
-        console.log('Token encontrado, realizando consulta automática...');
-        consultarComToken(token);
+  // Inicia display do status do token e tenta usar token salvo
+  startTokenTimer();
+
+  // Marca a checkbox 'manter-logado' por padrão
+  try {
+    const manterCheckbox = document.getElementById('manter-logado');
+    if (manterCheckbox) manterCheckbox.checked = true;
+  } catch (e) {
+    console.warn('Checkbox manter-logado não encontrada');
+  }
+
+  const info = getTokenInfo();
+  const token = info ? info.token : (localStorage.getItem('sigaa_token') || sessionStorage.getItem('sigaa_token'));
+  if (token) {
+    const now = Date.now();
+    const expiresAt = info && info.expiresAt ? info.expiresAt : null;
+    if (expiresAt && expiresAt <= now) {
+      console.log('Token expirado, removendo.');
+      clearStoredTokenInfo();
+      stopTokenTimer();
+      return;
     }
+    console.log('Token encontrado, realizando consulta automática...');
+    consultarComToken(token);
+  }
+  // Ajusta o layout inicial (altura do container de novidades)
+  setTimeout(ajustarAlturaNovidades, 60);
+  // Ajusta visibilidade das tabs em mobile (esconde Horários/Novidades se necessário)
+  setTimeout(ajustarTabsMobileOcultar, 120);
 });
 
 // Botão de logout/apagar informações
 document.getElementById('logout-btn').addEventListener('click', () => {
-    localStorage.removeItem('sigaa_token');
-    sessionStorage.removeItem('sigaa_token');
-    location.reload();
+  clearStoredTokenInfo();
+  stopTokenTimer();
+  location.reload();
 });
 
 // Salva os dados para filtrar depois
@@ -427,6 +454,8 @@ function preencherTabelaNovidades(novidades) {
       tabela.style.display = 'none';
     }
   });
+  // Ajusta a altura do container de novidades agora que conteúdos mudaram
+  setTimeout(ajustarAlturaNovidades, 30);
 }
 
 // Controle de abas
@@ -443,6 +472,29 @@ document.querySelectorAll('.tab-button').forEach(button => {
   });
 });
 
+// Ativa uma aba pelo id (mesmo que o botão esteja escondido)
+function activateTab(tabId) {
+  try {
+    // Remove estado ativo de botões e conteúdos
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+
+    // Marca botão correspondente como ativo se existir
+    const btn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
+    if (btn) btn.classList.add('active');
+
+    // Mostra o conteúdo da aba
+    const content = document.getElementById(tabId);
+    if (content) {
+      content.classList.add('active');
+      // rola suavemente até o conteúdo se estiver fora da view
+      try { content.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { }
+    }
+  } catch (e) {
+    console.warn('Erro ao ativar aba', tabId, e);
+  }
+}
+
 function removerEstiloSemDados() {
   const homeContent = document.getElementById('home-content');
   const tabHome = document.getElementById('tab-home');
@@ -453,7 +505,20 @@ function removerEstiloSemDados() {
   if (msg) msg.remove();
   document.getElementById('dados-institucionais').style.display = 'block';
   document.getElementById('tabela-novidades-container').style.display = 'block';
-  document.getElementById('home-aviso').style.display = 'block';
+  // Só mostra o aviso se o usuário não escolheu 'não mostrar mais'
+  try {
+    const STORAGE_KEY = 'sigaa_nao_mostrar_aviso';
+    const aviso = document.getElementById('home-aviso');
+    if (aviso && localStorage.getItem(STORAGE_KEY) !== '1') {
+      aviso.style.display = 'block';
+    }
+  } catch (e) {
+    // silenciar erros de acesso ao localStorage
+    const aviso = document.getElementById('home-aviso');
+    if (aviso) aviso.style.display = 'block';
+  }
+  // Ajusta altura quando removemos o estilo sem-dados
+  setTimeout(ajustarAlturaNovidades, 40);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -574,11 +639,148 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
       dadosDiv.classList.toggle('expanded');
     }
   };
+  // Ajusta altura de novidades sempre que dados institucionais são renderizados
+  setTimeout(ajustarAlturaNovidades, 50);
+
+  // --- Ensure hover/size/content changes trigger ajustarAlturaNovidades ---
+  try {
+    if (!dadosDiv.dataset.__syncSetup) {
+      // mouseenter/mouseleave para atualizar imediatamente ao hover
+      dadosDiv.addEventListener('mouseenter', () => {
+        // pequeno atraso para dar tempo ao CSS de mostrar .extra-info
+        setTimeout(ajustarAlturaNovidades, 12);
+      });
+      dadosDiv.addEventListener('mouseleave', () => {
+        setTimeout(ajustarAlturaNovidades, 12);
+      });
+
+      // ResizeObserver para mudanças de layout/altura
+      if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => {
+          try { ajustarAlturaNovidades(); } catch (e) { /* ignore */ }
+        });
+        ro.observe(dadosDiv);
+        // guarda referência para possível limpeza futura
+        dadosDiv.__resizeObserver = ro;
+      }
+
+      // MutationObserver para mudanças de conteúdo/class (ex: toggle .expanded)
+      const mo = new MutationObserver(muts => {
+        for (const m of muts) {
+          if (m.type === 'attributes' || m.type === 'childList' || m.type === 'subtree') {
+            // delay curto para permitir reflow
+            setTimeout(ajustarAlturaNovidades, 8);
+            break;
+          }
+        }
+      });
+      mo.observe(dadosDiv, { attributes: true, childList: true, subtree: true });
+      dadosDiv.__mutationObserver = mo;
+
+      dadosDiv.dataset.__syncSetup = '1';
+    }
+  } catch (e) {
+    console.warn('Não foi possível configurar observers para dados-institucionais:', e);
+  }
+}
+
+// Ajusta a altura máxima do container de novidades com base na altura do formulário e dos dados institucionais
+function ajustarAlturaNovidades() {
+  try {
+    const form = document.getElementById('sigaa-form');
+    const dados = document.getElementById('dados-institucionais');
+    const container = document.getElementById('tabela-novidades-container');
+    if (!form || !dados || !container) return;
+    const formH = form.getBoundingClientRect().height || 0;
+    const dadosH = dados.getBoundingClientRect().height || 0;
+    const x = Math.round(formH + 22 + dadosH);
+    container.style.maxHeight = x + 'px';
+    container.style.overflow = 'auto';
+  } catch (e) {
+    console.warn('Erro ao ajustar altura de novidades:', e);
+  }
+}
+
+// Ajusta ao redimensionar a janela
+window.addEventListener('resize', () => {
+  ajustarAlturaNovidades();
+  ajustarLabelsTabsPorEmoji();
+  ajustarTabsMobileOcultar();
+});
+
+// Em mobile, se as tabs ocuparem mais de 2 linhas, esconder o botão 'Horários'.
+// Se ainda exceder 2 linhas, esconder também 'Novidades'.
+function ajustarTabsMobileOcultar() {
+  try {
+    const MOBILE_MAX = 1040;
+    const tabs = document.querySelector('.tabs');
+    if (!tabs) return;
+
+    // Em desktop, garante visibilidade padrão
+    if (window.innerWidth > MOBILE_MAX) {
+      const btnH = document.querySelector('.tab-button[data-tab="tab-horarios"]');
+      const btnN = document.querySelector('.tab-button[data-tab="tab-novidades"]');
+      if (btnH) btnH.style.display = '';
+      if (btnN) btnN.style.display = '';
+      // restaura label original da 'Tabela Simplificada' se foi alterada
+      const btnSimplificada = document.querySelector('.tab-button[data-tab="tab-simplificada"]');
+      if (btnSimplificada && btnSimplificada.dataset.origLabel) {
+        btnSimplificada.textContent = btnSimplificada.dataset.origLabel;
+      }
+      return;
+    }
+
+    // Mostra todos antes de medir
+    const allButtons = Array.from(tabs.querySelectorAll('.tab-button'));
+    allButtons.forEach(b => b.style.display = '');
+
+    // Conta linhas via posição Y
+    const lines = [];
+    allButtons.forEach(btn => {
+      const r = btn.getBoundingClientRect();
+      const y = Math.round(r.top);
+      if (!lines.includes(y)) lines.push(y);
+    });
+
+    if (lines.length <= 2) return;
+
+    // Esconde Horários primeiro
+    const btnHorarios = document.querySelector('.tab-button[data-tab="tab-horarios"]');
+    if (btnHorarios) btnHorarios.style.display = 'none';
+
+    // Se escondemos 'Horários', renomeia a 'Tabela Simplificada' para 'Horários' para preservar acesso
+    const btnSimplificada = document.querySelector('.tab-button[data-tab="tab-simplificada"]');
+    if (btnSimplificada) {
+      if (!btnSimplificada.dataset.origLabel) btnSimplificada.dataset.origLabel = btnSimplificada.textContent.trim();
+      btnSimplificada.textContent = 'Horários';
+    }
+
+    // Reconta linhas
+    const remaining = Array.from(tabs.querySelectorAll('.tab-button')).filter(b => b.style.display !== 'none');
+    const lines2 = [];
+    remaining.forEach(btn => {
+      const r = btn.getBoundingClientRect();
+      const y = Math.round(r.top);
+      if (!lines2.includes(y)) lines2.push(y);
+    });
+
+    if (lines2.length <= 2) return;
+
+    // Se ainda passar, esconde Novidades
+    const btnNovidades = document.querySelector('.tab-button[data-tab="tab-novidades"]');
+    if (btnNovidades) btnNovidades.style.display = 'none';
+
+  } catch (e) {
+    console.warn('Erro ao ajustar visibilidade das tabs mobile:', e);
+  }
 }
 
 // Aviso colapsável, timer e preferências
-(function () {
+// Aviso colapsável, timer e preferências (executa após DOMContentLoaded)
+window.addEventListener('DOMContentLoaded', () => {
   const aviso = document.getElementById('home-aviso');
+  if (!aviso) return; // nada a fazer se não existe
+
   const avisoContent = document.getElementById('home-aviso-content');
   const fecharBtn = document.getElementById('fechar-aviso');
   const naoMostrarBtn = document.getElementById('nao-mostrar-aviso');
@@ -596,46 +798,97 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
     const tabHome = document.getElementById('tab-home');
     if (tabHome && aviso) {
       tabHome.appendChild(aviso); // move para o fim da tab
-      aviso.style.marginTop = "24px";
+      aviso.style.marginTop = '24px';
     }
   }, 30000);
 
-  // Começa collapsed por padrão
-  aviso.classList.add('home-aviso-collapsed');
+  // Começa collapsed por padrão (só se suportado)
+  try { aviso.classList.add('home-aviso-collapsed'); } catch (e) { /* ignore */ }
 
   // Colapsar/expandir ao clicar (exceto nos botões)
   aviso.addEventListener('click', function (e) {
     if (e.target === fecharBtn || e.target === naoMostrarBtn) return;
-    aviso.classList.toggle('home-aviso-collapsed');
+    try { aviso.classList.toggle('home-aviso-collapsed'); } catch (e) { /* ignore */ }
   });
 
   // Expande ao hover (desktop)
   aviso.addEventListener('mouseenter', function () {
-    if (window.matchMedia("(hover: hover)").matches) {
-      aviso.classList.remove('home-aviso-collapsed');
+    if (window.matchMedia('(hover: hover)').matches) {
+      try { aviso.classList.remove('home-aviso-collapsed'); } catch (e) { }
     }
   });
   aviso.addEventListener('mouseleave', function () {
-    if (window.matchMedia("(hover: hover)").matches) {
-      aviso.classList.add('home-aviso-collapsed');
+    if (window.matchMedia('(hover: hover)').matches) {
+      try { aviso.classList.add('home-aviso-collapsed'); } catch (e) { }
     }
   });
 
   // Botão fechar: esconde só até recarregar
-  fecharBtn.addEventListener('click', function (e) {
-    e.stopPropagation();
-    aviso.style.display = 'none';
-    clearTimeout(timerId);
-  });
+  if (fecharBtn) {
+    fecharBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      aviso.style.display = 'none';
+      clearTimeout(timerId);
+    });
+  }
 
   // Botão não mostrar mais: nunca mais mostra
-  naoMostrarBtn.addEventListener('click', function (e) {
+  if (naoMostrarBtn) {
+    naoMostrarBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      try { localStorage.setItem(STORAGE_KEY, '1'); } catch (err) { console.warn('Erro ao salvar preferência:', err); }
+      aviso.style.display = 'none';
+      clearTimeout(timerId);
+    });
+  }
+});
+
+// --- Mobile FAB (floating action button) behavior ---
+document.addEventListener('DOMContentLoaded', () => {
+  const fabToggle = document.getElementById('mobile-fab-toggle');
+  const fabMenu = document.getElementById('mobile-fab-menu');
+  const fab = document.getElementById('mobile-fab');
+  if (!fabToggle || !fabMenu || !fab) return; // nada a fazer
+
+  function closeFab() {
+    fabMenu.classList.remove('open');
+    fab.setAttribute('aria-hidden', 'true');
+    fabMenu.setAttribute('aria-hidden', 'true');
+  }
+  function openFab() {
+    fabMenu.classList.add('open');
+    fab.setAttribute('aria-hidden', 'false');
+    fabMenu.setAttribute('aria-hidden', 'false');
+  }
+
+  fabToggle.addEventListener('click', (e) => {
     e.stopPropagation();
-    localStorage.setItem(STORAGE_KEY, '1');
-    aviso.style.display = 'none';
-    clearTimeout(timerId);
+    if (fabMenu.classList.contains('open')) closeFab(); else openFab();
   });
-})();
+
+  // Ações dos itens
+  fabMenu.addEventListener('click', (e) => {
+    const btn = e.target.closest('.fab-item');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'abrir-horarios-completos') {
+      // ativa diretamente a aba completa de horários
+      activateTab('tab-horarios');
+    } else if (action === 'abrir-novidades') {
+      // ativa diretamente a aba de novidades
+      activateTab('tab-novidades');
+    }
+    closeFab();
+  });
+
+  // Fecha se clicar fora
+  document.addEventListener('click', (e) => {
+    if (!fab.contains(e.target)) closeFab();
+  });
+
+  // Fecha em resize para evitar menus abertos em desktop
+  window.addEventListener('resize', () => closeFab());
+});
 
 let notasGlobais = [];
 
@@ -713,3 +966,234 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
     wrapper.innerHTML = `<div style="color:#888;">Nenhuma nota encontrada para o filtro selecionado.</div>`;
   }
 }
+
+// ---------------------- Token helpers & UI timer ----------------------
+let __tokenTimerId = null;
+
+// ---------------------- Scrape counter ----------------------
+let __scrapeCounterInterval = null;
+let __scrapeCounterStartTime = null;
+let __elapsedSinceInterval = null;
+
+function formatTimeSince(ms) {
+  if (ms < 1000) return 'agora';
+  const totalSeconds = Math.floor(ms / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days > 0) return `há ${days}d ${hours}h`;
+  if (hours > 0) return `há ${hours}h ${minutes}m`;
+  if (minutes > 0) return `há ${minutes}m ${seconds}s`;
+  return `há ${seconds}s`;
+}
+
+function stopElapsedSinceUpdate() {
+  if (__elapsedSinceInterval) {
+    clearInterval(__elapsedSinceInterval);
+    __elapsedSinceInterval = null;
+  }
+}
+
+function startElapsedSinceUpdate(timestamp) {
+  stopElapsedSinceUpdate();
+  const el = document.getElementById('scrape-timer');
+  if (!el) return;
+  el.dataset.lastUpdated = String(timestamp);
+  // Atualiza imediatamente
+  el.textContent = `Atualizado ${formatTimeSince(Date.now() - timestamp)}`;
+  __elapsedSinceInterval = setInterval(() => {
+    const last = parseInt(el.dataset.lastUpdated || '0', 10) || 0;
+    el.textContent = `Atualizado ${formatTimeSince(Date.now() - last)}`;
+  }, 1000);
+}
+
+function startScrapeCounter() {
+  if (__scrapeCounterInterval) return; // já rodando
+  // se havia um contador de tempo desde a última atualização, pare-o
+  stopElapsedSinceUpdate();
+  __scrapeCounterStartTime = Date.now();
+  const form = document.getElementById('sigaa-form');
+  if (!form) return;
+  let el = document.getElementById('scrape-timer');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'scrape-timer';
+    el.style.cssText = 'margin-top:8px;color:#555;font-size:0.95em;';
+    form.appendChild(el);
+  }
+  el.style.opacity = '1';
+  el.textContent = 'Consultando... 0s';
+  __scrapeCounterInterval = setInterval(() => {
+    const seconds = Math.floor((Date.now() - __scrapeCounterStartTime) / 1000) + 1;
+    el.textContent = `Consultando... ${seconds}s`;
+  }, 1000);
+}
+
+function stopScrapeCounter(success = true, durationSec = null) {
+  if (__scrapeCounterInterval) {
+    clearInterval(__scrapeCounterInterval);
+    __scrapeCounterInterval = null;
+  }
+  const el = document.getElementById('scrape-timer');
+  if (!el) return;
+  if (success) {
+    const duration = durationSec || Math.max(1, Math.floor((Date.now() - (__scrapeCounterStartTime || Date.now())) / 1000));
+    // Em vez de mostrar duração fixa, guarda o timestamp de atualização e inicia contador "há X"
+    const updatedAt = Date.now();
+    el.classList.remove('scrape-error');
+    el.classList.add('scrape-success');
+    // Registra o momento da atualização e inicia contador que mostra 'Atualizado há X'
+    startElapsedSinceUpdate(updatedAt);
+    // adicionar atributo title com duração da operação
+    el.title = `Atualizado (duração do scraping: ${duration}s)`;
+  } else {
+    el.textContent = 'Erro ao atualizar informações';
+    el.classList.add('scrape-error');
+    // Remove mensagem de erro após alguns segundos
+    setTimeout(() => { try { if (el && el.parentNode) el.parentNode.removeChild(el); } catch (e) {} }, 4000);
+  }
+}
+
+
+function parseJwtExpiry(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (payload && payload.exp) {
+      // exp em segundos desde epoch
+      return payload.exp * 1000;
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
+
+function saveTokenWithExpiry(token, storageType = 'local') {
+  // Tenta extrair expiry do JWT
+  let expiresAt = parseJwtExpiry(token);
+
+  // Se backend retornar expiresIn (não presente atualmente), você pode
+  // adaptar para usar esse valor. Aqui assume expiry embutido no JWT.
+
+  const info = { token, expiresAt };
+  if (storageType === 'session') {
+    sessionStorage.setItem('sigaa_token', token);
+    sessionStorage.setItem('sigaa_token_info', JSON.stringify(info));
+    localStorage.removeItem('sigaa_token');
+    localStorage.removeItem('sigaa_token_info');
+  } else {
+    localStorage.setItem('sigaa_token', token);
+    localStorage.setItem('sigaa_token_info', JSON.stringify(info));
+    sessionStorage.removeItem('sigaa_token');
+    sessionStorage.removeItem('sigaa_token_info');
+  }
+
+  // Inicia/atualiza timer de exibição do token
+  startTokenTimer();
+}
+
+function getTokenInfo() {
+  const infoLocal = localStorage.getItem('sigaa_token_info');
+  if (infoLocal) {
+    try { return JSON.parse(infoLocal); } catch (e) { /* fallthrough */ }
+  }
+  const infoSession = sessionStorage.getItem('sigaa_token_info');
+  if (infoSession) {
+    try { return JSON.parse(infoSession); } catch (e) { /* fallthrough */ }
+  }
+  return null;
+}
+
+function clearStoredTokenInfo() {
+  localStorage.removeItem('sigaa_token');
+  localStorage.removeItem('sigaa_token_info');
+  sessionStorage.removeItem('sigaa_token');
+  sessionStorage.removeItem('sigaa_token_info');
+}
+
+function ensureTokenStatusElement() {
+  let el = document.getElementById('token-status');
+  if (!el) {
+    // tenta inserir em header ou home-content, senão no body
+    const container = document.getElementById('home-content') || document.body;
+    el = document.createElement('div');
+    el.id = 'token-status';
+    el.style.cssText = 'font-size:0.9em;color:#444;margin:8px 0;padding:6px 10px;border-radius:6px;background:#f7f7f7;display:inline-block;';
+    container.insertBefore(el, container.firstChild);
+  }
+  return el;
+}
+
+function formatTimeRemaining(ms) {
+  if (ms <= 0) return 'expirado';
+  const totalSeconds = Math.floor(ms / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
+function updateTokenStatusUI() {
+  const info = getTokenInfo();
+  const el = ensureTokenStatusElement();
+  if (!info || !info.token) {
+    el.textContent = 'Sem token salvo';
+    return;
+  }
+
+  if (!info.expiresAt) {
+    el.textContent = 'Token presente (expiração desconhecida)';
+    return;
+  }
+
+  const now = Date.now();
+  const remaining = info.expiresAt - now;
+  if (remaining <= 0) {
+    el.textContent = 'Token expirado';
+    // opcional: remover token expirado automaticamente
+    // clearStoredTokenInfo();
+    // stopTokenTimer();
+    return;
+  }
+
+  el.textContent = `Token válido por: ${formatTimeRemaining(remaining)}`;
+}
+
+function startTokenTimer() {
+  stopTokenTimer();
+  updateTokenStatusUI();
+  // Atualiza a cada 1s para contagem regressiva; pode ser aumentado
+  __tokenTimerId = setInterval(() => {
+    const info = getTokenInfo();
+    if (!info || !info.expiresAt) {
+      updateTokenStatusUI();
+      return;
+    }
+    const remaining = info.expiresAt - Date.now();
+    if (remaining <= 0) {
+      updateTokenStatusUI();
+      stopTokenTimer();
+      // notifica o usuário visualmente
+      const el = ensureTokenStatusElement();
+      el.textContent = 'Token expirado — faça login novamente';
+      return;
+    }
+    updateTokenStatusUI();
+  }, 1000);
+}
+
+function stopTokenTimer() {
+  if (__tokenTimerId) {
+    clearInterval(__tokenTimerId);
+    __tokenTimerId = null;
+  }
+}
+
+// ---------------------- End token helpers ----------------------
