@@ -83,6 +83,22 @@ button:hover {
   transition: background-color 0.2s, color 0.2s;
 }
 
+/* Remove blue tap highlight and text selection on touch devices */
+button, .tab-button, .fab-toggle, .fab-item, #fechar-aviso, #nao-mostrar-aviso {
+  -webkit-tap-highlight-color: rgba(0,0,0,0); /* iOS/Android WebKit */
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none; /* prevent selection on double-tap */
+  touch-action: manipulation; /* help prevent default selection gestures */
+}
+
+/* Remove default focus outline/box-shadow when tapping on mobile; keep accessibility via :focus-visible if desired */
+button:focus, .tab-button:focus, .fab-toggle:focus, .fab-item:focus, #fechar-aviso:focus, #nao-mostrar-aviso:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .tab-content {
   display: none;
   margin-top: 20px;
@@ -291,6 +307,10 @@ button:hover {
   }
   .fab-item:hover {
     background: rgba(255,255,255,0.06);
+  }
+  /* reforça remoção de destaque em dispositivos touch dentro do media query mobile */
+  .fab-toggle, .fab-item, .tab-button, button {
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
   }
 }
 
