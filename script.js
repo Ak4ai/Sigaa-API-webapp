@@ -1,3 +1,54 @@
+// Importa a função de exportação do boletim
+// <script src="boletim.js"></script> deve estar incluído no index.html antes de script.js para garantir que a função esteja disponível
+
+document.addEventListener('DOMContentLoaded', function () {
+  var btnExportar = document.getElementById('exportar-pdf-btn');
+  if (btnExportar) {
+    btnExportar.addEventListener('click', function () {
+      // notasGlobais deve estar disponível no escopo global
+      if (typeof exportarBoletimPDF === 'function' && typeof notasGlobais !== 'undefined') {
+        // Busca dados institucionais do DOM, se possível, senão pega do localStorage
+        let dadosInstitucionais = null;
+        try {
+          const dadosDiv = document.getElementById('dados-institucionais');
+          if (dadosDiv && dadosDiv.innerText) {
+            // Extrai os dados exibidos no DOM
+            const linhas = Array.from(dadosDiv.querySelectorAll('li'));
+            dadosInstitucionais = {};
+            linhas.forEach(li => {
+              const txt = li.innerText;
+              const idx = txt.indexOf(':');
+              if (idx > 0) {
+                const chave = txt.slice(0, idx).trim();
+                const valor = txt.slice(idx + 1).trim();
+                dadosInstitucionais[chave] = valor;
+              }
+            });
+          }
+        } catch (e) { dadosInstitucionais = null; }
+        // Se não encontrou ou encontrou poucos campos, tenta pegar do localStorage
+        if (!dadosInstitucionais || Object.keys(dadosInstitucionais).length < 4) {
+          try {
+            const dadosSalvos = localStorage.getItem('sigaaUltimaConsulta');
+            if (dadosSalvos) {
+              const data = JSON.parse(dadosSalvos);
+              if (data && data.dadosInstitucionais) {
+                dadosInstitucionais = { ...data.dadosInstitucionais };
+                // Adiciona o semestre do primeiro horário simplificado, se existir
+                if (data.horariosSimplificados && data.horariosSimplificados.length > 0) {
+                  dadosInstitucionais['Semestre'] = data.horariosSimplificados[0].semestre;
+                }
+              }
+            }
+          } catch (e) { /* ignora erro */ }
+        }
+        exportarBoletimPDF(notasGlobais, dadosInstitucionais);
+      } else {
+        alert('Notas não encontradas ou função de exportação não disponível.');
+      }
+    });
+  }
+});
 document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -940,10 +991,42 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
         </thead>
         <tbody>`;
 
+      // Variáveis para calcular totais
+      let notaTotalSomada = 0;
+      let somaNotasAluno = 0;
+      let somaPesos = 0;
+
       notas.avaliacoes.forEach((av, idx) => {
         let idxHeader = notas.headers.findIndex(h => h === av.abrev);
         if (idxHeader === -1) idxHeader = idx;
         let suaNota = (linhaAluno && linhaAluno[idxHeader + 2]) ? linhaAluno[idxHeader + 2] : '';
+        
+        // Calcula totais para o rodapé
+        const notaTotal = parseFloat(av.nota) || 0;
+        let peso = parseFloat(av.peso) || 1;
+        const notaAluno = parseFloat(suaNota.replace(',', '.')) || 0; // Converte vírgula para ponto
+        
+        // Lógica inteligente para pesos
+        let notaCalculada = 0;
+        if (peso === 1) {
+          // Peso igual a 1: mantém o valor original da nota
+          notaCalculada = notaAluno;
+        } else if (peso > 1) {
+          // Peso maior que 1: trata como porcentagem
+          notaCalculada = (notaAluno * peso) / 100;
+        } else {
+          // Peso menor que 1: multiplica diretamente (fração)
+          notaCalculada = notaAluno * peso;
+        }
+        
+        notaTotalSomada += notaTotal;
+        somaPesos += peso;
+        
+        // Só conta no cálculo se o aluno tem nota lançada
+        if (suaNota && suaNota.trim() !== '' && !isNaN(notaAluno)) {
+          somaNotasAluno += notaCalculada;
+        }
+        
         html += `<tr>
           <td>${disciplina}</td>
           <td>${av.abrev}</td>
@@ -953,6 +1036,15 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
           <td>${suaNota}</td>
         </tr>`;
       });
+
+      // Adiciona linha de rodapé com totais
+      html += `<tr class="tabela-notas-rodape">
+        <td><strong>${disciplina}</strong></td>
+        <td colspan="2"><strong>Totais</strong></td>
+        <td><strong>${notaTotalSomada.toFixed(2)}</strong></td>
+        <td><strong>${somaPesos.toFixed(2)}</strong></td>
+        <td><strong>${somaNotasAluno.toFixed(2)}</strong></td>
+      </tr>`;
 
       html += `</tbody></table></div>`;
     } else {

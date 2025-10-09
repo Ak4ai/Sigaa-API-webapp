@@ -300,19 +300,33 @@ button:hover {
   border-radius: 8px;
 }
 
+.tabela-notas-rodape {
+  background-color: #f5f5f5;
+  border-top: 2px solid #094384;
+}
+
+.tabela-notas-rodape td {
+  font-weight: bold;
+  padding: 8px 12px;
+}
+
 @media (min-width: 1040px) {
   #home-content {
-    display: grid;
+    display: flex;
     grid-template-columns: 340px 1fr;
     grid-template-rows: auto 1fr;
     grid-template-areas:
       "form novidades"
       "dados novidades";
     gap: 24px 32px;
-    align-items: start;
+    align-items: center;
     justify-items: stretch;
     margin-top: 24px;
     height: 100%; /* Garante altura total do grid */
+    justify-content: center;
+    align-content: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
   }
   #sigaa-form {
     grid-area: form;
@@ -331,9 +345,7 @@ button:hover {
 
 @media (min-width: 1040px) {
   #tabela-novidades-container {
-    grid-area: novidades;
-    align-self: stretch;
-    height: auto;
+    align-self: center;
     overflow: auto;
     max-height: 491px;
     transition: max-height 0.3s;
@@ -592,6 +604,7 @@ input#manter-logado {
   overflow: hidden;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   transition: box-shadow 0.2s;
+  transition: max-height 0.3s;
   cursor: pointer;
   position: relative;
   cursor: pointer;
@@ -641,6 +654,7 @@ input#manter-logado {
   #dados-institucionais:hover .extra-info {
     display: block;
     animation: fadeIn 0.2s;
+    transition: all 0.3s;
   }
 }
 
@@ -657,7 +671,8 @@ input#manter-logado {
   top: 18px;
   font-size: 13px;
   color: #888;
-  transition: transform 0.2s;
+  transition: transform 0.3s;
+  transition: max-height 0.3s;
 }
 
 #dados-institucionais.expanded::after {
