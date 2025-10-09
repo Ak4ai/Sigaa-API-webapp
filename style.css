@@ -5,6 +5,26 @@ body {
   font-size: 16px;
 }
 
+/* Remove default blue selection background across the app */
+::selection {
+  background: transparent;
+  color: inherit;
+}
+
+/* Prevent tap highlight on mobile for the whole document */
+html, body {
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+
+/* Keep keyboard accessibility: show visible focus only for keyboard users */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 3px solid #1976d2;
+  outline-offset: 2px;
+}
+
 form {
   margin-bottom: 20px;
   background: white;
