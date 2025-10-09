@@ -5,11 +5,7 @@ body {
   font-size: 16px;
 }
 
-/* Remove default blue selection background across the app */
-::selection {
-  background: transparent;
-  color: inherit;
-}
+/* Keep default text selection color for content; disable selection visuals on interactive elements below */
 
 /* Prevent tap highlight on mobile for the whole document */
 html, body {
@@ -117,6 +113,12 @@ button, .tab-button, .fab-toggle, .fab-item, #fechar-aviso, #nao-mostrar-aviso {
 button:focus, .tab-button:focus, .fab-toggle:focus, .fab-item:focus, #fechar-aviso:focus, #nao-mostrar-aviso:focus {
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* Prevent ::selection background on interactive elements (buttons/tabs/FAB) but keep normal selection in text content */
+button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::selection, #fechar-aviso::selection, #nao-mostrar-aviso::selection {
+  background: transparent;
+  color: inherit;
 }
 
 .tab-content {
@@ -327,6 +329,25 @@ button:focus, .tab-button:focus, .fab-toggle:focus, .fab-item:focus, #fechar-avi
   }
   .fab-item:hover {
     background: rgba(255,255,255,0.06);
+  }
+  /* Touch feedback: provide a subtle 'pressed' state on touch devices
+     without changing desktop hover behavior. Uses :active inside a
+     touch-only media query so keyboard/desktop hovers are unaffected. */
+  @media (hover: none) and (pointer: coarse) {
+    button, .tab-button, .fab-toggle, .fab-item, #fechar-aviso, #nao-mostrar-aviso {
+      transition: background-color 160ms ease, transform 120ms ease;
+      -webkit-tap-highlight-color: rgba(0,0,0,0);
+    }
+
+    button:active, .tab-button:active, .fab-toggle:active, .fab-item:active, #fechar-aviso:active, #nao-mostrar-aviso:active {
+      background-color: rgba(0,0,0,0.08); /* subtle darken on press */
+      transform: translateY(1px) scale(0.998);
+    }
+
+    /* For colored buttons like the FAB, slightly reduce brightness on press */
+    .fab-toggle:active {
+      filter: brightness(0.92);
+    }
   }
   /* reforça remoção de destaque em dispositivos touch dentro do media query mobile */
   .fab-toggle, .fab-item, .tab-button, button {
