@@ -1209,12 +1209,27 @@ function clearStoredTokenInfo() {
 function ensureTokenStatusElement() {
   let el = document.getElementById('token-status');
   if (!el) {
-    // tenta inserir em header ou home-content, senão no body
-    const container = document.getElementById('home-content') || document.body;
+    // tenta inserir após o header do conteúdo da home (abaixo do formulário)
+    const homeHeader = document.getElementById('home-content-header');
+    const homeContent = document.getElementById('home-content');
+    const container = homeHeader || homeContent || document.body;
     el = document.createElement('div');
     el.id = 'token-status';
+    // mantemos estilo inline mínimo para evitar regressões; prefer class if needed
     el.style.cssText = 'font-size:0.9em;color:#444;margin:8px 0;padding:6px 10px;border-radius:6px;background:#f7f7f7;display:inline-block;';
-    container.insertBefore(el, container.firstChild);
+    if (homeHeader && homeHeader.parentNode) {
+      // inserir logo após o header dentro de home-content
+      if (homeHeader.nextSibling) {
+        homeHeader.parentNode.insertBefore(el, homeHeader.nextSibling);
+      } else {
+        homeHeader.parentNode.appendChild(el);
+      }
+    } else if (homeContent) {
+      // anexa ao final do home-content
+      homeContent.appendChild(el);
+    } else {
+      container.insertBefore(el, container.firstChild);
+    }
   }
   return el;
 }
@@ -1289,3 +1304,57 @@ function stopTokenTimer() {
 }
 
 // ---------------------- End token helpers ----------------------
+// ...existing code...
+function ajustarMaxHeightNovidades() {
+  const loading = document.getElementById('loading');
+  const novidades = document.getElementById('tabela-novidades-container');
+  if (!novidades) return;
+  if (window.innerWidth < 1040) return; // só aplica em desktop
+
+  let maxHeight = 486;
+  let maxHeightExpanded = 871;
+
+  const dados = document.getElementById('dados-institucionais');
+  const expanded = dados && dados.classList.contains('expanded');
+  const hovered = dados && dados.matches(':hover');
+
+  if (expanded || hovered) {
+    maxHeight = maxHeightExpanded;
+  }
+
+  // Se loading está escondido, diminui 19px; se visível, soma 19px
+  if (loading && loading.style.display === 'none') {
+    novidades.style.maxHeight = (maxHeight - 19) + 'px';
+  } else {
+    novidades.style.maxHeight = maxHeight + 'px';
+  }
+}
+
+// Atualiza novidades ao passar mouse em dados institucionais
+const dadosDiv = document.getElementById('dados-institucionais');
+if (dadosDiv) {
+  dadosDiv.addEventListener('mouseenter', ajustarMaxHeightNovidades);
+  dadosDiv.addEventListener('mouseleave', ajustarMaxHeightNovidades);
+}
+// ...existing code...
+
+// Sempre que mostrar/esconder o loading, chame ajustarMaxHeightNovidades()
+function showLoading() {
+  document.getElementById('loading').style.display = '';
+  ajustarMaxHeightNovidades();
+}
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+  ajustarMaxHeightNovidades();
+}
+
+// Garante ajuste automático mesmo se display mudar por outros meios
+const loading = document.getElementById('loading');
+if (loading) {
+  const observer = new MutationObserver(ajustarMaxHeightNovidades);
+  observer.observe(loading, { attributes: true, attributeFilter: ['style'] });
+}
+
+// Também ajusta ao redimensionar ou carregar a página
+window.addEventListener('resize', ajustarMaxHeightNovidades);
+window.addEventListener('DOMContentLoaded', ajustarMaxHeightNovidades);
