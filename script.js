@@ -115,33 +115,26 @@ async function consultarComToken(token) {
             signal: controller.signal
         });
 
-        // Primeiro, esperamos os headers para pegar o X-Queue-Id
-        // Porém fetch só retorna quando o servidor envia a resposta completa
-        // Então vamos checar a fila em paralelo com um timeout inicial
-        let queueId = null;
+        // Polling de fila — o fetch /api/scraper fica bloqueado até o backend
+        // processar (pode levar minutos na fila). Enquanto isso, fazemos polling
+        // do status da fila para exibir a posição.
+        // Como o X-Queue-Id só vem na resposta final, não podemos usá-lo para polling.
+        // Em vez disso, checamos o estado geral da fila (processing + queueLength).
 
-        // Faz um pre-check na fila para saber se há espera antes mesmo do fetch retornar
-        try {
-            const preCheck = await fetch(`${API_BASE}/api/queue-status?id=0`, { method: 'GET' });
-            const preData = await preCheck.json();
-            if (preData.processing || preData.queueLength > 0) {
-                // Há fila! Mostra mensagem e inicia polling
-                const totalAhead = preData.queueLength + (preData.processing ? 1 : 0);
-                updateQueueDisplay(totalAhead, preData.avgTimeMs);
-            }
-        } catch (e) { /* sem fila info — ok */ }
+        // Mostra display de fila imediatamente (o fetch pode demorar)
+        updateQueueDisplay(-1, 60000); // -1 = "entrando na fila..."
 
         // Inicia polling da fila a cada 2s
         queuePollInterval = setInterval(async () => {
             try {
-                const statusResp = await fetch(`${API_BASE}/api/queue-status?id=${queueId || 0}`, { method: 'GET' });
+                const statusResp = await fetch(`${API_BASE}/api/queue-status?id=0`, { method: 'GET' });
                 const statusData = await statusResp.json();
-                const posAtual = statusData.position;
-                if (posAtual > 0) {
-                    updateQueueDisplay(posAtual, statusData.avgTimeMs);
-                } else if (statusData.processing && statusData.queueLength === 0) {
-                    updateQueueDisplay(0, statusData.avgTimeMs); // sendo processado agora
+                // Mostra fila se há alguém processando ou esperando
+                if (statusData.processing || statusData.queueLength > 0) {
+                    const totalAhead = statusData.queueLength + (statusData.processing ? 1 : 0);
+                    updateQueueDisplay(totalAhead, statusData.avgTimeMs);
                 } else {
+                    // Ninguém na fila e ninguém processando — esconde
                     hideQueueDisplay();
                 }
             } catch (e) { /* ignora erros de polling */ }
@@ -152,9 +145,6 @@ async function consultarComToken(token) {
         // Para o polling ao receber resposta
         if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
         hideQueueDisplay();
-
-        // Captura o queue ID (para referência)
-        queueId = response.headers.get('X-Queue-Id');
 
         const fim = performance.now();
         const duracaoSegundos = ((fim - inicio) / 1000).toFixed(2);
@@ -1498,9 +1488,13 @@ function updateQueueDisplay(position, avgTimeMs) {
 
     const avgSec = Math.round((avgTimeMs || 60000) / 1000);
 
-    if (position === 0) {
+    if (position === -1) {
         el.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ff9800" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ffa000" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <span><b>Conectando à fila...</b></span>`;
+    } else if (position <= 1) {
+        el.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#4caf50" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
             <span><b>Sua consulta está sendo processada agora...</b> <span style="color:#999">~${avgSec}s por consulta</span></span>`;
     } else {
         const waitSec = avgSec * position;
