@@ -366,10 +366,9 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   const homeAviso = document.getElementById('home-aviso');
   if (homeAviso) homeAviso.style.display = 'none';
 
-  // 16. Esconde tabs que não sejam Home
-  document.querySelectorAll('.tabs .tab-button').forEach(btn => {
-    if (btn.getAttribute('data-tab') !== 'tab-home') btn.style.display = 'none';
-  });
+  // 16. Esconde a barra de tabs inteira
+  const tabsBar = document.querySelector('.tabs');
+  if (tabsBar) tabsBar.style.display = 'none';
 });
 
 // Salva os dados para filtrar depois
@@ -975,8 +974,9 @@ function removerEstiloSemDados() {
   // Ajusta altura quando removemos o estilo sem-dados
   setTimeout(ajustarAlturaNovidades, 40);
 
-  // Mostra todas as tabs novamente
-  document.querySelectorAll('.tabs .tab-button').forEach(btn => btn.style.display = '');
+  // Mostra a barra de tabs novamente
+  const tabsBar = document.querySelector('.tabs');
+  if (tabsBar) tabsBar.style.display = '';
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -1000,10 +1000,9 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dados-institucionais').style.display = 'none';
     document.getElementById('tabela-novidades-container').style.display = 'none';
     document.getElementById('home-aviso').style.display = 'none';
-    // Esconde tabs que não sejam Home
-    document.querySelectorAll('.tabs .tab-button').forEach(btn => {
-      if (btn.getAttribute('data-tab') !== 'tab-home') btn.style.display = 'none';
-    });
+    // Esconde a barra de tabs inteira
+    const tabsBar = document.querySelector('.tabs');
+    if (tabsBar) tabsBar.style.display = 'none';
     return; // Não tenta preencher tabelas
   }
 
