@@ -862,8 +862,24 @@ span#fechar-aviso-span {
   border: 1px dashed #b2dfdb;
   border-radius: 10px;
   box-shadow: none;
-  padding: 48px 16px 32px 16px;
-  margin-top: 32px;
+  padding: 32px 16px 32px 16px;
+  margin: calc(32px - 1.34em);
+}
+
+/* Mobile: sem-dados ocupa tela toda */
+@media (max-width: 1040px) {
+  #tab-home.sem-dados,
+  #home-content.sem-dados {
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-width: unset;
+    width: 100%;
+    margin: 0;
+    padding: 32px 16px;
+    border: none;
+    border-radius: 0;
+    box-sizing: border-box;
+  }
 }
 
 #tab-home.sem-dados .mensagem-sem-dados,
