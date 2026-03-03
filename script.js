@@ -123,10 +123,12 @@ async function consultarComToken(token) {
 
         // Polling da fila a cada 2s usando clientId para posição exata
         // NUNCA esconde o display — só atualiza. O hide é feito no finally.
+        console.log(`[FILA] clientId deste request: ${clientId}`);
         queuePollInterval = setInterval(async () => {
             try {
                 const statusResp = await fetch(`${API_BASE}/api/queue-status?clientId=${clientId}`, { method: 'GET' });
                 const statusData = await statusResp.json();
+                console.log(`[FILA] poll response:`, statusData);
                 if (statusData.position > 0) {
                     // position = posição exata deste cliente na fila
                     updateQueueDisplay(statusData.position, statusData.avgTimeMs);
