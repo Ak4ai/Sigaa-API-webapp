@@ -132,6 +132,7 @@ async function consultarComToken(token) {
             renderizarDadosInstitucionais(inst, data.horariosSimplificados[0]?.semestre, duracaoSegundos);
         }
 
+        horariosGlobais = data.horariosSimplificados || [];
         preencherTabelaSimplificada(data.horariosSimplificados);
         preencherTabelaDetalhada(data.horariosDetalhados);
 
@@ -373,6 +374,240 @@ document.getElementById('select-disciplina-notas').addEventListener('change', fu
 });
 
 // Função para preencher a aba de horários simplificados
+// ─── Exportação Google Calendar (.ics) ────────────────────────────────────
+// ─── Abrir no Google Calendar (sem importar arquivo) ─────────────────────
+function abrirNoGoogleCalendar() {
+    if (!horariosGlobais || horariosGlobais.length === 0) {
+        alert('Nenhum horário disponível. Faça o scraping primeiro.');
+        return;
+    }
+
+    const diasSemanaNum = {
+        'Domingo': 0, 'Segunda-feira': 1, 'Terça-feira': 2,
+        'Quarta-feira': 3, 'Quinta-feira': 4, 'Sexta-feira': 5, 'Sábado': 6
+    };
+    const diasIcal = {
+        'Segunda-feira': 'MO', 'Terça-feira': 'TU', 'Quarta-feira': 'WE',
+        'Quinta-feira': 'TH', 'Sexta-feira': 'FR', 'Sábado': 'SA'
+    };
+
+    const semestre = horariosGlobais[0]?.semestre || '';
+    const anoBase = semestre.split('.')[0] || new Date().getFullYear();
+    const dataFim = semestre.includes('.2') ? `${anoBase}1130T030000Z` : `${anoBase}0731T030000Z`;
+
+    function proximaOcorrencia(diaNome) {
+        const hoje = new Date();
+        const alvo = diasSemanaNum[diaNome];
+        let diff = alvo - hoje.getDay();
+        if (diff <= 0) diff += 7;
+        const d = new Date(hoje);
+        d.setDate(hoje.getDate() + diff);
+        return d;
+    }
+
+    // Formato UTC para URL do Google Calendar (BRT = UTC-3)
+    // Usa Date.UTC() diretamente para evitar interferência do fuso local do computador
+    function toGCalUTC(data, horaStr) {
+        const [h, m] = horaStr.split(':').map(Number);
+        const p = n => String(n).padStart(2, '0');
+        // Converte BRT → UTC somando 3h usando Date.UTC (independente do fuso local)
+        const dt = new Date(Date.UTC(data.getFullYear(), data.getMonth(), data.getDate(), h + 3, m, 0));
+        return `${dt.getUTCFullYear()}${p(dt.getUTCMonth()+1)}${p(dt.getUTCDate())}T${p(dt.getUTCHours())}${p(dt.getUTCMinutes())}00Z`;
+    }
+
+    // Monta links e exibe modal
+    const links = horariosGlobais.map(({ disciplina, turma, dia, horário }) => {
+        const [inicio, fim] = horário.split('-');
+        const dataBase = proximaOcorrencia(dia);
+        const dtStart = toGCalUTC(dataBase, inicio);
+        const dtEnd   = toGCalUTC(dataBase, fim);
+        const titulo  = encodeURIComponent(disciplina);
+        const detalhe = encodeURIComponent(`Turma/Sala: ${turma}\nHorario: ${horário}`);
+        const local   = encodeURIComponent(`CEFET-MG - ${turma}`);
+        const rrule   = encodeURIComponent(`RRULE:FREQ=WEEKLY;BYDAY=${diasIcal[dia]};UNTIL=${dataFim}`);
+        // crm=AVAILABLE = sem ocupar agenda; sem parâmetro de notificação (Google não suporta via URL)
+        const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titulo}&dates=${dtStart}/${dtEnd}&details=${detalhe}&location=${local}&recur=${rrule}&crm=AVAILABLE&sf=true&output=xml`;
+        return { disciplina, turma, dia, horário, url };
+    });
+
+    // Remove modal anterior se existir
+    document.getElementById('gcal-modal')?.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'gcal-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.innerHTML = `
+        <div style="background:#fff;border-radius:12px;max-width:640px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
+            <div style="padding:20px 24px 12px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center">
+                <strong style="font-size:16px">Adicionar ao Google Agenda</strong>
+                <button onclick="document.getElementById('gcal-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#555;padding:0 4px">&times;</button>
+            </div>
+            <div style="padding:16px 24px">
+                <p style="margin:0 0 14px;color:#555;font-size:13px">Clique em cada disciplina para abrir o Google Agenda com o evento já preenchido. Basta confirmar o salvamento.</p>
+                ${links.map(({ disciplina, turma, dia, horário, url }) => `
+                    <a href="${url}" target="_blank" rel="noopener" style="display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:8px;text-decoration:none;color:inherit;transition:background 0.15s" onmouseover="this.style.background='#f1f7ff'" onmouseout="this.style.background=''">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="#1a73e8" style="flex-shrink:0;margin-top:2px"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+                        <div>
+                            <div style="font-weight:600;font-size:14px">${disciplina}</div>
+                            <div style="font-size:12px;color:#666;margin-top:2px">${dia} · ${horário} · ${turma}</div>
+                        </div>
+                    </a>
+                `).join('')}
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+// ───────────────────────────────────────────────────────────────────────────
+
+function exportarParaGoogleCalendar() {
+    if (!horariosGlobais || horariosGlobais.length === 0) {
+        alert('Nenhum horário disponível. Faça o scraping primeiro.');
+        return;
+    }
+
+    const diasSemanaNum = {
+        'Domingo': 0, 'Segunda-feira': 1, 'Terça-feira': 2,
+        'Quarta-feira': 3, 'Quinta-feira': 4, 'Sexta-feira': 5, 'Sábado': 6
+    };
+    const diasIcal = {
+        'Segunda-feira': 'MO', 'Terça-feira': 'TU', 'Quarta-feira': 'WE',
+        'Quinta-feira': 'TH', 'Sexta-feira': 'FR', 'Sábado': 'SA'
+    };
+
+    const semestre = horariosGlobais[0]?.semestre || '';
+    // Fim do semestre: 1º=julho, 2º=novembro
+    const anoBase = semestre.split('.')[0] || new Date().getFullYear();
+    const dataFim = semestre.includes('.2') ? `${anoBase}1130` : `${anoBase}0731`;
+
+    function proximaOcorrencia(diaNome) {
+        const hoje = new Date();
+        const alvo = diasSemanaNum[diaNome];
+        let diff = alvo - hoje.getDay();
+        if (diff <= 0) diff += 7;
+        const d = new Date(hoje);
+        d.setDate(hoje.getDate() + diff);
+        return d;
+    }
+
+    // Formata datetime em UTC (Brasil = UTC-3)
+    function toIcalUTC(data, horaStr) {
+        const [h, m] = horaStr.split(':').map(Number);
+        const dt = new Date(data);
+        dt.setHours(h + 3, m, 0, 0);
+        const p = n => String(n).padStart(2, '0');
+        return `${dt.getUTCFullYear()}${p(dt.getUTCMonth()+1)}${p(dt.getUTCDate())}T${p(dt.getUTCHours())}${p(dt.getUTCMinutes())}00Z`;
+    }
+
+    const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2) + '@sigaa';
+
+    // Formata como local time (sem Z) para usar com TZID=America/Sao_Paulo
+    function toIcalLocal(data, horaStr) {
+        const [h, m] = horaStr.split(':').map(Number);
+        const dt = new Date(data);
+        const p = n => String(n).padStart(2, '0');
+        return `${dt.getFullYear()}${p(dt.getMonth()+1)}${p(dt.getDate())}T${p(h)}${p(m)}00`;
+    }
+
+    // Remove acentos e caracteres especiais — garante compatibilidade total
+    function normalizar(str) {
+        return (str || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')  // remove diacríticos (acentos, cedilha, til, etc)
+            .replace(/[^\x00-\x7F]/g, '?');   // qualquer outro char não-ASCII vira '?'
+    }
+
+    // Escapa chars especiais conforme RFC 5545
+    function escIcal(str) {
+        return (str || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+    }
+
+    // Folding: quebra linhas > 75 chars com CRLF + espaço (RFC 5545 sec 3.1)
+    function fold(line) {
+        const bytes = new TextEncoder().encode(line);
+        if (bytes.length <= 75) return line;
+        let result = '';
+        let cur = '';
+        let curBytes = 0;
+        for (const char of line) {
+            const charBytes = new TextEncoder().encode(char).length;
+            if (curBytes + charBytes > 75) {
+                result += cur + '\r\n ';
+                cur = char;
+                curBytes = 1 + charBytes; // 1 = espaço de continuação
+            } else {
+                cur += char;
+                curBytes += charBytes;
+            }
+        }
+        return result + cur;
+    }
+
+    const blocos = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//SIGAA APP//Horarios SIGAA//PT',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        fold(`X-WR-CALNAME:Horarios SIGAA ${semestre}`),
+        'X-WR-TIMEZONE:America/Sao_Paulo',
+        'BEGIN:VTIMEZONE',
+        'TZID:America/Sao_Paulo',
+        'BEGIN:STANDARD',
+        'DTSTART:19700101T000000',
+        'TZOFFSETFROM:-0200',
+        'TZOFFSETTO:-0300',
+        'TZNAME:BRT',
+        'END:STANDARD',
+        'END:VTIMEZONE',
+    ];
+
+    horariosGlobais.forEach(({ disciplina, turma, dia, horário }) => {
+        const [inicio, fim] = horário.split('-');
+        const dataBase = proximaOcorrencia(dia);
+        blocos.push(
+            'BEGIN:VEVENT',
+            fold(`UID:${uid()}`),
+            fold(`DTSTART;TZID=America/Sao_Paulo:${toIcalLocal(dataBase, inicio)}`),
+            fold(`DTEND;TZID=America/Sao_Paulo:${toIcalLocal(dataBase, fim)}`),
+            fold(`RRULE:FREQ=WEEKLY;BYDAY=${diasIcal[dia]};UNTIL=${dataFim}T030000Z`),
+            fold(`SUMMARY:${escIcal(normalizar(disciplina))}`),
+            fold(`DESCRIPTION:Turma/Sala: ${escIcal(normalizar(turma))}\\nHorario: ${escIcal(horário)}`),
+            fold(`LOCATION:CEFET-MG - ${escIcal(normalizar(turma))}`),
+            'STATUS:CONFIRMED',
+            'END:VEVENT'
+        );
+    });
+
+    blocos.push('END:VCALENDAR');
+
+    // SEM BOM — causa falha de parse no Google Calendar
+    const conteudo = blocos.join('\r\n');
+    // Todo conteúdo é ASCII puro após normalizar() — Blob direto sem risco de encoding
+    const blob = new Blob([conteudo], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `horarios-sigaa-${semestre}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Abre Google Agenda na página de importação após o download
+    setTimeout(() => {
+        const abrir = confirm(
+            'Arquivo .ics baixado!\n\n' +
+            'Clique em OK para abrir o Google Agenda e importar todos os eventos de uma vez.\n\n' +
+            'Na página que abrir: clique em "Importar" → selecione o arquivo baixado → clique em "Importar".'
+        );
+        if (abrir) {
+            window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
+        }
+    }, 500);
+}
+// ───────────────────────────────────────────────────────────────────────────
+
 function preencherTabelaSimplificada(horarios) {
     // Mapear dias para ids das tabelas
     const diasMap = {
@@ -617,6 +852,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
 
       // Preenche tabelas
+      horariosGlobais = data.horariosSimplificados || [];
       preencherTabelaSimplificada(data.horariosSimplificados || []);
       preencherTabelaDetalhada(data.horariosDetalhados || []);
 
@@ -945,6 +1181,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 let notasGlobais = [];
+let horariosGlobais = [];
 
 function preencherSelectorNotas(avisosPorDisciplina) {
   const select = document.getElementById('select-disciplina-notas');

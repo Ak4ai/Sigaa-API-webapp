@@ -142,6 +142,36 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   margin: 0;
 }
 
+/* ===== Tabela "Hoje" — tema azul ===== */
+.tabela-wrapper-hoje {
+  border: 1px solid #1a73e8 !important;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#tabela-horarios-hoje th {
+  background-color: #1565c0;
+  color: #ffffff;
+  border-color: #1a73e8;
+}
+
+#tabela-horarios-hoje td {
+  border-color: #bbdefb;
+}
+
+#tabela-horarios-hoje tbody tr:nth-child(even) {
+  background-color: #e3f2fd;
+}
+
+#tabela-horarios-hoje tbody tr:hover {
+  background-color: #bbdefb;
+}
+
+/* Esconde o wrapper quando a tabela Hoje está oculta (ex: fim de semana) */
+.tabela-wrapper-hoje:has(#tabela-horarios-hoje[style*="display: none"]) {
+  display: none;
+}
+
 /* ===== Mobile adjustments ===== */
 @media (max-width: 1040px) {
 
