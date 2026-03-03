@@ -877,8 +877,8 @@ span#fechar-aviso-span {
     width: 100%;
     margin: 0;
     padding: 32px 16px;
-    border: none;
-    border-radius: 0;
+    border: 1px dashed #b2dfdb;
+    border-radius: 10px;
     box-sizing: border-box;
     overflow: hidden;
   }
