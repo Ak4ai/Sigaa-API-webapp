@@ -366,9 +366,11 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   const homeAviso = document.getElementById('home-aviso');
   if (homeAviso) homeAviso.style.display = 'none';
 
-  // 16. Esconde a barra de tabs inteira
+  // 16. Esconde a barra de tabs inteira e o FAB
   const tabsBar = document.querySelector('.tabs');
   if (tabsBar) tabsBar.style.display = 'none';
+  const fab = document.getElementById('mobile-fab');
+  if (fab) fab.style.display = 'none';
 });
 
 // Salva os dados para filtrar depois
@@ -974,9 +976,11 @@ function removerEstiloSemDados() {
   // Ajusta altura quando removemos o estilo sem-dados
   setTimeout(ajustarAlturaNovidades, 40);
 
-  // Mostra a barra de tabs novamente
+  // Mostra a barra de tabs e o FAB novamente
   const tabsBar = document.querySelector('.tabs');
   if (tabsBar) tabsBar.style.display = '';
+  const fab = document.getElementById('mobile-fab');
+  if (fab) fab.style.display = '';
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -1000,9 +1004,11 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dados-institucionais').style.display = 'none';
     document.getElementById('tabela-novidades-container').style.display = 'none';
     document.getElementById('home-aviso').style.display = 'none';
-    // Esconde a barra de tabs inteira
+    // Esconde a barra de tabs inteira e o FAB
     const tabsBar = document.querySelector('.tabs');
     if (tabsBar) tabsBar.style.display = 'none';
+    const fab = document.getElementById('mobile-fab');
+    if (fab) fab.style.display = 'none';
     return; // Não tenta preencher tabelas
   }
 
