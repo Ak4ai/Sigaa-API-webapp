@@ -104,6 +104,9 @@ async function consultarComToken(token) {
     startScrapeCounter();
     const inicio = performance.now();
 
+        // ID único deste cliente para rastrear posição na fila
+        const clientId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
         // Usa AbortController para poder parar o fetch se necessário
         const controller = new AbortController();
 
@@ -111,34 +114,27 @@ async function consultarComToken(token) {
         const fetchPromise = fetch(`${API_BASE}/api/scraper`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token }),
+            body: JSON.stringify({ token, clientId }),
             signal: controller.signal
         });
-
-        // Polling de fila — o fetch /api/scraper fica bloqueado até o backend
-        // processar (pode levar minutos na fila). Enquanto isso, fazemos polling
-        // do status da fila para exibir a posição.
-        // Como o X-Queue-Id só vem na resposta final, não podemos usá-lo para polling.
-        // Em vez disso, checamos o estado geral da fila (processing + queueLength).
 
         // Mostra display de fila imediatamente (o fetch pode demorar)
         updateQueueDisplay(-1, 60000); // -1 = "entrando na fila..."
 
-        // Inicia polling da fila a cada 2s
-        // NUNCA esconde o display aqui — só atualiza. O hide é feito
-        // apenas quando o fetch /api/scraper retorna (no finally).
-        // Motivo: o polling pode disparar antes do POST chegar ao servidor,
-        // ver fila vazia e esconder prematuramente.
+        // Polling da fila a cada 2s usando clientId para posição exata
+        // NUNCA esconde o display — só atualiza. O hide é feito no finally.
         queuePollInterval = setInterval(async () => {
             try {
-                const statusResp = await fetch(`${API_BASE}/api/queue-status?id=0`, { method: 'GET' });
+                const statusResp = await fetch(`${API_BASE}/api/queue-status?clientId=${clientId}`, { method: 'GET' });
                 const statusData = await statusResp.json();
-                const totalAhead = statusData.queueLength + (statusData.processing ? 1 : 0);
-                if (totalAhead > 0) {
-                    updateQueueDisplay(totalAhead, statusData.avgTimeMs);
+                if (statusData.position > 0) {
+                    // position = posição exata deste cliente na fila
+                    updateQueueDisplay(statusData.position, statusData.avgTimeMs);
+                } else if (statusData.position === -1) {
+                    // Ainda não apareceu no servidor — mostra "entrando na fila"
+                    updateQueueDisplay(-1, statusData.avgTimeMs);
                 } else {
-                    // Fila parece vazia, mas nosso request está pendente —
-                    // mostra "sendo processada" em vez de esconder
+                    // position = 0 — não encontrado (já terminou ou erro)
                     updateQueueDisplay(1, statusData.avgTimeMs);
                 }
             } catch (e) { /* ignora erros de polling */ }
