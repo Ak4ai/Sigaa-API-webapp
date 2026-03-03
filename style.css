@@ -870,8 +870,9 @@ span#fechar-aviso-span {
 @media (max-width: 1040px) {
   #tab-home.sem-dados,
   #home-content.sem-dados {
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: calc(100vh - 60px);
+    height: calc(100dvh - 60px);
+    min-height: unset;
     min-width: unset;
     width: 100%;
     margin: 0;
@@ -879,6 +880,7 @@ span#fechar-aviso-span {
     border: none;
     border-radius: 0;
     box-sizing: border-box;
+    overflow: hidden;
   }
 }
 
