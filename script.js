@@ -341,6 +341,30 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   const homeContent = document.getElementById('tab-home');
   if (homeTab) homeTab.classList.add('active');
   if (homeContent) homeContent.classList.add('active');
+
+  // 14. Reaplica estilo de "sem dados" — volta à interface inicial de login
+  const homeContentDiv = document.getElementById('home-content');
+  const tabHomeDiv = document.getElementById('tab-home');
+  if (homeContentDiv) {
+    homeContentDiv.classList.add('sem-dados');
+    if (!homeContentDiv.querySelector('.mensagem-sem-dados')) {
+      homeContentDiv.insertAdjacentHTML('beforeend', `
+        <div class="mensagem-sem-dados">
+          Nenhum dado encontrado.<br>
+          Faça login para visualizar suas informações.
+        </div>
+      `);
+    }
+  }
+  if (tabHomeDiv) tabHomeDiv.classList.add('sem-dados');
+
+  // 15. Esconde elementos que só aparecem com dados
+  const dadosInst = document.getElementById('dados-institucionais');
+  if (dadosInst) dadosInst.style.display = 'none';
+  const novContainer = document.getElementById('tabela-novidades-container');
+  if (novContainer) novContainer.style.display = 'none';
+  const homeAviso = document.getElementById('home-aviso');
+  if (homeAviso) homeAviso.style.display = 'none';
 });
 
 // Salva os dados para filtrar depois
