@@ -284,6 +284,12 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     padding: 10px 20px;
   }
 
+  /* Esconde tabs que o FAB substitui no mobile */
+  .tab-button[data-tab="tab-horarios"],
+  .tab-button[data-tab="tab-novidades"] {
+    display: none;
+  }
+
   /* Floating Action Button (FAB) para mobile */
   .mobile-fab {
     position: fixed;
