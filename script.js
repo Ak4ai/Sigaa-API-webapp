@@ -2,7 +2,7 @@
 // <script src="boletim.js"></script> deve estar incluído no index.html antes de script.js para garantir que a função esteja disponível
 
 // URL base da API — em desenvolvimento local o server.js injeta window.API_BASE_URL via index.html
-const API_BASE = window.API_BASE_URL || 'http://137.131.135.96:3000';
+const API_BASE = window.API_BASE_URL || 'https://cream-ccd-aerial-smith.trycloudflare.com';
 
 document.addEventListener('DOMContentLoaded', function () {
   var btnExportar = document.getElementById('exportar-pdf-btn');
@@ -994,7 +994,6 @@ function ajustarAlturaNovidades() {
 // Ajusta ao redimensionar a janela
 window.addEventListener('resize', () => {
   ajustarAlturaNovidades();
-  ajustarLabelsTabsPorEmoji();
   ajustarTabsMobileOcultar();
 });
 
