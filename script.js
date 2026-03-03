@@ -97,16 +97,64 @@ async function consultarComToken(token) {
     dadosDiv.innerHTML = '';
     loadingDiv.style.display = 'block';
 
+  let queuePollInterval = null;
+
   try {
     // inicia contador visível no formulário
     startScrapeCounter();
     const inicio = performance.now();
 
-        const response = await fetch(`${API_BASE}/api/scraper`, {
+        // Usa AbortController para poder parar o fetch se necessário
+        const controller = new AbortController();
+
+        // Inicia fetch (pode ficar na fila do backend)
+        const fetchPromise = fetch(`${API_BASE}/api/scraper`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token })
+            body: JSON.stringify({ token }),
+            signal: controller.signal
         });
+
+        // Primeiro, esperamos os headers para pegar o X-Queue-Id
+        // Porém fetch só retorna quando o servidor envia a resposta completa
+        // Então vamos checar a fila em paralelo com um timeout inicial
+        let queueId = null;
+
+        // Faz um pre-check na fila para saber se há espera antes mesmo do fetch retornar
+        try {
+            const preCheck = await fetch(`${API_BASE}/api/queue-status?id=0`, { method: 'GET' });
+            const preData = await preCheck.json();
+            if (preData.processing || preData.queueLength > 0) {
+                // Há fila! Mostra mensagem e inicia polling
+                const totalAhead = preData.queueLength + (preData.processing ? 1 : 0);
+                updateQueueDisplay(totalAhead, preData.avgTimeMs);
+            }
+        } catch (e) { /* sem fila info — ok */ }
+
+        // Inicia polling da fila a cada 2s
+        queuePollInterval = setInterval(async () => {
+            try {
+                const statusResp = await fetch(`${API_BASE}/api/queue-status?id=${queueId || 0}`, { method: 'GET' });
+                const statusData = await statusResp.json();
+                const posAtual = statusData.position;
+                if (posAtual > 0) {
+                    updateQueueDisplay(posAtual, statusData.avgTimeMs);
+                } else if (statusData.processing && statusData.queueLength === 0) {
+                    updateQueueDisplay(0, statusData.avgTimeMs); // sendo processado agora
+                } else {
+                    hideQueueDisplay();
+                }
+            } catch (e) { /* ignora erros de polling */ }
+        }, 2000);
+
+        const response = await fetchPromise;
+
+        // Para o polling ao receber resposta
+        if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
+        hideQueueDisplay();
+
+        // Captura o queue ID (para referência)
+        queueId = response.headers.get('X-Queue-Id');
 
         const fim = performance.now();
         const duracaoSegundos = ((fim - inicio) / 1000).toFixed(2);
@@ -159,11 +207,15 @@ async function consultarComToken(token) {
     errorDiv.textContent = error.message;
     // para contador com flag de erro
     stopScrapeCounter(false);
+    if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
+    hideQueueDisplay();
   } finally {
     const fimGeral = performance.now();
     const duracaoSegundosGeral = Math.max(1, Math.round((fimGeral - (typeof inicio !== 'undefined' ? inicio : fimGeral)) / 1000));
     stopScrapeCounter(true, duracaoSegundosGeral);
     loadingDiv.style.display = 'none';
+    if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
+    hideQueueDisplay();
   }
 }
 
@@ -1338,6 +1390,45 @@ function startElapsedSinceUpdate(timestamp) {
     el.textContent = `Atualizado ${formatTimeSince(Date.now() - last)}`;
   }, 1000);
 }
+
+// ── Exibição de fila de espera ────────────────────────────────────────────
+function updateQueueDisplay(position, avgTimeMs) {
+    let el = document.getElementById('queue-status-display');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'queue-status-display';
+        el.style.cssText = 'margin-top:10px;padding:12px 16px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;font-size:0.95em;color:#795548;display:flex;align-items:center;gap:10px;';
+        const form = document.getElementById('sigaa-form');
+        if (form) form.appendChild(el);
+    }
+    el.style.display = 'flex';
+
+    const avgSec = Math.round((avgTimeMs || 60000) / 1000);
+
+    if (position === 0) {
+        el.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ff9800" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            <span><b>Sua consulta está sendo processada agora...</b> <span style="color:#999">~${avgSec}s por consulta</span></span>`;
+    } else {
+        const waitSec = avgSec * position;
+        const waitMin = Math.floor(waitSec / 60);
+        const waitRemSec = waitSec % 60;
+        const tempoStr = waitMin > 0 ? `~${waitMin}min ${waitRemSec}s` : `~${waitSec}s`;
+
+        el.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ffa000" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <span>
+                <b>Posição na fila: ${position}º</b><br>
+                <span style="font-size:0.88em;color:#999">Tempo estimado de espera: ${tempoStr}</span>
+            </span>`;
+    }
+}
+
+function hideQueueDisplay() {
+    const el = document.getElementById('queue-status-display');
+    if (el) el.style.display = 'none';
+}
+// ── Fim fila de espera ───────────────────────────────────────────────────
 
 function startScrapeCounter() {
   if (__scrapeCounterInterval) return; // já rodando
