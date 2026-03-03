@@ -1,6 +1,9 @@
 // Importa a função de exportação do boletim
 // <script src="boletim.js"></script> deve estar incluído no index.html antes de script.js para garantir que a função esteja disponível
 
+// URL base da API — em desenvolvimento local o server.js injeta window.API_BASE_URL via index.html
+const API_BASE = window.API_BASE_URL || 'https://sigaa-api-backend.vercel.app';
+
 document.addEventListener('DOMContentLoaded', function () {
   var btnExportar = document.getElementById('exportar-pdf-btn');
   if (btnExportar) {
@@ -64,7 +67,7 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
 
     try {
         // 1. Login e salva token
-        const resp = await fetch('https://sigaa-api-backend.vercel.app/api/login', {
+        const resp = await fetch(`${API_BASE}/api/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user, pass })
@@ -99,7 +102,7 @@ async function consultarComToken(token) {
     startScrapeCounter();
     const inicio = performance.now();
 
-        const response = await fetch('https://sigaa-api-backend.vercel.app/api/scraper', {
+        const response = await fetch(`${API_BASE}/api/scraper`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token })
