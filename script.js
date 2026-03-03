@@ -125,17 +125,21 @@ async function consultarComToken(token) {
         updateQueueDisplay(-1, 60000); // -1 = "entrando na fila..."
 
         // Inicia polling da fila a cada 2s
+        // NUNCA esconde o display aqui — só atualiza. O hide é feito
+        // apenas quando o fetch /api/scraper retorna (no finally).
+        // Motivo: o polling pode disparar antes do POST chegar ao servidor,
+        // ver fila vazia e esconder prematuramente.
         queuePollInterval = setInterval(async () => {
             try {
                 const statusResp = await fetch(`${API_BASE}/api/queue-status?id=0`, { method: 'GET' });
                 const statusData = await statusResp.json();
-                // Mostra fila se há alguém processando ou esperando
-                if (statusData.processing || statusData.queueLength > 0) {
-                    const totalAhead = statusData.queueLength + (statusData.processing ? 1 : 0);
+                const totalAhead = statusData.queueLength + (statusData.processing ? 1 : 0);
+                if (totalAhead > 0) {
                     updateQueueDisplay(totalAhead, statusData.avgTimeMs);
                 } else {
-                    // Ninguém na fila e ninguém processando — esconde
-                    hideQueueDisplay();
+                    // Fila parece vazia, mas nosso request está pendente —
+                    // mostra "sendo processada" em vez de esconder
+                    updateQueueDisplay(1, statusData.avgTimeMs);
                 }
             } catch (e) { /* ignora erros de polling */ }
         }, 2000);
