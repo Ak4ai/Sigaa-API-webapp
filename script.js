@@ -253,9 +253,102 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Botão de logout/apagar informações
 document.getElementById('logout-btn').addEventListener('click', () => {
+  if (!confirm('Tem certeza que deseja sair?\nSeus dados salvos serão apagados.')) return;
+
+  // 1. Remove tokens do storage
   clearStoredTokenInfo();
   stopTokenTimer();
-  location.reload();
+
+  // 2. Remove dados salvos do localStorage
+  localStorage.removeItem('sigaaUltimaConsulta');
+  localStorage.removeItem('sigaa_aviso_fechado');
+
+  // 3. Limpa variáveis globais em memória
+  horariosGlobais = [];
+  frequenciasGlobais = [];
+  notasGlobais = [];
+
+  // 4. Limpa toda a interface — dados institucionais
+  const dadosDiv = document.getElementById('dados-institucionais');
+  if (dadosDiv) dadosDiv.innerHTML = '';
+
+  // 5. Limpa tabelas de horários (simplificada)
+  ['tabela-horarios-hoje', 'tabela-horarios-segunda', 'tabela-horarios-terca',
+   'tabela-horarios-quarta', 'tabela-horarios-quinta', 'tabela-horarios-sexta'
+  ].forEach(id => {
+    const tbl = document.getElementById(id);
+    if (tbl) {
+      const tbody = tbl.querySelector('tbody');
+      if (tbody) tbody.innerHTML = '';
+      tbl.style.display = 'none';
+    }
+  });
+
+  // 6. Limpa tabela detalhada
+  const tblDet = document.getElementById('tabela-horarios-detalhados');
+  if (tblDet) {
+    const tbody = tblDet.querySelector('tbody');
+    if (tbody) tbody.innerHTML = '';
+    tblDet.style.display = 'none';
+  }
+
+  // 7. Limpa frequências
+  const tblFreq = document.getElementById('tabela-frequencias');
+  if (tblFreq) {
+    const tbody = tblFreq.querySelector('tbody');
+    if (tbody) tbody.innerHTML = '';
+    tblFreq.style.display = 'none';
+  }
+  const selFreq = document.getElementById('select-disciplina-frequencia');
+  if (selFreq) selFreq.innerHTML = '<option value="todas">Todas</option>';
+  const resumoFreq = document.getElementById('resumo-frequencia-disciplina');
+  if (resumoFreq) resumoFreq.innerHTML = '';
+  const barraFreq = document.getElementById('barra-progresso-faltas');
+  if (barraFreq) barraFreq.innerHTML = '';
+
+  // 8. Limpa notas
+  const tblNotas = document.getElementById('tabela-notas');
+  if (tblNotas) {
+    const tbody = tblNotas.querySelector('tbody');
+    if (tbody) tbody.innerHTML = '';
+    tblNotas.style.display = 'none';
+  }
+  const selNotas = document.getElementById('select-disciplina-notas');
+  if (selNotas) selNotas.innerHTML = '<option value="todas">Todas</option>';
+
+  // 9. Limpa novidades
+  const tblNovHome = document.getElementById('tabela-novidades-home');
+  if (tblNovHome) {
+    const tbody = tblNovHome.querySelector('tbody');
+    if (tbody) tbody.innerHTML = '';
+    tblNovHome.style.display = 'none';
+  }
+
+  // 10. Limpa timer/status de scrape
+  const scrapeTimer = document.getElementById('scrape-timer');
+  if (scrapeTimer) scrapeTimer.remove();
+  const tokenStatus = document.getElementById('token-status');
+  if (tokenStatus) tokenStatus.textContent = '';
+
+  // 11. Limpa campos de login
+  const userInput = document.getElementById('user');
+  const passInput = document.getElementById('pass');
+  if (userInput) userInput.value = '';
+  if (passInput) passInput.value = '';
+
+  // 12. Limpa erros e loading
+  const errorDiv = document.getElementById('error');
+  if (errorDiv) errorDiv.textContent = '';
+  const loadingDiv = document.getElementById('loading');
+  if (loadingDiv) loadingDiv.style.display = 'none';
+
+  // 13. Volta para a tab Home
+  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+  const homeTab = document.querySelector('[data-tab="tab-home"]');
+  const homeContent = document.getElementById('tab-home');
+  if (homeTab) homeTab.classList.add('active');
+  if (homeContent) homeContent.classList.add('active');
 });
 
 // Salva os dados para filtrar depois
