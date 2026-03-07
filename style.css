@@ -325,7 +325,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     margin: 0 2px;
-    min-height: 60px;
+    height: 60px;
   }
 
   .tab-button:hover {
@@ -333,14 +333,13 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   }
 
   .tab-button.active {
-    flex-direction: column-reverse;
+    flex: 1.4;
     color: #1565c0;
-    padding: 12px 8px;
-    min-height: 72px;
+    padding: 10px 14px;
   }
 
   .tab-button.active .tab-icon {
-    transform: scale(1.2);
+    transform: scale(1.15);
   }
 
   .tab-icon {
