@@ -267,27 +267,74 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   }
 
   .tabs {
-        display: flex;
-        flex-wrap: wrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: unset;
-        gap: 10px;
-        margin-top: 20px;
-        overflow: auto;
-        flex-direction: row;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0;
+    margin: 0;
+    background: #fff;
+    border-top: 1px solid #e0e0e0;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+    z-index: 100;
+    padding: 0;
+    height: auto;
+  }
+
+  body {
+    padding-bottom: 70px;
   }
 
   .tab-button {
-    flex: 0 0 auto;   /* Faz o botão ter largura fixa, não crescer */
-    white-space: nowrap; /* Não quebra o texto do botão */
-    font-size: 16px;
-    padding: 10px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 12px 8px;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-size: 12px;
+    white-space: nowrap;
+    font-weight: 400;
+    border-radius: 0;
+    transition: color 0.2s, background 0.2s;
+  }
+
+  .tab-button.active {
+    color: #1565c0;
+    border-top: 3px solid #1565c0;
+    border-bottom: none;
+  }
+
+  .tab-button:active {
+    background: #f5f5f5;
+  }
+
+  .tab-icon {
+    font-size: 24px;
+    display: block;
+  }
+
+  .tab-label {
+    display: block;
+    font-size: 11px;
+    text-align: center;
   }
 
   /* Esconde tabs que o FAB substitui no mobile */
   .tab-button[data-tab="tab-horarios"],
   .tab-button[data-tab="tab-novidades"] {
     display: none;
+  }
+
+  /* Garante que conteúdo não fica atrás da bottom nav */
+  .tab-content {
+    padding-bottom: 20px;
   }
 
   /* Floating Action Button (FAB) para mobile */
@@ -388,6 +435,62 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   /* reforça remoção de destaque em dispositivos touch dentro do media query mobile */
   .fab-toggle, .fab-item, .tab-button, button {
     -webkit-tap-highlight-color: rgba(0,0,0,0);
+  }
+}
+
+/* Reset das abas para desktop - voltam comportamento padrão */
+@media (min-width: 1041px) {
+  .tabs {
+    position: static !important;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    border: none;
+    box-shadow: none;
+    z-index: auto;
+    padding: 0;
+    height: auto;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  body {
+    padding-bottom: auto;
+  }
+
+  .tab-button {
+    flex: unset;
+    flex-direction: row;
+    gap: 8px;
+    padding: 10px 20px;
+    border-top: none;
+    color: unset;
+    white-space: nowrap;
+    font-weight: bold;
+    font-size: 15px;
+    background-color: #eee;
+    border-radius: 4px;
+  }
+
+  .tab-button.active {
+    color: unset;
+    border-top: none;
+    background-color: #ccc;
+  }
+
+  .tab-icon {
+    font-size: 18px;
+    display: inline;
+  }
+
+  .tab-label {
+    font-size: 15px;
+    display: inline;
+  }
+
+  .tab-content {
+    padding-bottom: auto;
   }
 }
 
