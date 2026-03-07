@@ -303,7 +303,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   }
 
   body {
-    padding-bottom: 86px;
+    padding-bottom: 74px;
   }
 
   .tab-button {
@@ -351,7 +351,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   }
 
   .tab-label {
-    display: block;
+    display: none;
     font-size: 11px;
     color: inherit;
     line-height: 1.2;
@@ -362,6 +362,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   }
 
   .tab-button.active .tab-label {
+    display: block;
     font-size: 12px;
     font-weight: 500;
   }
