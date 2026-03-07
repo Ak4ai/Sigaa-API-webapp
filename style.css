@@ -446,7 +446,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   }
 }
 
-/* Reset das abas para desktop - voltam comportamento padrão */
+/* Reset das abas para desktop - voltam comportamento original */
 @media (min-width: 1041px) {
   .tabs {
     position: static !important;
@@ -464,7 +464,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     flex-wrap: wrap;
     gap: 10px;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
   }
 
   body {
@@ -473,26 +473,30 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
 
   .tab-button {
     flex: unset;
+    display: inline-flex;
+    align-items: center;
     gap: 8px;
     padding: 10px 20px;
-    border-top: none;
-    color: unset;
-    white-space: nowrap;
+    border: none;
+    border-radius: 4px;
     font-weight: bold;
     font-size: 15px;
     background-color: #eee;
-    border-radius: 4px;
+    color: #000;
+    transition: background-color 0.2s, color 0.2s;
+    cursor: pointer;
+    white-space: nowrap;
     margin: 0;
   }
 
   .tab-button:hover {
-    background: #e0e0e0 !important;
+    background-color: #e0e0e0;
     color: #1976d2;
   }
 
   .tab-button.active {
-    color: #000;
     background-color: #ccc;
+    color: #000;
   }
 
   .tab-button.active .tab-icon {
@@ -503,6 +507,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     font-size: 18px;
     display: inline;
     transition: none;
+    line-height: 1;
   }
 
   .tab-label {
@@ -512,6 +517,12 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
 
   .tab-content {
     padding-bottom: auto;
+  }
+
+  /* Mostra tabs que estão escondidas no mobile */
+  .tab-button[data-tab="tab-horarios"],
+  .tab-button[data-tab="tab-novidades"] {
+    display: inline-flex;
   }
 }
 
