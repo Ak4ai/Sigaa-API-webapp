@@ -333,6 +333,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   }
 
   .tab-button.active {
+    flex-direction: column-reverse;
     color: #1565c0;
     padding: 12px 8px;
     min-height: 72px;
