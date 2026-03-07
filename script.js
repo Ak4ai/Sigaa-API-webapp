@@ -976,13 +976,20 @@ function removerEstiloSemDados() {
   // Ajusta altura quando removemos o estilo sem-dados
   setTimeout(ajustarAlturaNovidades, 40);
 
-  // Mostra a barra de tabs e o FAB novamente (se não foi marcado como "não mostrar mais")
+  // Mostra a barra de tabs e o FAB novamente (se não foi minimizado)
   const tabsBar = document.querySelector('.tabs');
   if (tabsBar) tabsBar.style.display = '';
   const fab = document.getElementById('mobile-fab');
+  const fabMinimized = document.getElementById('fab-minimized');
   if (fab) {
-    const fabHidden = localStorage.getItem('sigaa-fab-hidden');
-    fab.style.display = fabHidden === 'true' ? 'none' : '';
+    const fabMinimizedState = localStorage.getItem('sigaa-fab-minimized');
+    if (fabMinimizedState === 'true') {
+      fab.style.display = 'none';
+      if (fabMinimized) fabMinimized.classList.add('visible');
+    } else {
+      fab.style.display = '';
+      if (fabMinimized) fabMinimized.classList.remove('visible');
+    }
   }
 }
 
@@ -1318,13 +1325,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const fabToggle = document.getElementById('mobile-fab-toggle');
   const fabMenu = document.getElementById('mobile-fab-menu');
   const fab = document.getElementById('mobile-fab');
-  const fabHideBtn = document.getElementById('fab-hide-btn');
+  const fabMinimizeBtn = document.getElementById('fab-minimize-btn');
+  const fabMinimized = document.getElementById('fab-minimized');
   if (!fabToggle || !fabMenu || !fab) return; // nada a fazer
 
-  // Verificar se o FAB foi marcado como "não mostrar mais"
-  const fabHidden = localStorage.getItem('sigaa-fab-hidden');
-  if (fabHidden === 'true') {
+  // Verificar se o FAB foi minimizado
+  const fabMinimizedState = localStorage.getItem('sigaa-fab-minimized');
+  if (fabMinimizedState === 'true') {
     fab.style.display = 'none';
+    fabMinimized.classList.add('visible');
   }
 
   function closeFab() {
@@ -1332,10 +1341,24 @@ document.addEventListener('DOMContentLoaded', () => {
     fab.setAttribute('aria-hidden', 'true');
     fabMenu.setAttribute('aria-hidden', 'true');
   }
+  
   function openFab() {
     fabMenu.classList.add('open');
     fab.setAttribute('aria-hidden', 'false');
     fabMenu.setAttribute('aria-hidden', 'false');
+  }
+
+  function minimizeFab() {
+    fab.style.display = 'none';
+    fabMinimized.classList.add('visible');
+    localStorage.setItem('sigaa-fab-minimized', 'true');
+    closeFab();
+  }
+
+  function expandFab() {
+    fab.style.display = 'block';
+    fabMinimized.classList.remove('visible');
+    localStorage.setItem('sigaa-fab-minimized', 'false');
   }
 
   fabToggle.addEventListener('click', (e) => {
@@ -1360,13 +1383,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Botão "Não mostrar mais"
-  if (fabHideBtn) {
-    fabHideBtn.addEventListener('click', (e) => {
+  // Botão de minimizar
+  if (fabMinimizeBtn) {
+    fabMinimizeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      localStorage.setItem('sigaa-fab-hidden', 'true');
-      fab.style.display = 'none';
-      closeFab();
+      minimizeFab();
+    });
+  }
+
+  // Barrinha minimizada - clique para expandir
+  if (fabMinimized) {
+    fabMinimized.addEventListener('click', (e) => {
+      e.stopPropagation();
+      expandFab();
+      openFab();
     });
   }
 

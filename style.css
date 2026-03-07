@@ -454,16 +454,42 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   .fab-item:hover {
     background: rgba(255,255,255,0.06);
   }
-  .fab-item-hide {
+  .fab-item-minimize {
     border-top: 1px solid rgba(255, 255, 255, 0.2);
-    font-size: 0.85rem;
+    font-size: 1.2rem;
     color: rgba(255, 255, 255, 0.9);
     padding-top: 10px;
     margin-top: 4px;
   }
-  .fab-item-hide:hover {
+  .fab-item-minimize:hover {
     background: rgba(255, 255, 255, 0.12);
     color: #fff;
+  }
+
+  /* Minimized FAB indicator - thin bar at the corner */
+  .fab-minimized {
+    position: fixed;
+    right: 0;
+    bottom: 86px;
+    width: 3px;
+    height: 60px;
+    background: linear-gradient(to bottom, #1976d2, #1565c0);
+    z-index: 1100;
+    cursor: pointer;
+    display: none;
+    align-items: flex-end;
+    opacity: 0.7;
+    transition: opacity 0.3s ease, width 0.3s ease;
+    border-radius: 3px 0 0 3px;
+  }
+
+  .fab-minimized:hover {
+    opacity: 1;
+    width: 5px;
+  }
+
+  .fab-minimized.visible {
+    display: flex;
   }
   /* Touch feedback: provide a subtle 'pressed' state on touch devices
      without changing desktop hover behavior. Uses :active inside a
