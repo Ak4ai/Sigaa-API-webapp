@@ -356,8 +356,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     color: inherit;
     line-height: 1.2;
     text-align: center;
-    white-space: normal;
-    width: 48px;
+    white-space: nowrap;
     word-break: break-word;
   }
 
