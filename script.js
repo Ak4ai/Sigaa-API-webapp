@@ -976,11 +976,14 @@ function removerEstiloSemDados() {
   // Ajusta altura quando removemos o estilo sem-dados
   setTimeout(ajustarAlturaNovidades, 40);
 
-  // Mostra a barra de tabs e o FAB novamente
+  // Mostra a barra de tabs e o FAB novamente (se não foi marcado como "não mostrar mais")
   const tabsBar = document.querySelector('.tabs');
   if (tabsBar) tabsBar.style.display = '';
   const fab = document.getElementById('mobile-fab');
-  if (fab) fab.style.display = '';
+  if (fab) {
+    const fabHidden = localStorage.getItem('sigaa-fab-hidden');
+    fab.style.display = fabHidden === 'true' ? 'none' : '';
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -1315,7 +1318,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const fabToggle = document.getElementById('mobile-fab-toggle');
   const fabMenu = document.getElementById('mobile-fab-menu');
   const fab = document.getElementById('mobile-fab');
+  const fabHideBtn = document.getElementById('fab-hide-btn');
   if (!fabToggle || !fabMenu || !fab) return; // nada a fazer
+
+  // Verificar se o FAB foi marcado como "não mostrar mais"
+  const fabHidden = localStorage.getItem('sigaa-fab-hidden');
+  if (fabHidden === 'true') {
+    fab.style.display = 'none';
+  }
 
   function closeFab() {
     fabMenu.classList.remove('open');
@@ -1338,15 +1348,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('.fab-item');
     if (!btn) return;
     const action = btn.dataset.action;
+    
     if (action === 'abrir-horarios-completos') {
       // ativa diretamente a aba completa de horários
       activateTab('tab-horarios');
+      closeFab();
     } else if (action === 'abrir-novidades') {
       // ativa diretamente a aba de novidades
       activateTab('tab-novidades');
+      closeFab();
     }
-    closeFab();
   });
+
+  // Botão "Não mostrar mais"
+  if (fabHideBtn) {
+    fabHideBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      localStorage.setItem('sigaa-fab-hidden', 'true');
+      fab.style.display = 'none';
+      closeFab();
+    });
+  }
 
   // Fecha se clicar fora
   document.addEventListener('click', (e) => {

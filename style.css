@@ -381,7 +381,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   .mobile-fab {
     position: fixed;
     right: 16px;
-    bottom: 16px;
+    bottom: 86px;
     z-index: 1200;
     /* manter o toggle no fluxo; o menu ficará posicionado de forma absoluta acima */
     display: block; /* visível somente dentro deste bloco (mobile) */
@@ -439,6 +439,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   }
   .fab-menu.open .fab-item:nth-child(1) { transition-delay: 40ms; }
   .fab-menu.open .fab-item:nth-child(2) { transition-delay: 80ms; }
+  .fab-menu.open .fab-item:nth-child(3) { transition-delay: 120ms; }
   .fab-item {
     background: transparent; /* itens dentro do container colorido */
     border: none;
@@ -452,6 +453,17 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   }
   .fab-item:hover {
     background: rgba(255,255,255,0.06);
+  }
+  .fab-item-hide {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+  .fab-item-hide:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
   }
   /* Touch feedback: provide a subtle 'pressed' state on touch devices
      without changing desktop hover behavior. Uses :active inside a
