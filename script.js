@@ -1336,9 +1336,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const fabMinimized = document.getElementById('fab-minimized');
   if (!fabToggle || !fabMenu || !fab) return; // nada a fazer
 
-  // Verificar se o FAB foi minimizado - carregar estado persistente
+  // Rastreia se o FAB foi minimizado ao carregar
   const fabMinimizedState = localStorage.getItem('sigaa-fab-minimized');
-  if (fabMinimizedState === 'true') {
+  let fabWasInitiallyMinimized = fabMinimizedState === 'true';
+  
+  if (fabWasInitiallyMinimized) {
     fab.classList.add('minimized');
     fab.style.display = 'none';
     fabMinimized.classList.add('visible');
@@ -1352,6 +1354,15 @@ document.addEventListener('DOMContentLoaded', () => {
     fabMenu.classList.remove('open');
     fab.setAttribute('aria-hidden', 'true');
     fabMenu.setAttribute('aria-hidden', 'true');
+    
+    // Se foi originalmente minimizado, volta ao minimizado ao clicar fora
+    if (fabWasInitiallyMinimized) {
+      fab.classList.add('minimized');
+      setTimeout(() => {
+        fab.style.display = 'none';
+      }, 300);
+      fabMinimized.classList.add('visible');
+    }
   }
   
   function openFab() {
@@ -1368,6 +1379,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 300);
     fabMinimized.classList.add('visible');
     localStorage.setItem('sigaa-fab-minimized', 'true');
+    fabWasInitiallyMinimized = true; // Atualiza o rastreamento
     closeFab();
   }
 
@@ -1378,6 +1390,15 @@ document.addEventListener('DOMContentLoaded', () => {
     fab.classList.remove('minimized');
     fabMinimized.classList.remove('visible');
     localStorage.setItem('sigaa-fab-minimized', 'false');
+    fabWasInitiallyMinimized = false; // Atualiza o rastreamento
+  }
+
+  // Expande temporariamente (apenas para visualizar menu)
+  function expandFabTemporarily() {
+    fab.style.display = 'block';
+    fab.offsetHeight;
+    fab.classList.remove('minimized');
+    // NÃO salva no localStorage - apenas mostra visualmente
   }
 
   fabToggle.addEventListener('click', (e) => {
@@ -1414,7 +1435,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (fabMinimized) {
     fabMinimized.addEventListener('click', (e) => {
       e.stopPropagation();
-      expandFab();
+      expandFabTemporarily(); // Expande temporariamente
       openFab();
     });
   }
