@@ -370,7 +370,12 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   const tabsBar = document.querySelector('.tabs');
   if (tabsBar) tabsBar.style.display = 'none';
   const fab = document.getElementById('mobile-fab');
-  if (fab) fab.style.display = 'none';
+  if (fab) {
+    fab.classList.add('minimized');
+    setTimeout(() => {
+      fab.style.display = 'none';
+    }, 300);
+  }
 });
 
 // Salva os dados para filtrar depois
@@ -976,7 +981,7 @@ function removerEstiloSemDados() {
   // Ajusta altura quando removemos o estilo sem-dados
   setTimeout(ajustarAlturaNovidades, 40);
 
-  // Mostra a barra de tabs e o FAB novamente (se não foi minimizado)
+  // Mostra a barra de tabs e o FAB novamente (respeitando estado minimizado)
   const tabsBar = document.querySelector('.tabs');
   if (tabsBar) tabsBar.style.display = '';
   const fab = document.getElementById('mobile-fab');
@@ -984,9 +989,11 @@ function removerEstiloSemDados() {
   if (fab) {
     const fabMinimizedState = localStorage.getItem('sigaa-fab-minimized');
     if (fabMinimizedState === 'true') {
+      fab.classList.add('minimized');
       fab.style.display = 'none';
       if (fabMinimized) fabMinimized.classList.add('visible');
     } else {
+      fab.classList.remove('minimized');
       fab.style.display = '';
       if (fabMinimized) fabMinimized.classList.remove('visible');
     }
@@ -1329,11 +1336,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const fabMinimized = document.getElementById('fab-minimized');
   if (!fabToggle || !fabMenu || !fab) return; // nada a fazer
 
-  // Verificar se o FAB foi minimizado
+  // Verificar se o FAB foi minimizado - carregar estado persistente
   const fabMinimizedState = localStorage.getItem('sigaa-fab-minimized');
   if (fabMinimizedState === 'true') {
+    fab.classList.add('minimized');
     fab.style.display = 'none';
     fabMinimized.classList.add('visible');
+  } else {
+    fab.classList.remove('minimized');
+    fab.style.display = 'block';
+    fabMinimized.classList.remove('visible');
   }
 
   function closeFab() {
@@ -1349,7 +1361,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function minimizeFab() {
-    fab.style.display = 'none';
+    fab.classList.add('minimized');
+    // Espera a animação terminar antes de mudar display
+    setTimeout(() => {
+      fab.style.display = 'none';
+    }, 300);
     fabMinimized.classList.add('visible');
     localStorage.setItem('sigaa-fab-minimized', 'true');
     closeFab();
@@ -1357,6 +1373,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function expandFab() {
     fab.style.display = 'block';
+    // Força reflow para a animação funcionar
+    fab.offsetHeight;
+    fab.classList.remove('minimized');
     fabMinimized.classList.remove('visible');
     localStorage.setItem('sigaa-fab-minimized', 'false');
   }

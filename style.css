@@ -386,6 +386,15 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     /* manter o toggle no fluxo; o menu ficará posicionado de forma absoluta acima */
     display: block; /* visível somente dentro deste bloco (mobile) */
     width: auto;
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 300ms ease, transform 300ms ease;
+  }
+
+  .mobile-fab.minimized {
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none;
   }
   .fab-toggle {
     width: 56px;
@@ -478,8 +487,9 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     cursor: pointer;
     display: none;
     align-items: flex-end;
-    opacity: 0.7;
-    transition: opacity 0.3s ease, width 0.3s ease;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 300ms ease, width 0.3s ease, transform 300ms ease;
     border-radius: 3px 0 0 3px;
   }
 
@@ -490,6 +500,8 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
 
   .fab-minimized.visible {
     display: flex;
+    opacity: 1;
+    transform: scale(1);
   }
   /* Touch feedback: provide a subtle 'pressed' state on touch devices
      without changing desktop hover behavior. Uses :active inside a
