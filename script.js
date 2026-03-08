@@ -1340,6 +1340,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const fabMinimizedState = localStorage.getItem('sigaa-fab-minimized');
   let fabWasInitiallyMinimized = fabMinimizedState === 'true';
   
+  function updateExpandButtonVisibility() {
+    if (fabExpandBtn) {
+      fabExpandBtn.style.display = fabWasInitiallyMinimized ? 'block' : 'none';
+    }
+  }
+  
   if (fabWasInitiallyMinimized) {
     fab.classList.add('minimized');
     fab.style.display = 'none';
@@ -1349,6 +1355,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fab.style.display = 'block';
     fabMinimized.classList.remove('visible');
   }
+  
+  updateExpandButtonVisibility();
 
   function closeFab() {
     fabMenu.classList.remove('open');
@@ -1380,6 +1388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fabMinimized.classList.add('visible');
     localStorage.setItem('sigaa-fab-minimized', 'true');
     fabWasInitiallyMinimized = true; // Atualiza o rastreamento
+    updateExpandButtonVisibility();
     closeFab();
   }
 
@@ -1391,6 +1400,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fabMinimized.classList.remove('visible');
     localStorage.setItem('sigaa-fab-minimized', 'false');
     fabWasInitiallyMinimized = false; // Atualiza o rastreamento
+    updateExpandButtonVisibility();
   }
 
   // Expande temporariamente (apenas para visualizar menu)
@@ -1428,6 +1438,15 @@ document.addEventListener('DOMContentLoaded', () => {
     fabMinimizeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       minimizeFab();
+    });
+  }
+  
+  // Botão de expandir (fixar)
+  if (fabExpandBtn) {
+    fabExpandBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      expandFab();
+      closeFab();
     });
   }
 
