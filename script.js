@@ -1462,7 +1462,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Fecha se clicar fora
   document.addEventListener('click', (e) => {
-    if (!fab.contains(e.target)) closeFab();
+    if (!fab.contains(e.target) && !fabMinimized.contains(e.target)) {
+      closeFab();
+    }
   });
 
   // Fecha em resize para evitar menus abertos em desktop
