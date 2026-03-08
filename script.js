@@ -1333,6 +1333,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const fabMenu = document.getElementById('mobile-fab-menu');
   const fab = document.getElementById('mobile-fab');
   const fabMinimizeBtn = document.getElementById('fab-minimize-btn');
+  const fabExpandBtn = document.getElementById('fab-expand-btn');
   const fabMinimized = document.getElementById('fab-minimized');
   if (!fabToggle || !fabMenu || !fab) return; // nada a fazer
 
