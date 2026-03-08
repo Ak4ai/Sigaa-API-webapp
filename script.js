@@ -1408,6 +1408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fab.style.display = 'block';
     fab.offsetHeight;
     fab.classList.remove('minimized');
+    fabMinimized.classList.remove('visible'); // Oculta a barrinha
     // NÃO salva no localStorage - apenas mostra visualmente
   }
 
