@@ -5,6 +5,102 @@ body {
   font-size: 16px;
 }
 
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  margin: -8px -8px 20px -8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid #d9e5ef;
+  border-radius: 12px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #0f3f7a;
+  white-space: nowrap;
+}
+
+.page-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.desktop-quick-actions {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.desktop-actions-separator {
+  width: 1px;
+  height: 30px;
+  background: #b8cbe0;
+  display: inline-block;
+}
+
+.desktop-actions-toggle {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: none;
+  background: #e7eff7;
+  color: #15569b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.desktop-actions-toggle:hover {
+  background: #d6e4f2;
+  color: #0d4685;
+}
+
+.desktop-actions-menu {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  min-width: 190px;
+  background: #ffffff;
+  border: 1px solid #d7e2ef;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 450;
+}
+
+.desktop-actions-menu.open {
+  display: flex;
+}
+
+.desktop-action-item {
+  border: none;
+  border-radius: 8px;
+  background: #f4f8fd;
+  color: #1b4f80;
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.desktop-action-item:hover {
+  background: #e3effb;
+}
+
 /* Material Icons Setup */
 .material-icons {
   font-family: 'Material Icons';
@@ -83,9 +179,9 @@ th {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 0;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .tab-button {
@@ -139,7 +235,6 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
 
 .tab-content {
   display: none;
-  margin-top: 20px;
 }
 
 .tab-content.active {
@@ -147,7 +242,6 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
     gap: 10px;
-    margin-top: 20px;
     flex-direction: column;
 }
 
@@ -191,8 +285,23 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
 /* ===== Mobile adjustments ===== */
 @media (max-width: 1040px) {
 
-  /* Esconder o título principal em mobile para economizar espaço */
-  h1 {
+  .desktop-quick-actions {
+    display: none;
+  }
+
+  .page-header {
+    position: static;
+    top: auto;
+    z-index: auto;
+    display: block;
+    padding: 0;
+    background: transparent;
+    backdrop-filter: none;
+    border: none;
+    border-radius: 0;
+  }
+
+  .page-header h1 {
     display: none;
   }
 
@@ -531,6 +640,14 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
 
 /* Reset das abas para desktop - voltam comportamento original */
 @media (min-width: 1041px) {
+  .page-header {
+    align-items: center;
+  }
+
+  .desktop-quick-actions {
+    display: inline-flex;
+  }
+
   .tabs {
     position: static !important;
     bottom: auto;
@@ -542,12 +659,12 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     background: transparent;
     z-index: auto;
     padding: 0;
-    margin-top: 20px;
+    margin-top: 0;
     height: auto;
     flex-wrap: wrap;
     gap: 10px;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
   }
 
   body {
@@ -628,17 +745,169 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     gap: 24px 32px;
     align-items: start;
     justify-items: stretch;
-    margin-top: 24px;
     height: 100%; /* Garante altura total do grid */
   }
   #sigaa-form {
     grid-area: form;
     margin-bottom: 0;
   }
-  #tabela-novidades-container {
-    border: 1px solid #1f1f1f;
-    border-radius: 8px;
+  #home-listas-container {
+    grid-area: novidades;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-self: stretch;
   }
+
+  .novidades-toggle {
+    display: none;
+  }
+
+  .novidades-toggle-btn {
+    border: 1px solid #d0d7de;
+    background: #f6f8fa;
+    color: #1f2328;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .novidades-toggle-btn.active {
+    background: #1976d2;
+    border-color: #1976d2;
+    color: #fff;
+  }
+
+  .home-lista-container {
+    border: 1px solid #1a73e8;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    height: auto;
+    max-height: 491px;
+    transition: max-height 0.3s, box-shadow 0.25s ease, transform 0.25s ease;
+  }
+
+  .home-lista-container:hover {
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .home-painel-titulo {
+    margin: 0;
+    padding: 12px 14px;
+    font-size: 0.96rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    border-bottom: 1px solid #1a73e8;
+    background: #1565c0;
+    color: #ffffff;
+  }
+
+  /* Novidades: base da tabela "Hoje" */
+  #tabela-novidades-container {
+    border-color: #1a73e8;
+    background: #ffffff;
+  }
+
+  #tabela-novidades-container .home-painel-titulo {
+    background: #1565c0;
+    border-bottom-color: #1a73e8;
+    color: #ffffff;
+  }
+
+  /* Atividades: azul escuro complementar */
+  #tabela-atividades-container {
+    border-color: #1565c0;
+    background: #ffffff;
+  }
+
+  #tabela-atividades-container .home-painel-titulo {
+    background: #0d47a1;
+    border-bottom-color: #1565c0;
+    color: #ffffff;
+  }
+
+  #tabela-novidades-home,
+  #tabela-atividades-home {
+    margin-top: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: transparent;
+  }
+
+  #tabela-novidades-home thead th,
+  #tabela-atividades-home thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    font-size: 0.84rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  #tabela-novidades-home thead th {
+    background: #1565c0;
+    color: #ffffff;
+    border-color: #1a73e8;
+  }
+
+  #tabela-atividades-home thead th {
+    background: #0d47a1;
+    color: #ffffff;
+    border-color: #1565c0;
+  }
+
+  #tabela-novidades-home td,
+  #tabela-atividades-home td {
+    background: #ffffff;
+  }
+
+  #tabela-novidades-home td {
+    border-color: #bbdefb;
+  }
+
+  #tabela-atividades-home td {
+    border-color: #c5d9f1;
+  }
+
+  #tabela-novidades-home tbody tr:nth-child(even) td {
+    background: #e3f2fd;
+  }
+
+  #tabela-atividades-home tbody tr:nth-child(even) td {
+    background: #e8f0fb;
+  }
+
+  #tabela-novidades-home tbody tr:hover td {
+    background: #bbdefb;
+  }
+
+  #tabela-atividades-home tbody tr:hover td {
+    background: #c8dbf2;
+  }
+
+  #novidades-home-vazio,
+  #atividades-home-vazio {
+    margin: 10px;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  #novidades-home-vazio {
+    border: 1px dashed #1a73e8;
+    background: #e8f2ff;
+    color: #24527a !important;
+  }
+
+  #atividades-home-vazio {
+    border: 1px dashed #1565c0;
+    background: #e9f0fb;
+    color: #274d73 !important;
+  }
+
   #dados-institucionais {
     grid-area: dados;
     margin-top: 0;
@@ -647,21 +916,35 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
 }
 
 @media (min-width: 1040px) {
-  #tabela-novidades-container {
-    grid-area: novidades;
-    align-self: stretch;
-    height: auto;
-    overflow: auto;
-    max-height: 491px;
-    transition: max-height 0.3s;
-  }
-  #dados-institucionais.expanded ~ #tabela-novidades-container,
-  #dados-institucionais:hover ~ #tabela-novidades-container {
+  #dados-institucionais.expanded ~ #home-listas-container .home-lista-container,
+  #dados-institucionais:hover ~ #home-listas-container .home-lista-container {
     max-height: 871px;
   }
 }
 
 @media (max-width: 1040px) {
+  .novidades-toggle {
+    display: none;
+    gap: 8px;
+    padding: 10px 10px 4px;
+  }
+
+  #home-listas-container {
+    display: none !important;
+  }
+
+  .home-lista-container {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    max-height: none;
+    box-shadow: none;
+  }
+
+  .home-painel-titulo {
+    display: none;
+  }
+
   .tabela-horarios th:nth-child(3), /* Turma */
   .tabela-horarios th:nth-child(4), /* Período */
   .tabela-horarios td:nth-child(3),
@@ -857,15 +1140,15 @@ progress.custom-bar.vermelho::-moz-progress-bar {
 /* Estilo para o select de filtro de disciplina */
 select {
   padding: 8px 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #b7d3e4;
   border-radius: 6px;
-  background: #fafbfc;
+  background: #f8fcff;
   font-size: 16px;
-  color: #333;
+  color: #1a5a7d;
   margin: 8px 0 16px 0;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  box-shadow: 0 1px 2px rgba(16, 62, 93, 0.06);
   min-width: 100%;
   max-width: 100%;
   appearance: none;
@@ -873,14 +1156,13 @@ select {
 }
 
 select:focus {
-  border-color: #000000;
-  box-shadow: 0 0 0 2px #00000055;
+  border-color: #1f78a8;
+  box-shadow: 0 0 0 2px rgba(31, 120, 168, 0.2);
 }
 
 select option {
-  background: #fff;
-  background-color: #ccc;
-  color: #222;
+  background: #ffffff;
+  color: #1a5a7d;
   font-size: 16px;
 }
 
@@ -901,13 +1183,58 @@ input#manter-logado {
     width: auto;
 }
 
-#dados-institucionais {
-  background: #fff;
-  border: 1px solid #ccc;
+/* Tema azul compartilhado entre formulário e dados institucionais */
+#sigaa-form {
+  border: 1px solid #6ea7c8;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #f3f9fd 100%);
+  box-shadow: 0 8px 20px rgba(16, 62, 93, 0.1);
+}
+
+#sigaa-form label {
+  color: #1a5a7d;
+  font-weight: 600;
+}
+
+#sigaa-form input[type="text"],
+#sigaa-form input[type="password"] {
+  border: 1px solid #b7d3e4;
   border-radius: 8px;
+  background: #f8fcff;
+}
+
+#sigaa-form input[type="text"]:focus,
+#sigaa-form input[type="password"]:focus {
+  border-color: #1f78a8;
+  box-shadow: 0 0 0 2px rgba(31, 120, 168, 0.2);
+}
+
+#sigaa-form button {
+  background: #1f78a8;
+  border: 1px solid #1f78a8;
+  color: #ffffff;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+}
+
+#sigaa-form button:hover {
+  background: #17648e;
+  border-color: #17648e;
+  color: #ffffff;
+}
+
+#sigaa-form button:active {
+  transform: translateY(1px);
+}
+
+#dados-institucionais {
+  background: linear-gradient(180deg, #ffffff 0%, #f3f9fd 100%);
+  border: 1px solid #6ea7c8;
+  border-radius: 10px;
   padding: 0;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  box-shadow: 0 8px 20px rgba(16, 62, 93, 0.1);
   transition: box-shadow 0.2s;
   cursor: pointer;
   position: relative;
@@ -917,11 +1244,12 @@ input#manter-logado {
 }
 
 #dados-institucionais h2 {
-  background: #f2f2f2;
+  background: #1f78a8;
+  color: #ffffff;
   margin: 0;
   padding: 12px 16px;
   font-size: 15px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #6ea7c8;
 }
 
 #dados-institucionais ul {
@@ -932,7 +1260,7 @@ input#manter-logado {
 
 #dados-institucionais li {
   padding: 10px 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #d5e5ef;
   font-size: 15px;
   display: flex;
   gap: 8px;
@@ -944,7 +1272,7 @@ input#manter-logado {
 
 #dados-institucionais strong {
   min-width: 120px;
-  color: #1976d2;
+  color: #1a5a7d;
   font-weight: 600;
   font-size: 15px;
 }
@@ -974,7 +1302,7 @@ input#manter-logado {
   right: 18px;
   top: 18px;
   font-size: 13px;
-  color: #888;
+  color: #d7ebf7;
   transition: transform 0.2s;
 }
 
@@ -1128,12 +1456,6 @@ span#fechar-aviso-span {
 #home-content.sem-dados form {
   margin-bottom: 32px;
   min-width: 40vw;
-}
-
-@media (max-width: 1040px) {
-  #tabela-novidades-container {
-    display: none !important;
-  }
 }
 
 /* Por padrão (desktop) esconde o FAB mobile - mantido via media queries */

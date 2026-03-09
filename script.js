@@ -189,7 +189,16 @@ async function consultarComToken(token) {
           notasGlobais = data.avisosPorDisciplina;
           preencherSelectorNotas(notasGlobais);
           preencherTabelaNotas(notasGlobais, "todas");
+        } else {
+          preencherTabelaNovidades([]);
+          frequenciasGlobais = [];
+          notasGlobais = [];
         }
+
+        // Atividades (campo opcional do backend)
+        // Atividades (campo opcional do backend + fallback por avisos)
+        atividadesGlobais = extrairAtividades(data);
+        preencherTabelaAtividades(atividadesGlobais);
 
         //document.getElementById('tabela-horarios').style.display = '';
         document.getElementById('tabela-horarios-detalhados').style.display = '';
@@ -259,6 +268,8 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   horariosGlobais = [];
   frequenciasGlobais = [];
   notasGlobais = [];
+  atividadesGlobais = [];
+  novidadesGlobais = [];
 
   // 4. Limpa toda a interface — dados institucionais
   const dadosDiv = document.getElementById('dados-institucionais');
@@ -308,12 +319,24 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   const selNotas = document.getElementById('select-disciplina-notas');
   if (selNotas) selNotas.innerHTML = '<option value="todas">Todas</option>';
 
-  // 9. Limpa novidades
+  // 9. Limpa novidades e atividades
   const tblNovHome = document.getElementById('tabela-novidades-home');
   if (tblNovHome) {
     const tbody = tblNovHome.querySelector('tbody');
     if (tbody) tbody.innerHTML = '';
     tblNovHome.style.display = 'none';
+  }
+  const tblAtivHome = document.getElementById('tabela-atividades-home');
+  if (tblAtivHome) {
+    const tbody = tblAtivHome.querySelector('tbody');
+    if (tbody) tbody.innerHTML = '';
+    tblAtivHome.style.display = 'none';
+  }
+  const tblAtivTab = document.getElementById('tabela-atividades-atividades');
+  if (tblAtivTab) {
+    const tbody = tblAtivTab.querySelector('tbody');
+    if (tbody) tbody.innerHTML = '';
+    tblAtivTab.style.display = 'none';
   }
 
   // 10. Limpa timer/status de scrape
@@ -361,8 +384,8 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   // 15. Esconde elementos que só aparecem com dados
   const dadosInst = document.getElementById('dados-institucionais');
   if (dadosInst) dadosInst.style.display = 'none';
-  const novContainer = document.getElementById('tabela-novidades-container');
-  if (novContainer) novContainer.style.display = 'none';
+  const listasContainer = document.getElementById('home-listas-container');
+  if (listasContainer) listasContainer.style.display = 'none';
   const homeAviso = document.getElementById('home-aviso');
   if (homeAviso) homeAviso.style.display = 'none';
 
@@ -380,6 +403,74 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 
 // Salva os dados para filtrar depois
 let frequenciasGlobais = [];
+let atividadesGlobais = [];
+let novidadesGlobais = [];
+let __homeHeightSyncInterval = null;
+
+function isHomeTabActive() {
+  const homeTab = document.getElementById('tab-home');
+  return !!homeTab && homeTab.classList.contains('active') && document.visibilityState === 'visible';
+}
+
+function runHomeHeightSyncTick() {
+  if (!isHomeTabActive()) return;
+  atualizarHomePainelNovidadesAtividades();
+  ajustarAlturaNovidades();
+}
+
+function startHomeHeightSyncLoop() {
+  if (__homeHeightSyncInterval) return;
+  __homeHeightSyncInterval = setInterval(() => {
+    if (!isHomeTabActive()) {
+      stopHomeHeightSyncLoop();
+      return;
+    }
+    runHomeHeightSyncTick();
+  }, 350);
+}
+
+function stopHomeHeightSyncLoop() {
+  if (!__homeHeightSyncInterval) return;
+  clearInterval(__homeHeightSyncInterval);
+  __homeHeightSyncInterval = null;
+}
+
+function refreshHomeHeightSyncLoop() {
+  if (isHomeTabActive()) {
+    startHomeHeightSyncLoop();
+    runHomeHeightSyncTick();
+  } else {
+    stopHomeHeightSyncLoop();
+  }
+}
+
+function extrairAtividades(data) {
+  if (!data) return [];
+
+  // Preferir campo dedicado quando o backend disponibilizar.
+  if (Array.isArray(data.atividades) && data.atividades.length > 0) {
+    return data.atividades.flatMap(({ disciplina, atividades }) =>
+      (atividades || []).map(({ data: dataAtiv, descricao }) => ({
+        disciplina,
+        data: dataAtiv || '',
+        descricao: descricao || ''
+      }))
+    );
+  }
+
+  // Fallback: filtra avisos que parecem atividades acadêmicas.
+  if (!Array.isArray(data.avisosPorDisciplina)) return [];
+  const regexAtividade = /(atividade|lista|trabalho|tarefa|exercicio|exercício|projeto|seminario|seminário|avaliacao|avaliação|prova|entrega)/i;
+  return data.avisosPorDisciplina.flatMap(({ disciplina, avisos }) =>
+    (avisos || [])
+      .filter(aviso => regexAtividade.test(aviso?.descricao || ''))
+      .map(({ data: dataAviso, descricao }) => ({
+        disciplina,
+        data: dataAviso || '',
+        descricao: descricao || ''
+      }))
+  );
+}
 
 function preencherSelectorFrequencias(avisosPorDisciplina) {
   const select = document.getElementById('select-disciplina-frequencia');
@@ -894,6 +985,34 @@ function preencherTabelaDetalhada(horarios) {
     tabela.style.display = horarios.length > 0 ? '' : 'none';
 }
 
+// Função para preencher as tabelas de atividades (home + aba)
+function preencherTabelaAtividades(atividades) {
+  const tabelaHome = document.getElementById('tabela-atividades-home');
+  const tabelaAba = document.getElementById('tabela-atividades-atividades');
+  const vaziHome = document.getElementById('atividades-home-vazio');
+  const vaziTab = document.getElementById('atividades-tab-vazio');
+
+  [tabelaHome, tabelaAba].forEach(tabela => {
+    if (!tabela) return;
+    const tbody = tabela.querySelector('tbody');
+    tbody.innerHTML = '';
+    if (atividades.length > 0) {
+      atividades.forEach(a => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${a.disciplina}</td><td>${a.data || ''}</td><td>${a.descricao || ''}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  });
+
+  // Aba Atividades
+  const temDados = atividades.length > 0;
+  if (tabelaAba) tabelaAba.style.display = temDados ? '' : 'none';
+  if (vaziTab) vaziTab.style.display = (!temDados) ? '' : 'none';
+
+  atualizarHomePainelNovidadesAtividades();
+}
+
 // Função para preencher a aba de novidades
 function preencherTabelaNovidades(novidades) {
   // Home
@@ -905,19 +1024,82 @@ function preencherTabelaNovidades(novidades) {
     const tbody = tabela.querySelector('tbody');
     tbody.innerHTML = '';
     if (novidades.length > 0) {
-      tabela.style.display = '';
       novidades.forEach(n => {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${n.disciplina}</td><td>${n.data}</td><td>${n.descricao}</td>`;
         tbody.appendChild(tr);
       });
-    } else {
-      tabela.style.display = 'none';
     }
   });
+
+  novidadesGlobais = novidades;
+
+  const temNovidades = novidades.length > 0;
+  if (tabelaNovidades) tabelaNovidades.style.display = temNovidades ? '' : 'none';
+
+  atualizarHomePainelNovidadesAtividades();
+
   // Ajusta a altura do container de novidades agora que conteúdos mudaram
   setTimeout(ajustarAlturaNovidades, 30);
 }
+
+function atualizarHomePainelNovidadesAtividades() {
+  const isDesktop = window.innerWidth >= 1040;
+
+  const toggle = document.querySelector('.novidades-toggle');
+  const btnAtiv = document.querySelector('.novidades-toggle-btn[data-view="atividades"]');
+  const panelNov = document.getElementById('tabela-novidades-container');
+  const panelAtiv = document.getElementById('tabela-atividades-container');
+  const tblNov = document.getElementById('tabela-novidades-home');
+  const tblAtiv = document.getElementById('tabela-atividades-home');
+  const vazioNov = document.getElementById('novidades-home-vazio');
+  const vazioAtiv = document.getElementById('atividades-home-vazio');
+
+  if (!tblNov || !tblAtiv || !panelNov || !panelAtiv) return;
+
+  const temNovidades = novidadesGlobais.length > 0;
+  const temAtividades = atividadesGlobais.length > 0;
+
+  if (toggle) toggle.style.display = isDesktop ? 'none' : 'inline-flex';
+
+  if (isDesktop) {
+    panelNov.style.display = '';
+    panelAtiv.style.display = '';
+
+    tblNov.style.display = temNovidades ? '' : 'none';
+    tblAtiv.style.display = temAtividades ? '' : 'none';
+
+    if (vazioNov) vazioNov.style.display = temNovidades ? 'none' : '';
+    if (vazioAtiv) vazioAtiv.style.display = temAtividades ? 'none' : '';
+    return;
+  }
+
+  // Mobile: mantém o toggle alternando entre os dois painéis.
+  const view = (btnAtiv && btnAtiv.classList.contains('active')) ? 'atividades' : 'novidades';
+
+  if (view === 'novidades') {
+    panelNov.style.display = '';
+    panelAtiv.style.display = 'none';
+    tblNov.style.display = temNovidades ? '' : 'none';
+    if (vazioNov) vazioNov.style.display = temNovidades ? 'none' : '';
+  } else {
+    panelNov.style.display = 'none';
+    panelAtiv.style.display = '';
+    tblAtiv.style.display = temAtividades ? '' : 'none';
+    if (vazioAtiv) vazioAtiv.style.display = temAtividades ? 'none' : '';
+  }
+}
+
+// Toggle Novidades / Atividades no container home
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.novidades-toggle-btn');
+  if (!btn) return;
+
+  // Atualiza estado ativo dos botões do toggle
+  document.querySelectorAll('.novidades-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  atualizarHomePainelNovidadesAtividades();
+});
 
 // Controle de abas
 document.querySelectorAll('.tab-button').forEach(button => {
@@ -930,6 +1112,7 @@ document.querySelectorAll('.tab-button').forEach(button => {
     button.classList.add('active');
     const tabId = button.getAttribute('data-tab');
     document.getElementById(tabId).classList.add('active');
+    refreshHomeHeightSyncLoop();
   });
 });
 
@@ -951,6 +1134,7 @@ function activateTab(tabId) {
       // rola suavemente até o conteúdo se estiver fora da view
       try { content.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { }
     }
+    refreshHomeHeightSyncLoop();
   } catch (e) {
     console.warn('Erro ao ativar aba', tabId, e);
   }
@@ -965,7 +1149,8 @@ function removerEstiloSemDados() {
   const msg = homeContent.querySelector('.mensagem-sem-dados');
   if (msg) msg.remove();
   document.getElementById('dados-institucionais').style.display = 'block';
-  document.getElementById('tabela-novidades-container').style.display = 'block';
+  // Deixa o CSS responsivo decidir (grid no desktop, oculto no mobile)
+  document.getElementById('home-listas-container').style.display = '';
   // Só mostra o aviso se o usuário não escolheu 'não mostrar mais'
   try {
     const STORAGE_KEY = 'sigaa_nao_mostrar_aviso';
@@ -1019,7 +1204,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     // Opcional: esconder dados institucionais e novidades
     document.getElementById('dados-institucionais').style.display = 'none';
-    document.getElementById('tabela-novidades-container').style.display = 'none';
+    document.getElementById('home-listas-container').style.display = 'none';
     document.getElementById('home-aviso').style.display = 'none';
     // Esconde a barra de tabs inteira e o FAB
     const tabsBar = document.querySelector('.tabs');
@@ -1064,10 +1249,16 @@ window.addEventListener('DOMContentLoaded', () => {
         notasGlobais = data.avisosPorDisciplina;
         preencherSelectorNotas(notasGlobais);
         preencherTabelaNotas(notasGlobais, "todas");
+      } else {
+        preencherTabelaNovidades([]);
+        frequenciasGlobais = [];
+        notasGlobais = [];
       }
 
       //document.getElementById('tabela-horarios').style.display = '';
       document.getElementById('tabela-horarios-detalhados').style.display = '';
+      atividadesGlobais = extrairAtividades(data);
+      preencherTabelaAtividades(atividadesGlobais);
     } catch (e) {
       console.warn('Erro ao carregar dados salvos:', e);
     }
@@ -1088,7 +1279,7 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
   });
   if (semestre) dadosFormatados['Semestre'] = semestre;
 
-  let html = '<h2 style="background:#f2f2f2;margin:0;padding:12px 16px;font-size:1.1em;border-bottom:1px solid #e0e0e0;">Dados Institucionais do Usuário</h2><ul>';
+  let html = '<h2>Dados Institucionais do Usuário</h2><ul>';
 
   // Mostra só principais
   principais.forEach(chave => {
@@ -1174,13 +1365,34 @@ function ajustarAlturaNovidades() {
   try {
     const form = document.getElementById('sigaa-form');
     const dados = document.getElementById('dados-institucionais');
-    const container = document.getElementById('tabela-novidades-container');
-    if (!form || !dados || !container) return;
-    const formH = form.getBoundingClientRect().height || 0;
-    const dadosH = dados.getBoundingClientRect().height || 0;
-    const x = Math.round(formH + 22 + dadosH);
-    container.style.maxHeight = x + 'px';
-    container.style.overflow = 'auto';
+    const novidadesContainer = document.getElementById('tabela-novidades-container');
+    const atividadesContainer = document.getElementById('tabela-atividades-container');
+    if (!form || !dados || !novidadesContainer || !atividadesContainer) return;
+
+    if (window.innerWidth < 1040) {
+      novidadesContainer.style.maxHeight = '';
+      atividadesContainer.style.maxHeight = '';
+      novidadesContainer.style.overflow = '';
+      atividadesContainer.style.overflow = '';
+      return;
+    }
+
+    // Soma real do bloco esquerdo: topo externo do formulário até base externa dos dados.
+    const formRect = form.getBoundingClientRect();
+    const dadosRect = dados.getBoundingClientRect();
+    const formStyle = window.getComputedStyle(form);
+    const dadosStyle = window.getComputedStyle(dados);
+
+    const formMarginTop = parseFloat(formStyle.marginTop || '0') || 0;
+    const dadosMarginBottom = parseFloat(dadosStyle.marginBottom || '0') || 0;
+    const top = formRect.top - formMarginTop;
+    const bottom = dadosRect.bottom + dadosMarginBottom;
+    const x = Math.max(120, Math.round(bottom - top));
+
+    novidadesContainer.style.maxHeight = x + 'px';
+    atividadesContainer.style.maxHeight = x + 'px';
+    novidadesContainer.style.overflow = 'auto';
+    atividadesContainer.style.overflow = 'auto';
   } catch (e) {
     console.warn('Erro ao ajustar altura de novidades:', e);
   }
@@ -1188,8 +1400,15 @@ function ajustarAlturaNovidades() {
 
 // Ajusta ao redimensionar a janela
 window.addEventListener('resize', () => {
+  atualizarHomePainelNovidadesAtividades();
   ajustarAlturaNovidades();
   ajustarTabsMobileOcultar();
+  refreshHomeHeightSyncLoop();
+});
+
+document.addEventListener('visibilitychange', refreshHomeHeightSyncLoop);
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(refreshHomeHeightSyncLoop, 120);
 });
 
 // Em mobile, se as tabs ocuparem mais de 2 linhas, esconder o botão 'Horários'.
@@ -1329,6 +1548,45 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // --- Mobile FAB (floating action button) behavior ---
 document.addEventListener('DOMContentLoaded', () => {
+  // Menu rápido do desktop (separado do FAB mobile)
+  const desktopToggle = document.getElementById('desktop-actions-toggle');
+  const desktopMenu = document.getElementById('desktop-actions-menu');
+
+  if (desktopToggle && desktopMenu) {
+    function closeDesktopMenu() {
+      desktopMenu.classList.remove('open');
+      desktopMenu.setAttribute('aria-hidden', 'true');
+    }
+
+    function openDesktopMenu() {
+      desktopMenu.classList.add('open');
+      desktopMenu.setAttribute('aria-hidden', 'false');
+    }
+
+    desktopToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (desktopMenu.classList.contains('open')) closeDesktopMenu(); else openDesktopMenu();
+    });
+
+    desktopMenu.addEventListener('click', (e) => {
+      const btn = e.target.closest('.desktop-action-item');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === 'abrir-horarios-completos') {
+        activateTab('tab-horarios');
+      } else if (action === 'abrir-novidades') {
+        activateTab('tab-novidades');
+      } else if (action === 'abrir-atividades') {
+        activateTab('tab-atividades');
+      }
+      closeDesktopMenu();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!desktopMenu.contains(e.target) && !desktopToggle.contains(e.target)) closeDesktopMenu();
+    });
+  }
+
   const fabToggle = document.getElementById('mobile-fab-toggle');
   const fabMenu = document.getElementById('mobile-fab-menu');
   const fab = document.getElementById('mobile-fab');
@@ -1431,6 +1689,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (action === 'abrir-novidades') {
       // ativa diretamente a aba de novidades
       activateTab('tab-novidades');
+      closeFab();
+    } else if (action === 'abrir-atividades') {
+      // ativa diretamente a aba de atividades
+      activateTab('tab-atividades');
       closeFab();
     }
   });
@@ -1879,28 +2141,8 @@ function stopTokenTimer() {
 // ---------------------- End token helpers ----------------------
 // ...existing code...
 function ajustarMaxHeightNovidades() {
-  const loading = document.getElementById('loading');
-  const novidades = document.getElementById('tabela-novidades-container');
-  if (!novidades) return;
-  if (window.innerWidth < 1040) return; // só aplica em desktop
-
-  let maxHeight = 486;
-  let maxHeightExpanded = 871;
-
-  const dados = document.getElementById('dados-institucionais');
-  const expanded = dados && dados.classList.contains('expanded');
-  const hovered = dados && dados.matches(':hover');
-
-  if (expanded || hovered) {
-    maxHeight = maxHeightExpanded;
-  }
-
-  // Se loading está escondido, diminui 19px; se visível, soma 19px
-  if (loading && loading.style.display === 'none') {
-    novidades.style.maxHeight = (maxHeight - 19) + 'px';
-  } else {
-    novidades.style.maxHeight = maxHeight + 'px';
-  }
+  // Mantido por compatibilidade com gatilhos existentes.
+  ajustarAlturaNovidades();
 }
 
 // Atualiza novidades ao passar mouse em dados institucionais

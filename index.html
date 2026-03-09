@@ -46,15 +46,32 @@
   }
 </script>
 <body>
-  <h1>Consulta de Horários - SIGAA</h1>
+  <header class="page-header">
+    <h1>Consulta de Horários - SIGAA</h1>
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab-button active" data-tab="tab-home" title="Home"><span class="material-icons tab-icon">home</span><span class="tab-label">Home</span></button>
-    <button class="tab-button" data-tab="tab-simplificada" title="Horários"><span class="material-icons tab-icon">schedule</span><span class="tab-label">Horários</span></button>
-    <button class="tab-button" data-tab="tab-frequencias" title="Frequência"><span class="material-icons tab-icon">check_circle</span><span class="tab-label">Frequência</span></button>
-    <button class="tab-button" data-tab="tab-notas" title="Notas"><span class="material-icons tab-icon">grade</span><span class="tab-label">Notas</span></button>
-  </div>
+    <div class="page-header-right">
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-button active" data-tab="tab-home" title="Home"><span class="material-icons tab-icon">home</span><span class="tab-label">Home</span></button>
+        <button class="tab-button" data-tab="tab-simplificada" title="Horários"><span class="material-icons tab-icon">schedule</span><span class="tab-label">Horários</span></button>
+        <button class="tab-button" data-tab="tab-frequencias" title="Frequência"><span class="material-icons tab-icon">check_circle</span><span class="tab-label">Frequência</span></button>
+        <button class="tab-button" data-tab="tab-notas" title="Notas"><span class="material-icons tab-icon">grade</span><span class="tab-label">Notas</span></button>
+        <button class="tab-button" data-tab="tab-atividades" title="Atividades"><span class="material-icons tab-icon">assignment</span><span class="tab-label">Atividades</span></button>
+      </div>
+
+      <div id="desktop-quick-actions" class="desktop-quick-actions" aria-hidden="false">
+        <span class="desktop-actions-separator" aria-hidden="true"></span>
+        <button id="desktop-actions-toggle" class="desktop-actions-toggle" aria-label="Abrir menu rápido" title="Menu rápido">
+          <span class="material-icons">menu</span>
+        </button>
+        <div id="desktop-actions-menu" class="desktop-actions-menu" role="menu" aria-hidden="true">
+          <button class="desktop-action-item" data-action="abrir-horarios-completos">Horários completos</button>
+          <button class="desktop-action-item" data-action="abrir-novidades">Novidades</button>
+          <button class="desktop-action-item" data-action="abrir-atividades">Atividades</button>
+        </div>
+      </div>
+    </div>
+  </header>
 
   <!-- Conteúdo das abas -->
   <div class="tab-content active" id="tab-home">
@@ -110,17 +127,40 @@
         </form>
         <div id="dados-institucionais"></div>
       </div>
-      <div id="tabela-novidades-container">
-        <table id="tabela-novidades-home" style="display: none;">
-          <thead>
-            <tr>
-              <th>Disciplina</th>
-              <th>Data</th>
-              <th>Descrição</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div id="home-listas-container">
+        <div class="novidades-toggle">
+          <button class="novidades-toggle-btn active" data-view="novidades">Novidades</button>
+          <button class="novidades-toggle-btn" data-view="atividades">Atividades</button>
+        </div>
+        <div id="tabela-novidades-container" class="home-lista-container" data-panel="novidades">
+          <h3 class="home-painel-titulo">Novidades</h3>
+          <table id="tabela-novidades-home" style="display: none;">
+            <thead>
+              <tr>
+                <th>Disciplina</th>
+                <th>Data</th>
+                <th>Descrição</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="novidades-home-vazio" style="display:none; padding: 16px; color: #888; font-style: italic;">Nenhuma novidade encontrada.</div>
+        </div>
+
+        <div id="tabela-atividades-container" class="home-lista-container" data-panel="atividades">
+          <h3 class="home-painel-titulo">Atividades</h3>
+          <table id="tabela-atividades-home" style="display: none;">
+            <thead>
+              <tr>
+                <th>Disciplina</th>
+                <th>Data</th>
+                <th>Descrição</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="atividades-home-vazio" style="display:none; padding: 16px; color: #888; font-style: italic;">Nenhuma atividade encontrada.</div>
+        </div>
       </div>
     </div>
   </div>
@@ -303,6 +343,23 @@
       </select>
       <button id="exportar-pdf-btn" style="margin: 12px 0 16px 0; display: block;">Exportar PDF (LaTeX)</button>
       <div id="tabela-notas-wrapper"></div>
+    </div>
+  </div>
+
+  <!-- Aba Atividades -->
+  <div class="tab-content" id="tab-atividades">
+    <div class="tab-novidades">
+      <table id="tabela-atividades-atividades" style="display: none;">
+        <thead>
+          <tr>
+            <th>Disciplina</th>
+            <th>Data</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="atividades-tab-vazio" style="display:none; padding: 16px; color: #888; font-style: italic;">Nenhuma atividade encontrada.</div>
     </div>
   </div>
 
