@@ -13,12 +13,15 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px 14px;
-  margin: -8px -8px 20px -8px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
+  padding: calc(10px + var(--scroll-pad-y, 0px)) calc(14px + var(--scroll-pad-x, 0px));
+  margin: calc(-8px - var(--scroll-margin, 0px)) calc(-8px - var(--scroll-margin, 0px)) 20px calc(-8px - var(--scroll-margin, 0px));
+  background: rgba(255, 255, 255, calc(0.95 + var(--scroll-bg, 0)));
+  backdrop-filter: blur(calc(8px + var(--scroll-blur, 0px)));
   border: 1px solid #d9e5ef;
-  border-radius: 12px;
+  border-bottom: 1px solid rgba(217, 229, 239, calc(1 - var(--scroll-progress, 0)));
+  border-radius: calc(12px - var(--scroll-radius, 0px));
+  box-shadow: 0 4px 16px rgba(15, 23, 42, calc(0 + var(--scroll-shadow, 0)));
+  transition: none;
 }
 
 .page-header h1 {
@@ -26,6 +29,16 @@ body {
   font-size: 1.25rem;
   color: #0f3f7a;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(18%) sepia(60%) saturate(1800%) hue-rotate(196deg) brightness(90%) contrast(95%);
 }
 
 .page-header-right {

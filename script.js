@@ -51,6 +51,43 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   }
+
+  // Dynamic header scroll behavior with smooth ease animation
+  const pageHeader = document.querySelector('.page-header');
+  const animationScrollDistance = 100; // Pixels to scroll for full animation (header reaches top)
+  const headerHeight = pageHeader?.offsetHeight || 70;
+  
+  // Easing function for smooth animation (easeInOutCubic)
+  const easeInOutCubic = (t) => {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  };
+  
+  window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    
+    // Calculate progress based on scroll distance (0 to 28px = 0% to 100%)
+    let linearProgress = Math.max(0, Math.min(1, scrollY / animationScrollDistance));
+    
+    // Apply easing function for smooth acceleration/deceleration
+    const easedProgress = easeInOutCubic(linearProgress);
+    
+    // Update CSS custom properties with eased progress
+    pageHeader?.style.setProperty('--scroll-progress', easedProgress);
+    pageHeader?.style.setProperty('--scroll-pad-y', (easedProgress * 2) + 'px');
+    pageHeader?.style.setProperty('--scroll-pad-x', (easedProgress * 2) + 'px');
+    pageHeader?.style.setProperty('--scroll-margin', (easedProgress * 20) + 'px');
+    pageHeader?.style.setProperty('--scroll-radius', (easedProgress * 12) + 'px');
+    pageHeader?.style.setProperty('--scroll-blur', (easedProgress * 2) + 'px');
+    pageHeader?.style.setProperty('--scroll-shadow', (easedProgress * 0.12) + '');
+    pageHeader?.style.setProperty('--scroll-bg', (easedProgress * 0.03) + '');
+    
+    // Smoothly transition padding-top throughout the animation
+    const basePadding = 20;
+    const targetPadding = headerHeight + 4;
+    const paddingDiff = targetPadding - basePadding;
+    const currentPadding = basePadding + (paddingDiff * easedProgress);
+    document.body.style.paddingTop = currentPadding + 'px';
+  }, { passive: true });
 });
 document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     e.preventDefault();
