@@ -1,3 +1,7 @@
+html {
+  margin-bottom: 40px;
+}
+
 body {
   font-family: Arial, sans-serif;
   padding: 20px;
@@ -256,6 +260,22 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     -webkit-overflow-scrolling: touch;
     gap: 10px;
     flex-direction: column;
+}
+
+/* Swipe slide animations */
+@keyframes swipe-in-left {
+  from { transform: translateX(35%); opacity: 0.3; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes swipe-in-right {
+  from { transform: translateX(-35%); opacity: 0.3; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.tab-content.swipe-in-left {
+  animation: swipe-in-left 0.25s ease-out both;
+}
+.tab-content.swipe-in-right {
+  animation: swipe-in-right 0.25s ease-out both;
 }
 
 .mobile-fab { display: none; }
@@ -1612,24 +1632,104 @@ span#fechar-aviso-span {
   text-overflow: ellipsis;
 }
 
+/* ===== Visualização 3 dias (reutiliza classes wc-*) ===== */
+.three-day-calendar {
+  display: grid;
+  grid-template-columns: 56px repeat(3, 1fr);
+  grid-template-rows: auto 1fr;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+  background: #fff;
+}
+
+.wc-header-today {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+.wc-day-today {
+  background: #f8fbff;
+}
+
 /* Responsive: weekly calendar on mobile */
 @media (max-width: 1040px) {
   .weekly-calendar {
-    grid-template-columns: 42px repeat(5, 1fr);
-    font-size: 11px;
+    grid-template-columns: 32px repeat(5, 1fr);
+    font-size: 10px;
+  }
+  .three-day-calendar {
+    grid-template-columns: 36px repeat(3, 1fr);
+    font-size: 12px;
   }
   .wc-header {
     padding: 6px 2px;
     font-size: 11px;
   }
-  .wc-event {
+
+  /* Weekly (5 cols): compact — allow wrap, shrink padding */
+  .weekly-calendar .wc-event {
+    font-size: 9px;
+    padding: 2px 3px;
+    line-height: 1.2;
+  }
+  .weekly-calendar .wc-event-title {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 9px;
+  }
+  .weekly-calendar .wc-event-time {
+    display: block;
+    font-size: 8px;
+  }
+  .weekly-calendar .wc-event-room {
+    display: block;
+    font-size: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .weekly-calendar .wc-time-label {
+    font-size: 8px;
+  }
+  .weekly-calendar .wc-time-label span {
+    right: 2px;
+  }
+
+  /* 3-day (3 cols): more room — show details, wrap title */
+  .three-day-calendar .wc-event {
     font-size: 10px;
-    padding: 2px 4px;
+    padding: 3px 5px;
+    line-height: 1.25;
   }
-  .wc-event-time, .wc-event-room {
-    display: none;
+  .three-day-calendar .wc-event-title {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 10px;
   }
-  .wc-time-label {
+  .three-day-calendar .wc-event-time {
+    display: block;
+    font-size: 9px;
+  }
+  .three-day-calendar .wc-event-room {
+    display: block;
+    font-size: 9px;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .three-day-calendar .wc-time-label {
     font-size: 9px;
   }
 }

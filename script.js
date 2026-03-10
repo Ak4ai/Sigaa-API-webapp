@@ -211,7 +211,7 @@ async function consultarComToken(token) {
 
         horariosGlobais = data.horariosSimplificados || [];
         preencherTabelaSimplificada(data.horariosSimplificados);
-        preencherVisualizacaoSemanal(horariosGlobais);
+        atualizarViewAtiva();
         preencherTabelaDetalhada(data.horariosDetalhados);
 
         if (data.avisosPorDisciplina) {
@@ -290,6 +290,8 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(ajustarTabsMobileOcultar, 120);
   // Inicia toggle de visualização lista/semanal
   initViewToggle();
+  // Inicia swipe para trocar de tab no mobile
+  initSwipeTabs();
 });
 
 // Botão de logout/apagar informações
@@ -1055,7 +1057,7 @@ function preencherVisualizacaoSemanal(horarios) {
 
   // Build structure: a simple CSS grid with time column + 5 day columns
   // Each day column is position:relative so events can be placed absolutely
-  container.style.gridTemplateColumns = '56px repeat(5, 1fr)';
+  // gridTemplateColumns is set via CSS (56px desktop, 36px mobile)
   container.style.gridTemplateRows = 'auto 1fr';
 
   // Header row
@@ -1144,27 +1146,233 @@ function preencherVisualizacaoSemanal(horarios) {
   });
 }
 
-// Toggle between list and weekly view
+// ===== Visualização 3 Dias =====
+function preencherVisualizacao3Dias(horarios) {
+  const container = document.querySelector('.three-day-calendar');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!horarios || horarios.length === 0) {
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:#888;grid-column:1/-1">Nenhum horário disponível.</div>';
+    return;
+  }
+
+  const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+  const diasCurtosMap = { 'Domingo': 'Dom', 'Segunda-feira': 'Seg', 'Terça-feira': 'Ter', 'Quarta-feira': 'Qua', 'Quinta-feira': 'Qui', 'Sexta-feira': 'Sex', 'Sábado': 'Sáb' };
+
+  // Decide which 3 days to show: today + next 2 weekdays (skip weekends)
+  const hoje = new Date();
+  const hojeIdx = hoje.getDay(); // 0=dom..6=sab
+  const tresDias = [];
+  let d = new Date(hoje);
+  while (tresDias.length < 3) {
+    const idx = d.getDay();
+    if (idx >= 1 && idx <= 5) tresDias.push(diasSemana[idx]);
+    d.setDate(d.getDate() + 1);
+  }
+
+  const diasCurtos = tresDias.map(dia => diasCurtosMap[dia]);
+
+  // Highlight today
+  const hojeNome = diasSemana[hojeIdx];
+
+  // Time range
+  let minH = 24, maxH = 0;
+  horarios.forEach(({ horário }) => {
+    const [ini, fim] = horário.split('-');
+    minH = Math.min(minH, Math.floor(parseHora(ini)));
+    maxH = Math.max(maxH, Math.ceil(parseHora(fim)));
+  });
+  minH = Math.max(6, minH);
+  maxH = Math.min(23, maxH);
+
+  const totalHours = maxH - minH;
+  const rowHeight = 48;
+  const totalHeight = totalHours * rowHeight;
+
+  // gridTemplateColumns is set via CSS (56px desktop, 36px mobile)
+  container.style.gridTemplateRows = 'auto 1fr';
+
+  // Header row
+  const thTime = document.createElement('div');
+  thTime.className = 'wc-header wc-header-time';
+  container.appendChild(thTime);
+
+  tresDias.forEach((dia, i) => {
+    const hdr = document.createElement('div');
+    hdr.className = 'wc-header';
+    if (dia === hojeNome) hdr.classList.add('wc-header-today');
+    hdr.textContent = diasCurtos[i];
+    container.appendChild(hdr);
+  });
+
+  // Time labels column
+  const timeCol = document.createElement('div');
+  timeCol.className = 'wc-time-col';
+  timeCol.style.cssText = `position:relative;height:${totalHeight}px;border-right:1px solid #dadce0;`;
+  for (let h = minH; h < maxH; h++) {
+    const lbl = document.createElement('div');
+    lbl.className = 'wc-time-label';
+    lbl.style.cssText = `position:absolute;top:${(h - minH) * rowHeight}px;width:100%;height:${rowHeight}px;box-sizing:border-box;border-bottom:1px solid #ebebeb;`;
+    const sp = document.createElement('span');
+    sp.textContent = `${String(h).padStart(2, '0')}:00`;
+    lbl.appendChild(sp);
+    timeCol.appendChild(lbl);
+  }
+  container.appendChild(timeCol);
+
+  // Group events by day
+  const eventosPorDia = {};
+  tresDias.forEach(d => eventosPorDia[d] = []);
+  horarios.forEach(item => {
+    if (eventosPorDia[item.dia]) eventosPorDia[item.dia].push(item);
+  });
+
+  // Day columns
+  tresDias.forEach((dia, colIdx) => {
+    const dayCol = document.createElement('div');
+    dayCol.className = 'wc-day-column';
+    if (dia === hojeNome) dayCol.classList.add('wc-day-today');
+    dayCol.style.cssText = `position:relative;height:${totalHeight}px;border-right:${colIdx < 2 ? '1px solid #ebebeb' : 'none'};`;
+
+    for (let h = minH; h < maxH; h++) {
+      const line = document.createElement('div');
+      line.style.cssText = `position:absolute;top:${(h - minH) * rowHeight}px;left:0;right:0;height:${rowHeight}px;border-bottom:1px solid #ebebeb;box-sizing:border-box;`;
+      dayCol.appendChild(line);
+    }
+
+    eventosPorDia[dia].forEach(({ disciplina, turma, horário }) => {
+      const [ini, fim] = horário.split('-');
+      const startH = parseHora(ini);
+      const endH = parseHora(fim);
+      const topPx = (startH - minH) * rowHeight;
+      const heightPx = (endH - startH) * rowHeight;
+
+      const ev = document.createElement('div');
+      ev.className = 'wc-event';
+      ev.style.top = topPx + 'px';
+      ev.style.height = Math.max(heightPx - 2, 18) + 'px';
+      ev.style.backgroundColor = getDisciplinaColor(disciplina);
+
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'wc-event-title';
+      titleDiv.textContent = disciplina;
+      ev.appendChild(titleDiv);
+
+      if (heightPx >= 36) {
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'wc-event-time';
+        timeDiv.textContent = horário;
+        ev.appendChild(timeDiv);
+      }
+      if (heightPx >= 50) {
+        const roomDiv = document.createElement('div');
+        roomDiv.className = 'wc-event-room';
+        roomDiv.textContent = turma;
+        ev.appendChild(roomDiv);
+      }
+
+      dayCol.appendChild(ev);
+    });
+
+    container.appendChild(dayCol);
+  });
+}
+
+// Toggle between list, 3-day, and weekly view
 function initViewToggle() {
   const btns = document.querySelectorAll('.view-toggle-btn');
   const listaContainer = document.getElementById('tabela-horarios-container');
   const weeklyContainer = document.getElementById('weekly-view-container');
+  const threeDayContainer = document.getElementById('three-day-view-container');
+
+  function ativarView(view, renderData) {
+    btns.forEach(b => b.classList.remove('active'));
+    const target = document.querySelector(`.view-toggle-btn[data-view="${view}"]`);
+    if (target) target.classList.add('active');
+    listaContainer.style.display = 'none';
+    weeklyContainer.style.display = 'none';
+    threeDayContainer.style.display = 'none';
+    if (view === 'semanal') {
+      weeklyContainer.style.display = '';
+      if (renderData) preencherVisualizacaoSemanal(horariosGlobais);
+    } else if (view === '3dias') {
+      threeDayContainer.style.display = '';
+      if (renderData) preencherVisualizacao3Dias(horariosGlobais);
+    } else {
+      listaContainer.style.display = '';
+    }
+    localStorage.setItem('sigaa-horarios-view', view);
+  }
 
   btns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      btns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const view = btn.dataset.view;
-      if (view === 'semanal') {
-        listaContainer.style.display = 'none';
-        weeklyContainer.style.display = '';
-        preencherVisualizacaoSemanal(horariosGlobais);
-      } else {
-        listaContainer.style.display = '';
-        weeklyContainer.style.display = 'none';
-      }
-    });
+    btn.addEventListener('click', () => ativarView(btn.dataset.view, true));
   });
+
+  // Restaura a última visualização salva (sem renderizar — dados ainda não chegaram)
+  const saved = localStorage.getItem('sigaa-horarios-view');
+  if (saved && saved !== 'lista') {
+    ativarView(saved, false);
+  }
+}
+
+// Atualiza a visualização de calendário ativa (chamado após dados carregarem)
+function atualizarViewAtiva() {
+  const saved = localStorage.getItem('sigaa-horarios-view');
+  if (saved === 'semanal') {
+    preencherVisualizacaoSemanal(horariosGlobais);
+  } else if (saved === '3dias') {
+    preencherVisualizacao3Dias(horariosGlobais);
+  }
+}
+
+// ===== Swipe para trocar de tab no mobile =====
+function initSwipeTabs() {
+  const content = document.querySelector('.container') || document.body;
+  let startX = 0, startY = 0, tracking = false;
+  const MIN_SWIPE = 60;   // px mínimos na horizontal
+  const MAX_VERT = 80;    // tolerância vertical
+
+  function getVisibleTabs() {
+    return Array.from(document.querySelectorAll('.tab-button'))
+      .filter(b => b.style.display !== 'none' && b.offsetParent !== null);
+  }
+
+  function getCurrentTabIdx(tabs) {
+    return tabs.findIndex(b => b.classList.contains('active'));
+  }
+
+  content.addEventListener('touchstart', (e) => {
+    if (window.innerWidth >= 1040) return;
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    tracking = true;
+  }, { passive: true });
+
+  content.addEventListener('touchend', (e) => {
+    if (!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    if (Math.abs(dx) < MIN_SWIPE || Math.abs(dy) > MAX_VERT) return;
+
+    const tabs = getVisibleTabs();
+    if (!tabs.length) return;
+    const idx = getCurrentTabIdx(tabs);
+    if (idx === -1) return;
+
+    // Swipe left → next tab, swipe right → previous tab
+    const newIdx = dx < 0 ? idx + 1 : idx - 1;
+    if (newIdx < 0 || newIdx >= tabs.length) return;
+
+    const tabId = tabs[newIdx].getAttribute('data-tab');
+    // Animação de slide: swipe left (dx<0) → conteúdo entra da direita
+    const direction = dx < 0 ? 'left' : 'right';
+    activateTabWithSwipe(tabId, direction);
+  }, { passive: true });
 }
 
 // Função para preencher a aba de horários detalhados
@@ -1324,7 +1532,9 @@ function activateTab(tabId) {
   try {
     // Remove estado ativo de botões e conteúdos
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(tab => {
+      tab.classList.remove('active', 'swipe-in-left', 'swipe-in-right');
+    });
 
     // Marca botão correspondente como ativo se existir
     const btn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
@@ -1340,6 +1550,31 @@ function activateTab(tabId) {
     refreshHomeHeightSyncLoop();
   } catch (e) {
     console.warn('Erro ao ativar aba', tabId, e);
+  }
+}
+
+// Ativa tab com animação de slide (chamado pelo swipe)
+function activateTabWithSwipe(tabId, direction) {
+  try {
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(tab => {
+      tab.classList.remove('active', 'swipe-in-left', 'swipe-in-right');
+    });
+
+    const btn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
+    if (btn) btn.classList.add('active');
+
+    const content = document.getElementById(tabId);
+    if (content) {
+      content.classList.add('active', `swipe-in-${direction}`);
+      content.addEventListener('animationend', () => {
+        content.classList.remove('swipe-in-left', 'swipe-in-right');
+      }, { once: true });
+      try { content.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { }
+    }
+    refreshHomeHeightSyncLoop();
+  } catch (e) {
+    console.warn('Erro ao ativar aba com swipe', tabId, e);
   }
 }
 
@@ -1437,7 +1672,7 @@ window.addEventListener('DOMContentLoaded', () => {
       // Preenche tabelas
       horariosGlobais = data.horariosSimplificados || [];
       preencherTabelaSimplificada(data.horariosSimplificados || []);
-      preencherVisualizacaoSemanal(horariosGlobais);
+      atualizarViewAtiva();
       preencherTabelaDetalhada(data.horariosDetalhados || []);
 
       if (data.avisosPorDisciplina) {
@@ -1566,6 +1801,8 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
 }
 
 // Calcula quantas linhas extras cabem no espaço disponível na tela e mostra apenas essas
+// No mobile (<=1040px) esta funcionalidade é desativada — todas as extras ficam ocultas
+let _dadosRafPending = false;
 function ajustarDadosMaxHeight() {
   try {
     const dados = document.getElementById('dados-institucionais');
@@ -1574,6 +1811,12 @@ function ajustarDadosMaxHeight() {
     if (!extraInfo) return;
     const extraLis = extraInfo.querySelectorAll('li');
     if (!extraLis.length) return;
+
+    // No mobile não ajusta — mantém extras ocultas
+    if (window.innerWidth < 1040) {
+      extraLis.forEach(li => li.classList.remove('visible-fit'));
+      return;
+    }
 
     // Espaço disponível: do fundo do último li principal até o fim da viewport
     const dadosRect = dados.getBoundingClientRect();
@@ -1586,7 +1829,7 @@ function ajustarDadosMaxHeight() {
     }
 
     const viewportBottom = window.innerHeight;
-    let spaceLeft = viewportBottom - bottomOfMain - 17;
+    let spaceLeft = viewportBottom - bottomOfMain - 5;
 
     // Mostra temporariamente cada li extra para medir sua altura
     extraLis.forEach(li => li.classList.remove('visible-fit'));
@@ -1602,8 +1845,17 @@ function ajustarDadosMaxHeight() {
   } catch (e) { /* ignore */ }
 }
 
-window.addEventListener('resize', () => { ajustarDadosMaxHeight(); });
-window.addEventListener('scroll', () => { ajustarDadosMaxHeight(); }, { passive: true });
+function agendarAjusteDados() {
+  if (_dadosRafPending) return;
+  _dadosRafPending = true;
+  requestAnimationFrame(() => {
+    _dadosRafPending = false;
+    ajustarDadosMaxHeight();
+  });
+}
+
+window.addEventListener('resize', agendarAjusteDados);
+window.addEventListener('scroll', agendarAjusteDados, { passive: true });
 
 function ajustarAlturaNovidades() {
   try {
