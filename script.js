@@ -1334,6 +1334,7 @@ function atualizarViewAtiva() {
 function initSwipeTabs() {
   const content = document.querySelector('.container') || document.body;
   let startX = 0, startY = 0, tracking = false;
+  let insideScrollable = false;
   const MIN_SWIPE = 60;   // px mínimos na horizontal
   const MAX_VERT = 80;    // tolerância vertical
 
@@ -1346,12 +1347,22 @@ function initSwipeTabs() {
     return tabs.findIndex(b => b.classList.contains('active'));
   }
 
+  // Verifica se o elemento ou algum ancestral tem scroll horizontal
+  function isInsideHorizontalScroll(el) {
+    while (el && el !== content) {
+      if (el.scrollWidth > el.clientWidth + 1) return true;
+      el = el.parentElement;
+    }
+    return false;
+  }
+
   content.addEventListener('touchstart', (e) => {
     if (window.innerWidth >= 1040) return;
     const t = e.touches[0];
     startX = t.clientX;
     startY = t.clientY;
     tracking = true;
+    insideScrollable = isInsideHorizontalScroll(e.target);
   }, { passive: true });
 
   content.addEventListener('touchend', (e) => {
@@ -1361,7 +1372,7 @@ function initSwipeTabs() {
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
 
-    if (Math.abs(dx) < MIN_SWIPE || Math.abs(dy) > MAX_VERT) return;
+    if (insideScrollable || Math.abs(dx) < MIN_SWIPE || Math.abs(dy) > MAX_VERT) return;
 
     const tabs = getVisibleTabs();
     if (!tabs.length) return;
