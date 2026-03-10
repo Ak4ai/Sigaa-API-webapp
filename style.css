@@ -356,17 +356,90 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     margin: 0px;
   }
 
-  div#resumo-frequencia-disciplina {
-    overflow: auto;
-    border: 1px solid #1f1f1f;
-    border-radius: 8px;
+  /* Frequências mobile overrides */
+  #tab-frequencias > * {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
   }
-
+  div#resumo-frequencia-disciplina {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .resumo-frequencia {
+    min-width: 420px;
+  }
+  .resumo-frequencia th, .resumo-frequencia td {
+    font-size: 10px;
+    padding: 6px 5px;
+  }
+  .resumo-frequencia th {
+    white-space: nowrap;
+  }
+  .resumo-frequencia td:first-child {
+    max-width: 100px;
+    white-space: normal;
+  }
+  .resumo-frequencia td:first-child .disc-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+  .freq-card {
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .freq-card-body {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #tabela-frequencias {
+    min-width: 0;
+    width: 100%;
+  }
+  #tabela-frequencias th, #tabela-frequencias td {
+    font-size: 11px;
+    padding: 6px 5px;
+    white-space: nowrap;
+  }
+  /* Discipline name: wrap to max 2 lines with ellipsis */
+  #tabela-frequencias td:first-child {
+    max-width: 120px;
+    white-space: normal;
+  }
+  #tabela-frequencias td:first-child .disc-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+  #tabela-frequencias th {
+    white-space: nowrap;
+    font-size: 10px;
+  }
+  .freq-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
   #select-disciplina-frequencia {
-    font-size: 12px;
-    margin: 0px;
-    overflow: auto !important;
-    border: 1px solid #1f1f1f !important;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  #barra-progresso-faltas {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .freq-info-details,
+  .freq-aviso-card {
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .tab-novidades {
@@ -380,24 +453,6 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   #tabela-novidades {
     font-size: 12px;
     margin: 0px;
-    overflow: auto !important;
-  }
-
-  div#tabela-frequencias-container {
-    overflow: auto;
-    border: 1px solid #1f1f1f;
-    border-radius: 8px;
-  }
-
-  #tabela-frequencias {
-    font-size: 12px;
-    margin: 0px;
-    overflow: auto !important;
-  }
-
-  .resumo-frequencia {
-    font-size: 12px;
-    margin: 0px !important;
     overflow: auto !important;
   }
 
@@ -1086,59 +1141,230 @@ button {
   text-align: left;
 }
 
-#tabela-frequencias {
-  width: 100%;
-  border-collapse: collapse;
-}
-#tabela-frequencias th, #tabela-frequencias td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: left;
-}
-
-.resumo-frequencia {
-  margin-bottom: 10px;
-  border-collapse: collapse;
-  width: 100%;
-}
-.resumo-frequencia th, .resumo-frequencia td {
-  border: 1px solid #ccc;
-  padding: 6px 8px;
-  text-align: left;
-}
-
 .frequencia-aviso {
-  background: #f8f8e1;
-  border: 1px solid #e2e2b0;
-  padding: 10px;
-  margin-bottom: 10px;
+  display: none;
 }
 .frequencia-info {
-  margin-top: 16px;
-  font-size: 0.95em;
-  color: #444;
+  display: none;
 }
 
-/* Fallback para navegadores que não suportam pseudo-elementos */
-progress.custom-bar.amarelo {
-  background-color: #ffeb3b !important;
+/* ===== Tab Frequências — Modern Card Style ===== */
+.freq-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
 }
-progress.custom-bar.vermelho {
-  background-color: #f44336 !important;
+.freq-filter-bar label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #3c4043;
 }
+#select-disciplina-frequencia {
+  flex: 1;
+  min-width: 180px;
+  max-width: 400px;
+  padding: 8px 12px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #fff;
+  color: #1f2328;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+#select-disciplina-frequencia:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26,115,232,0.15);
+}
+
+/* Summary card */
+div#resumo-frequencia-disciplina {
+  margin-bottom: 12px;
+  border: none;
+  border-radius: 0;
+}
+.resumo-frequencia {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #1a73e8;
+  margin-bottom: 0;
+}
+.resumo-frequencia th {
+  background: #1565c0;
+  color: #fff;
+  border: none;
+  border-right: 1px solid rgba(255,255,255,0.15);
+  padding: 10px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.resumo-frequencia th:last-child { border-right: none; }
+.resumo-frequencia td {
+  border: none;
+  border-right: 1px solid #e3f2fd;
+  border-top: 1px solid #e3f2fd;
+  padding: 10px 10px;
+  font-size: 0.9rem;
+  background: #fff;
+}
+.resumo-frequencia td:last-child { border-right: none; }
+
+/* Progress bar card */
+#barra-progresso-faltas {
+  margin: 0 0 14px 0;
+  padding: 14px 16px;
+  background: #f8fbff;
+  border: 1px solid #d0e3f7;
+  border-radius: 10px;
+}
+#barra-progresso-faltas:empty {
+  display: none;
+}
+
+/* Main table card */
+.freq-card {
+  border: 1px solid #1a73e8;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.05);
+  margin-bottom: 14px;
+}
+.freq-card-header {
+  background: #1565c0;
+  color: #fff;
+  padding: 11px 16px;
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.freq-card-body {
+  overflow-x: auto;
+}
+#tabela-frequencias {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 0;
+}
+#tabela-frequencias th {
+  background: #e8f0fe;
+  color: #1a3e6e;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 10px 10px;
+  border-bottom: 2px solid #1a73e8;
+  border-right: 1px solid #d0e3f7;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+#tabela-frequencias th:last-child { border-right: none; }
+#tabela-frequencias td {
+  padding: 9px 10px;
+  font-size: 0.88rem;
+  border-bottom: 1px solid #f0f0f0;
+  border-right: 1px solid #f5f5f5;
+  color: #333;
+}
+#tabela-frequencias td:last-child { border-right: none; }
+#tabela-frequencias tbody tr:nth-child(even) {
+  background: #f8fbff;
+}
+#tabela-frequencias tbody tr:hover {
+  background: #e3f2fd;
+}
+
+/* Info details */
+.freq-info-details {
+  margin-bottom: 12px;
+  border: 1px solid #dadce0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+.freq-info-details summary {
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: #3c4043;
+  cursor: pointer;
+  background: #f6f8fa;
+  border-bottom: 1px solid transparent;
+  list-style: none;
+  display: flex;
+  align-items: center;
+}
+.freq-info-details summary::-webkit-details-marker { display: none; }
+.freq-info-details summary::after {
+  content: 'expand_more';
+  font-family: 'Material Icons';
+  font-size: 20px;
+  margin-left: auto;
+  transition: transform 0.2s;
+  color: #5f6368;
+}
+.freq-info-details[open] summary::after {
+  transform: rotate(180deg);
+}
+.freq-info-details[open] summary {
+  border-bottom-color: #dadce0;
+}
+.freq-info-content {
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: #444;
+}
+.freq-info-content ul {
+  margin: 4px 0 8px 18px;
+  padding: 0;
+}
+.freq-info-content li {
+  margin-bottom: 4px;
+}
+.freq-info-obs {
+  margin: 8px 0 0;
+  color: #666;
+  font-style: italic;
+  font-size: 0.88rem;
+}
+
+/* Warning notice */
+.freq-aviso-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #5d4037;
+  line-height: 1.5;
+}
+.freq-aviso-icon {
+  color: #f9a825;
+  font-size: 22px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+/* Progress bar enhancements */
 progress.custom-bar {
-    background-color: #eee;
-    border-radius: 8px;
-    width: 100%;
-    height: 10px;
-    border: none;
-    appearance: none;
-    display: flex;
-    align-content: center;
-    align-items: center;
-    flex-direction: column;
-    margin-bottom: 6px;
-    border: 1px solid;
+  border: none;
+  height: 12px;
+  border-radius: 6px;
+  background-color: #e8eaed;
+  appearance: none;
+  display: block;
+  width: 100%;
+  margin-bottom: 6px;
 }
 /* Chrome/Edge/Safari */
 progress.custom-bar::-webkit-progress-bar {

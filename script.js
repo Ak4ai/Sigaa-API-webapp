@@ -533,6 +533,8 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
   const tbody = document.querySelector('#tabela-frequencias tbody');
   const resumoDiv = document.getElementById('resumo-frequencia-disciplina');
   const barraDiv = document.getElementById('barra-progresso-faltas');
+  const cardHeader = document.querySelector('.freq-card-header');
+  const isMobile = window.innerWidth <= 1040;
   tbody.innerHTML = '';
   resumoDiv.innerHTML = '';
   barraDiv.innerHTML = '';
@@ -541,14 +543,15 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
     // Esconde resumo e barra de progresso
     resumoDiv.style.display = "none";
     barraDiv.style.display = "none";
+    if (cardHeader) cardHeader.textContent = 'Resumo de Frequências';
     thead.innerHTML = `
       <tr>
         <th>Disciplina</th>
-        <th>Nº Aulas</th>
-        <th>Total de Faltas</th>
+        <th>${isMobile ? 'Aulas' : 'Nº Aulas'}</th>
+        <th>${isMobile ? 'Faltas' : 'Total de Faltas'}</th>
         <th>% Presença</th>
-        <th>Faltas Restantes (horários)</th>
-        <th>Faltas Restantes (Aulas)</th>
+        <th>${isMobile ? 'Rest. (h)' : 'Faltas Restantes (horários)'}</th>
+        <th>${isMobile ? 'Rest. (A)' : 'Faltas Restantes (Aulas)'}</th>
       </tr>
     `;
     avisosPorDisciplina.forEach(disc => {
@@ -566,7 +569,7 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${disciplina}</td>
+        <td><span class="disc-name">${disciplina}</span></td>
         <td>${nAulas}</td>
         <td>${totalFaltas}</td>
         <td>${presenca ? presenca + '%' : ''}</td>
@@ -580,6 +583,7 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
     // Mostra resumo e barra de progresso
     resumoDiv.style.display = "";
     barraDiv.style.display = "";
+    if (cardHeader) cardHeader.textContent = 'Detalhes de Frequência';
     const disc = avisosPorDisciplina.find(d => d.disciplina === filtro);
     if (disc) {
       const { disciplina, numeroAulasDefinidas = 0, frequencia = [], porcentagemFrequencia = '' } = disc;
@@ -599,17 +603,17 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
           <thead>
             <tr>
               <th>Disciplina</th>
-              <th>Nº Aulas</th>
-              <th>Total de Faltas</th>
+              <th>${isMobile ? 'Aulas' : 'Nº Aulas'}</th>
+              <th>${isMobile ? 'Faltas' : 'Total de Faltas'}</th>
               <th>% Presença</th>
-              <th>% Porcentagem - Sigaa</th>
-              <th>Faltas Restantes (horários)</th>
-              <th>Faltas Restantes (Aulas)</th>
+              <th>${isMobile ? '% Sigaa' : '% Porcentagem - Sigaa'}</th>
+              <th>${isMobile ? 'Rest. (h)' : 'Faltas Restantes (horários)'}</th>
+              <th>${isMobile ? 'Rest. (A)' : 'Faltas Restantes (Aulas)'}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>${disciplina}</td>
+              <td><span class="disc-name">${disciplina}</span></td>
               <td>${nAulas}</td>
               <td>${totalFaltas}</td>
               <td>${presenca ? presenca + '%' : ''}</td>
