@@ -31,9 +31,17 @@
           });
         });
 
+        // Verifica atualizações a cada 30s
         setInterval(function() {
           registration.update();
-        }, 60 * 1000);
+        }, 30 * 1000);
+
+        // Verifica ao voltar para a aba
+        document.addEventListener('visibilitychange', function() {
+          if (document.visibilityState === 'visible') {
+            registration.update();
+          }
+        });
       });
 
       let refreshing = false;

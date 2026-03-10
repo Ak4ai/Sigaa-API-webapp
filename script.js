@@ -1334,7 +1334,7 @@ function atualizarViewAtiva() {
 function initSwipeTabs() {
   const content = document.querySelector('.container') || document.body;
   let startX = 0, startY = 0, tracking = false;
-  let insideScrollable = false;
+  let scrollableEl = null;
   const MIN_SWIPE = 60;   // px mínimos na horizontal
   const MAX_VERT = 80;    // tolerância vertical
 
@@ -1347,13 +1347,17 @@ function initSwipeTabs() {
     return tabs.findIndex(b => b.classList.contains('active'));
   }
 
-  // Verifica se o elemento ou algum ancestral tem scroll horizontal
-  function isInsideHorizontalScroll(el) {
+  // Encontra o ancestral scrollável horizontal mais próximo, se existir
+  function findScrollableParent(el) {
     while (el && el !== content) {
-      if (el.scrollWidth > el.clientWidth + 1) return true;
+      const style = window.getComputedStyle(el);
+      const ox = style.overflowX;
+      if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 1) {
+        return el;
+      }
       el = el.parentElement;
     }
-    return false;
+    return null;
   }
 
   content.addEventListener('touchstart', (e) => {
@@ -1362,7 +1366,7 @@ function initSwipeTabs() {
     startX = t.clientX;
     startY = t.clientY;
     tracking = true;
-    insideScrollable = isInsideHorizontalScroll(e.target);
+    scrollableEl = findScrollableParent(e.target);
   }, { passive: true });
 
   content.addEventListener('touchend', (e) => {
@@ -1372,7 +1376,16 @@ function initSwipeTabs() {
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
 
-    if (insideScrollable || Math.abs(dx) < MIN_SWIPE || Math.abs(dy) > MAX_VERT) return;
+    if (Math.abs(dx) < MIN_SWIPE || Math.abs(dy) > MAX_VERT) return;
+
+    // Bloqueia swipe apenas se o container scrollável pode scrollar nessa direção
+    if (scrollableEl) {
+      const canScrollLeft = scrollableEl.scrollLeft > 0;
+      const canScrollRight = scrollableEl.scrollLeft < scrollableEl.scrollWidth - scrollableEl.clientWidth - 1;
+      // Swipe right (dx>0) = voltar → bloqueia se pode scrollar pra esquerda
+      // Swipe left (dx<0) = avançar → bloqueia se pode scrollar pra direita
+      if ((dx > 0 && canScrollLeft) || (dx < 0 && canScrollRight)) return;
+    }
 
     const tabs = getVisibleTabs();
     if (!tabs.length) return;
