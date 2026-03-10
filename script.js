@@ -211,6 +211,7 @@ async function consultarComToken(token) {
 
         horariosGlobais = data.horariosSimplificados || [];
         preencherTabelaSimplificada(data.horariosSimplificados);
+        preencherVisualizacaoSemanal(horariosGlobais);
         preencherTabelaDetalhada(data.horariosDetalhados);
 
         if (data.avisosPorDisciplina) {
@@ -287,6 +288,8 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(ajustarAlturaNovidades, 60);
   // Ajusta visibilidade das tabs em mobile (esconde Horários/Novidades se necessário)
   setTimeout(ajustarTabsMobileOcultar, 120);
+  // Inicia toggle de visualização lista/semanal
+  initViewToggle();
 });
 
 // Botão de logout/apagar informações
@@ -1001,6 +1004,169 @@ function preencherTabelaSimplificada(horarios) {
     });
 }
 
+// ===== Visualização Semanal (Google Calendar style) =====
+const weeklyEventColors = [
+  '#062d58', '#0277bd', '#00838f', '#00695c', '#2e7d32',
+  '#558b2f', '#9e9d24', '#f9a825', '#ff8f00', '#ef6c00',
+  '#d84315', '#6a1b9a', '#4527a0', '#283593', '#c62828'
+];
+const disciplinaColorMap = {};
+let nextColorIdx = 0;
+
+function getDisciplinaColor(disciplina) {
+  if (!disciplinaColorMap[disciplina]) {
+    disciplinaColorMap[disciplina] = weeklyEventColors[nextColorIdx % weeklyEventColors.length];
+    nextColorIdx++;
+  }
+  return disciplinaColorMap[disciplina];
+}
+
+function parseHora(str) {
+  const [h, m] = str.split(':').map(Number);
+  return h + m / 60;
+}
+
+function preencherVisualizacaoSemanal(horarios) {
+  const container = document.querySelector('.weekly-calendar');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!horarios || horarios.length === 0) {
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:#888;grid-column:1/-1">Nenhum horário disponível.</div>';
+    return;
+  }
+
+  const dias = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
+  const diasCurtos = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];
+
+  // Determine time range from data
+  let minH = 24, maxH = 0;
+  horarios.forEach(({ horário }) => {
+    const [ini, fim] = horário.split('-');
+    minH = Math.min(minH, Math.floor(parseHora(ini)));
+    maxH = Math.max(maxH, Math.ceil(parseHora(fim)));
+  });
+  minH = Math.max(6, minH);
+  maxH = Math.min(23, maxH);
+
+  const totalHours = maxH - minH;
+  const rowHeight = 48; // px per hour
+  const totalHeight = totalHours * rowHeight;
+
+  // Build structure: a simple CSS grid with time column + 5 day columns
+  // Each day column is position:relative so events can be placed absolutely
+  container.style.gridTemplateColumns = '56px repeat(5, 1fr)';
+  container.style.gridTemplateRows = 'auto 1fr';
+
+  // Header row
+  const thTime = document.createElement('div');
+  thTime.className = 'wc-header wc-header-time';
+  container.appendChild(thTime);
+
+  diasCurtos.forEach(d => {
+    const hdr = document.createElement('div');
+    hdr.className = 'wc-header';
+    hdr.textContent = d;
+    container.appendChild(hdr);
+  });
+
+  // Time labels column (body area)
+  const timeCol = document.createElement('div');
+  timeCol.className = 'wc-time-col';
+  timeCol.style.cssText = `position:relative;height:${totalHeight}px;border-right:1px solid #dadce0;`;
+  for (let h = minH; h < maxH; h++) {
+    const lbl = document.createElement('div');
+    lbl.className = 'wc-time-label';
+    lbl.style.cssText = `position:absolute;top:${(h - minH) * rowHeight}px;width:100%;height:${rowHeight}px;box-sizing:border-box;border-bottom:1px solid #ebebeb;`;
+    const sp = document.createElement('span');
+    sp.textContent = `${String(h).padStart(2, '0')}:00`;
+    lbl.appendChild(sp);
+    timeCol.appendChild(lbl);
+  }
+  container.appendChild(timeCol);
+
+  // Group events by day
+  const eventosPorDia = {};
+  dias.forEach(d => eventosPorDia[d] = []);
+  horarios.forEach(item => {
+    if (eventosPorDia[item.dia]) eventosPorDia[item.dia].push(item);
+  });
+
+  // Day columns with grid lines + events
+  dias.forEach((dia, colIdx) => {
+    const dayCol = document.createElement('div');
+    dayCol.className = 'wc-day-column';
+    dayCol.style.cssText = `position:relative;height:${totalHeight}px;border-right:${colIdx < 4 ? '1px solid #ebebeb' : 'none'};`;
+
+    // Hour grid lines
+    for (let h = minH; h < maxH; h++) {
+      const line = document.createElement('div');
+      line.style.cssText = `position:absolute;top:${(h - minH) * rowHeight}px;left:0;right:0;height:${rowHeight}px;border-bottom:1px solid #ebebeb;box-sizing:border-box;`;
+      dayCol.appendChild(line);
+    }
+
+    // Events
+    eventosPorDia[dia].forEach(({ disciplina, turma, horário }) => {
+      const [ini, fim] = horário.split('-');
+      const startH = parseHora(ini);
+      const endH = parseHora(fim);
+      const topPx = (startH - minH) * rowHeight;
+      const heightPx = (endH - startH) * rowHeight;
+
+      const ev = document.createElement('div');
+      ev.className = 'wc-event';
+      ev.style.top = topPx + 'px';
+      ev.style.height = Math.max(heightPx - 2, 18) + 'px';
+      ev.style.backgroundColor = getDisciplinaColor(disciplina);
+
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'wc-event-title';
+      titleDiv.textContent = disciplina;
+      ev.appendChild(titleDiv);
+
+      if (heightPx >= 36) {
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'wc-event-time';
+        timeDiv.textContent = horário;
+        ev.appendChild(timeDiv);
+      }
+      if (heightPx >= 50) {
+        const roomDiv = document.createElement('div');
+        roomDiv.className = 'wc-event-room';
+        roomDiv.textContent = turma;
+        ev.appendChild(roomDiv);
+      }
+
+      dayCol.appendChild(ev);
+    });
+
+    container.appendChild(dayCol);
+  });
+}
+
+// Toggle between list and weekly view
+function initViewToggle() {
+  const btns = document.querySelectorAll('.view-toggle-btn');
+  const listaContainer = document.getElementById('tabela-horarios-container');
+  const weeklyContainer = document.getElementById('weekly-view-container');
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      btns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const view = btn.dataset.view;
+      if (view === 'semanal') {
+        listaContainer.style.display = 'none';
+        weeklyContainer.style.display = '';
+        preencherVisualizacaoSemanal(horariosGlobais);
+      } else {
+        listaContainer.style.display = '';
+        weeklyContainer.style.display = 'none';
+      }
+    });
+  });
+}
+
 // Função para preencher a aba de horários detalhados
 function preencherTabelaDetalhada(horarios) {
     const tbody = document.querySelector('#tabela-horarios-detalhados tbody');
@@ -1271,6 +1437,7 @@ window.addEventListener('DOMContentLoaded', () => {
       // Preenche tabelas
       horariosGlobais = data.horariosSimplificados || [];
       preencherTabelaSimplificada(data.horariosSimplificados || []);
+      preencherVisualizacaoSemanal(horariosGlobais);
       preencherTabelaDetalhada(data.horariosDetalhados || []);
 
       if (data.avisosPorDisciplina) {
@@ -1354,6 +1521,7 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
   };
   // Ajusta altura de novidades sempre que dados institucionais são renderizados
   setTimeout(ajustarAlturaNovidades, 50);
+  setTimeout(ajustarDadosMaxHeight, 50);
 
   // --- Ensure hover/size/content changes trigger ajustarAlturaNovidades ---
   try {
@@ -1397,7 +1565,46 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
   }
 }
 
-// Ajusta a altura máxima do container de novidades com base na altura do formulário e dos dados institucionais
+// Calcula quantas linhas extras cabem no espaço disponível na tela e mostra apenas essas
+function ajustarDadosMaxHeight() {
+  try {
+    const dados = document.getElementById('dados-institucionais');
+    if (!dados) return;
+    const extraInfo = dados.querySelector('.extra-info');
+    if (!extraInfo) return;
+    const extraLis = extraInfo.querySelectorAll('li');
+    if (!extraLis.length) return;
+
+    // Espaço disponível: do fundo do último li principal até o fim da viewport
+    const dadosRect = dados.getBoundingClientRect();
+    const ul = dados.querySelector('ul');
+    const mainLis = ul ? ul.querySelectorAll(':scope > li') : [];
+    let bottomOfMain = dadosRect.top;
+    if (mainLis.length) {
+      const lastMain = mainLis[mainLis.length - 1];
+      bottomOfMain = lastMain.getBoundingClientRect().bottom;
+    }
+
+    const viewportBottom = window.innerHeight;
+    let spaceLeft = viewportBottom - bottomOfMain - 17;
+
+    // Mostra temporariamente cada li extra para medir sua altura
+    extraLis.forEach(li => li.classList.remove('visible-fit'));
+    for (const li of extraLis) {
+      li.classList.add('visible-fit');
+      const liHeight = li.getBoundingClientRect().height;
+      spaceLeft -= liHeight;
+      if (spaceLeft < 0) {
+        li.classList.remove('visible-fit');
+        break;
+      }
+    }
+  } catch (e) { /* ignore */ }
+}
+
+window.addEventListener('resize', () => { ajustarDadosMaxHeight(); });
+window.addEventListener('scroll', () => { ajustarDadosMaxHeight(); }, { passive: true });
+
 function ajustarAlturaNovidades() {
   try {
     const form = document.getElementById('sigaa-form');
@@ -2081,26 +2288,14 @@ function clearStoredTokenInfo() {
 function ensureTokenStatusElement() {
   let el = document.getElementById('token-status');
   if (!el) {
-    // tenta inserir após o header do conteúdo da home (abaixo do formulário)
-    const homeHeader = document.getElementById('home-content-header');
-    const homeContent = document.getElementById('home-content');
-    const container = homeHeader || homeContent || document.body;
+    const form = document.getElementById('sigaa-form');
     el = document.createElement('div');
     el.id = 'token-status';
-    // mantemos estilo inline mínimo para evitar regressões; prefer class if needed
-    el.style.cssText = 'font-size:0.9em;color:#444;margin:8px 0;padding:6px 10px;border-radius:6px;background:#f7f7f7;display:inline-block;';
-    if (homeHeader && homeHeader.parentNode) {
-      // inserir logo após o header dentro de home-content
-      if (homeHeader.nextSibling) {
-        homeHeader.parentNode.insertBefore(el, homeHeader.nextSibling);
-      } else {
-        homeHeader.parentNode.appendChild(el);
-      }
-    } else if (homeContent) {
-      // anexa ao final do home-content
-      homeContent.appendChild(el);
+    el.className = 'token-status';
+    if (form) {
+      form.appendChild(el);
     } else {
-      container.insertBefore(el, container.firstChild);
+      document.body.appendChild(el);
     }
   }
   return el;
