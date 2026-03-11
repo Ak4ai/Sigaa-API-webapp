@@ -29,6 +29,17 @@ body {
   transition: none;
 }
 
+.page-header.swipe-fixed {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  z-index: 400;
+  margin: 0;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
 .page-header h1 {
   margin: 0;
   font-size: 1.25rem;

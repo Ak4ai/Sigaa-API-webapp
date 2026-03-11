@@ -1344,6 +1344,7 @@ function initSwipeTabs() {
   let currentTab = null;
   let peekTab = null;
   let peekDirection = 0; // -1 = next (swipe left), +1 = prev (swipe right)
+  let savedScrollY = 0;
   const THRESHOLD = 0.3; // 30% of screen width to commit
   const DEAD_ZONE = 10; // px before deciding direction
 
@@ -1385,12 +1386,15 @@ function initSwipeTabs() {
   function cleanup() {
     if (currentTab) {
       currentTab.classList.remove('swipe-dragging', 'swipe-snap');
-      currentTab.style.transform = '';
+      clearPeekStyles(currentTab);
     }
     if (peekTab) {
       peekTab.classList.remove('swipe-peek', 'swipe-snap');
       clearPeekStyles(peekTab);
     }
+    document.body.style.overflow = '';
+    const hdr = document.querySelector('.page-header');
+    if (hdr) hdr.classList.remove('swipe-fixed');
     currentTab = null;
     peekTab = null;
     peekDirection = 0;
@@ -1470,9 +1474,28 @@ function initSwipeTabs() {
 
       currentTab.classList.add('swipe-dragging');
       peekTab.classList.add('swipe-peek');
-      // Position peek tab to cover the full viewport below the header
+      // Position both tabs fixed below the header
       const header = document.querySelector('.page-header');
       const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
+      savedScrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      // Fix the header above everything during swipe
+      if (header) header.classList.add('swipe-fixed');
+
+      // Fix-position the current tab
+      currentTab.style.position = 'fixed';
+      currentTab.style.top = `${headerBottom}px`;
+      currentTab.style.left = '0';
+      currentTab.style.width = '100vw';
+      currentTab.style.height = `calc(100vh - ${headerBottom}px)`;
+      currentTab.style.zIndex = '200';
+      currentTab.style.background = '#f0f2f5';
+      currentTab.style.overflowY = 'auto';
+      currentTab.style.padding = '20px';
+      currentTab.style.boxSizing = 'border-box';
+      currentTab.scrollTop = savedScrollY;
+
+      // Fix-position the peek tab
       peekTab.style.position = 'fixed';
       peekTab.style.top = `${headerBottom}px`;
       peekTab.style.left = '0';
@@ -1529,9 +1552,13 @@ function initSwipeTabs() {
         if (doneHandled) return;
         doneHandled = true;
         oldTab.classList.remove('active', 'swipe-dragging', 'swipe-snap');
-        oldTab.style.transform = '';
+        clearPeekStyles(oldTab);
         newTab.classList.remove('swipe-peek', 'swipe-snap');
         clearPeekStyles(newTab);
+        document.body.style.overflow = '';
+        const hdr = document.querySelector('.page-header');
+        if (hdr) hdr.classList.remove('swipe-fixed');
+        window.scrollTo(0, 0);
         newTab.classList.add('active');
 
         document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -1559,9 +1586,13 @@ function initSwipeTabs() {
         if (snapHandled) return;
         snapHandled = true;
         ct.classList.remove('swipe-dragging', 'swipe-snap');
-        ct.style.transform = '';
+        clearPeekStyles(ct);
         pt.classList.remove('swipe-peek', 'swipe-snap');
         clearPeekStyles(pt);
+        document.body.style.overflow = '';
+        const hdr = document.querySelector('.page-header');
+        if (hdr) hdr.classList.remove('swipe-fixed');
+        window.scrollTo(0, savedScrollY);
       };
       pt.addEventListener('transitionend', onSnapBack, { once: true });
       setTimeout(onSnapBack, 300);
