@@ -1345,7 +1345,7 @@ function initSwipeTabs() {
   let peekTab = null;
   let peekDirection = 0; // -1 = next (swipe left), +1 = prev (swipe right)
   let savedScrollY = 0;
-  const THRESHOLD = 0.15; // 15% of screen width to commit
+  const THRESHOLD = 0.075; // 7.5% of screen width to commit
   const DEAD_ZONE = 10; // px before deciding direction
 
   function getVisibleTabs() {
