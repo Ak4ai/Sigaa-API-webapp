@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sigaa-pwa-v32';
+const CACHE_NAME = 'sigaa-pwa-v33';
 const SW_PATH = self.location.pathname;
 const BASE_PATH = SW_PATH.replace(/\/service-worker\.js$/, '');
 
