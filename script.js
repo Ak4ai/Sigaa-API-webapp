@@ -1345,7 +1345,7 @@ function initSwipeTabs() {
   let peekTab = null;
   let peekDirection = 0; // -1 = next (swipe left), +1 = prev (swipe right)
   let savedScrollY = 0;
-  const THRESHOLD = 0.3; // 30% of screen width to commit
+  const THRESHOLD = 0.15; // 15% of screen width to commit
   const DEAD_ZONE = 10; // px before deciding direction
 
   function getVisibleTabs() {
@@ -1371,6 +1371,7 @@ function initSwipeTabs() {
 
   function clearPeekStyles(el) {
     el.style.transform = '';
+    el.style.transition = '';
     el.style.position = '';
     el.style.top = '';
     el.style.left = '';
@@ -1538,8 +1539,13 @@ function initSwipeTabs() {
     if (ratio >= THRESHOLD) {
       // Commit: snap to completion
       const targetCurrent = peekDirection === -1 ? -W : W;
+      const remainingRatio = 1 - ratio;
+      const snapDuration = Math.max(0.18, Math.min(0.45, remainingRatio * 0.55));
+      const easing = 'cubic-bezier(0.2, 0, 0, 1)';
       currentTab.classList.add('swipe-snap');
       peekTab.classList.add('swipe-snap');
+      currentTab.style.transition = `transform ${snapDuration}s ${easing}`;
+      peekTab.style.transition = `transform ${snapDuration}s ${easing}`;
       currentTab.style.transform = `translateX(${targetCurrent}px)`;
       peekTab.style.transform = 'translateX(0)';
 
@@ -1570,11 +1576,15 @@ function initSwipeTabs() {
 
       newTab.addEventListener('transitionend', onDone, { once: true });
       // Fallback if transitionend doesn't fire
-      setTimeout(onDone, 300);
+      setTimeout(onDone, snapDuration * 1000 + 50);
     } else {
       // Cancel: snap back
+      const snapBackDuration = Math.max(0.18, Math.min(0.4, ratio * 0.5));
+      const easeBack = 'cubic-bezier(0.2, 0, 0, 1)';
       currentTab.classList.add('swipe-snap');
       peekTab.classList.add('swipe-snap');
+      currentTab.style.transition = `transform ${snapBackDuration}s ${easeBack}`;
+      peekTab.style.transition = `transform ${snapBackDuration}s ${easeBack}`;
       currentTab.style.transform = 'translateX(0)';
       const W2 = peekDirection === -1 ? W : -W;
       peekTab.style.transform = `translateX(${W2}px)`;
@@ -1595,7 +1605,7 @@ function initSwipeTabs() {
         window.scrollTo(0, savedScrollY);
       };
       pt.addEventListener('transitionend', onSnapBack, { once: true });
-      setTimeout(onSnapBack, 300);
+      setTimeout(onSnapBack, snapBackDuration * 1000 + 50);
     }
 
     currentTab = null;

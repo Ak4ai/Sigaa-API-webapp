@@ -272,11 +272,12 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     -webkit-overflow-scrolling: touch;
     gap: 10px;
     flex-direction: column;
+    min-height: calc(100vh - 80px);
 }
 
 /* Swipe tab transition classes */
 .tab-content.swipe-dragging {
-  transition: none !important;
+  transition: none;
   will-change: transform;
 }
 .tab-content.swipe-peek {
@@ -285,10 +286,9 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   gap: 10px;
   will-change: transform;
   pointer-events: none;
-  transition: none !important;
+  transition: none;
 }
 .tab-content.swipe-snap {
-  transition: transform 0.25s ease-out;
   will-change: transform;
 }
 .tab-content.swipe-peek.swipe-snap {
@@ -297,7 +297,6 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   gap: 10px;
   will-change: transform;
   pointer-events: none;
-  transition: transform 0.25s ease-out;
 }
 
 .mobile-fab { display: none; }
