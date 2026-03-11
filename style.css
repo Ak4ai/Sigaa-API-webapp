@@ -7,6 +7,7 @@ body {
   padding: 20px;
   background: #f0f2f5;
   font-size: 16px;
+  overflow-x: hidden;
 }
 
 .page-header {
@@ -262,20 +263,30 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     flex-direction: column;
 }
 
-/* Swipe slide animations */
-@keyframes swipe-in-left {
-  from { transform: translateX(35%); opacity: 0.3; }
-  to   { transform: translateX(0);    opacity: 1; }
+/* Swipe tab transition classes */
+.tab-content.swipe-dragging {
+  transition: none !important;
+  will-change: transform;
 }
-@keyframes swipe-in-right {
-  from { transform: translateX(-35%); opacity: 0.3; }
-  to   { transform: translateX(0);     opacity: 1; }
+.tab-content.swipe-peek {
+  display: flex !important;
+  flex-direction: column;
+  gap: 10px;
+  will-change: transform;
+  pointer-events: none;
+  transition: none !important;
 }
-.tab-content.swipe-in-left {
-  animation: swipe-in-left 0.25s ease-out both;
+.tab-content.swipe-snap {
+  transition: transform 0.25s ease-out;
+  will-change: transform;
 }
-.tab-content.swipe-in-right {
-  animation: swipe-in-right 0.25s ease-out both;
+.tab-content.swipe-peek.swipe-snap {
+  display: flex !important;
+  flex-direction: column;
+  gap: 10px;
+  will-change: transform;
+  pointer-events: none;
+  transition: transform 0.25s ease-out;
 }
 
 .mobile-fab { display: none; }

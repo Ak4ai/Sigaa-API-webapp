@@ -1332,11 +1332,20 @@ function atualizarViewAtiva() {
 
 // ===== Swipe para trocar de tab no mobile =====
 function initSwipeTabs() {
-  const content = document.querySelector('.container') || document.body;
-  let startX = 0, startY = 0, tracking = false;
+  const body = document.body;
+  let startX = 0, startY = 0;
+  let tracking = false;
+  let dragging = false;
+  let locked = false; // locked to vertical scroll — ignore horizontal
   let scrollableEl = null;
-  const MIN_SWIPE = 60;   // px mínimos na horizontal
-  const MAX_VERT = 80;    // tolerância vertical
+  let scrolledHorizontally = false;
+  let initialScrollLeft = 0;
+
+  let currentTab = null;
+  let peekTab = null;
+  let peekDirection = 0; // -1 = next (swipe left), +1 = prev (swipe right)
+  const THRESHOLD = 0.3; // 30% of screen width to commit
+  const DEAD_ZONE = 10; // px before deciding direction
 
   function getVisibleTabs() {
     return Array.from(document.querySelectorAll('.tab-button'))
@@ -1347,9 +1356,8 @@ function initSwipeTabs() {
     return tabs.findIndex(b => b.classList.contains('active'));
   }
 
-  // Encontra o ancestral scrollável horizontal mais próximo, se existir
   function findScrollableParent(el) {
-    while (el && el !== content) {
+    while (el && el !== body) {
       const style = window.getComputedStyle(el);
       const ox = style.overflowX;
       if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 1) {
@@ -1360,46 +1368,215 @@ function initSwipeTabs() {
     return null;
   }
 
-  content.addEventListener('touchstart', (e) => {
+  function clearPeekStyles(el) {
+    el.style.transform = '';
+    el.style.position = '';
+    el.style.top = '';
+    el.style.left = '';
+    el.style.width = '';
+    el.style.height = '';
+    el.style.zIndex = '';
+    el.style.background = '';
+    el.style.overflowY = '';
+    el.style.padding = '';
+    el.style.boxSizing = '';
+  }
+
+  function cleanup() {
+    if (currentTab) {
+      currentTab.classList.remove('swipe-dragging', 'swipe-snap');
+      currentTab.style.transform = '';
+    }
+    if (peekTab) {
+      peekTab.classList.remove('swipe-peek', 'swipe-snap');
+      clearPeekStyles(peekTab);
+    }
+    currentTab = null;
+    peekTab = null;
+    peekDirection = 0;
+    dragging = false;
+    tracking = false;
+    locked = false;
+  }
+
+  body.addEventListener('touchstart', (e) => {
     if (window.innerWidth >= 1040) return;
+    cleanup();
     const t = e.touches[0];
     startX = t.clientX;
     startY = t.clientY;
     tracking = true;
+    locked = false;
+    scrolledHorizontally = false;
     scrollableEl = findScrollableParent(e.target);
+    initialScrollLeft = scrollableEl ? scrollableEl.scrollLeft : 0;
   }, { passive: true });
 
-  content.addEventListener('touchend', (e) => {
+  body.addEventListener('touchmove', (e) => {
     if (!tracking) return;
-    tracking = false;
-    const t = e.changedTouches[0];
+
+    const t = e.touches[0];
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
 
-    if (Math.abs(dx) < MIN_SWIPE || Math.abs(dy) > MAX_VERT) return;
-
-    // Bloqueia swipe apenas se o container scrollável pode scrollar nessa direção
-    if (scrollableEl) {
-      const canScrollLeft = scrollableEl.scrollLeft > 0;
-      const canScrollRight = scrollableEl.scrollLeft < scrollableEl.scrollWidth - scrollableEl.clientWidth - 1;
-      // Swipe right (dx>0) = voltar → bloqueia se pode scrollar pra esquerda
-      // Swipe left (dx<0) = avançar → bloqueia se pode scrollar pra direita
-      if ((dx > 0 && canScrollLeft) || (dx < 0 && canScrollRight)) return;
+    // Detect real horizontal scroll happening in a scrollable container
+    if (scrollableEl && !scrolledHorizontally && Math.abs(scrollableEl.scrollLeft - initialScrollLeft) > 2) {
+      scrolledHorizontally = true;
+      if (dragging) {
+        // Already started dragging tabs — cancel it
+        cleanup();
+      } else {
+        tracking = false;
+      }
+      return;
     }
 
-    const tabs = getVisibleTabs();
-    if (!tabs.length) return;
-    const idx = getCurrentTabIdx(tabs);
-    if (idx === -1) return;
+    if (scrolledHorizontally) return;
 
-    // Swipe left → next tab, swipe right → previous tab
-    const newIdx = dx < 0 ? idx + 1 : idx - 1;
-    if (newIdx < 0 || newIdx >= tabs.length) return;
+    // Dead zone: determine if this is horizontal or vertical gesture
+    if (!dragging && !locked) {
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > DEAD_ZONE) {
+        locked = true; // vertical scroll, ignore
+        return;
+      }
+      if (Math.abs(dx) < DEAD_ZONE) return;
+    }
 
-    const tabId = tabs[newIdx].getAttribute('data-tab');
-    // Animação de slide: swipe left (dx<0) → conteúdo entra da direita
-    const direction = dx < 0 ? 'left' : 'right';
-    activateTabWithSwipe(tabId, direction);
+    if (locked) return;
+
+    // Start dragging
+    if (!dragging) {
+      const tabs = getVisibleTabs();
+      if (!tabs.length) return;
+      const idx = getCurrentTabIdx(tabs);
+      if (idx === -1) return;
+
+      const dir = dx < 0 ? -1 : 1; // -1 = swipe left (next), +1 = swipe right (prev)
+      const peekIdx = dir === -1 ? idx + 1 : idx - 1;
+      if (peekIdx < 0 || peekIdx >= tabs.length) {
+        tracking = false;
+        return;
+      }
+
+      peekDirection = dir;
+      currentTab = document.querySelector('.tab-content.active');
+      const peekTabId = tabs[peekIdx].getAttribute('data-tab');
+      peekTab = document.getElementById(peekTabId);
+
+      if (!currentTab || !peekTab) {
+        tracking = false;
+        return;
+      }
+
+      currentTab.classList.add('swipe-dragging');
+      peekTab.classList.add('swipe-peek');
+      // Position peek tab to cover the full viewport below the header
+      const header = document.querySelector('.page-header');
+      const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
+      peekTab.style.position = 'fixed';
+      peekTab.style.top = `${headerBottom}px`;
+      peekTab.style.left = '0';
+      peekTab.style.width = '100vw';
+      peekTab.style.height = `calc(100vh - ${headerBottom}px)`;
+      peekTab.style.zIndex = '150';
+      peekTab.style.background = '#f0f2f5';
+      peekTab.style.overflowY = 'auto';
+      peekTab.style.padding = '20px';
+      peekTab.style.boxSizing = 'border-box';
+      // Position peek tab off-screen on the correct side
+      const W = window.innerWidth;
+      peekTab.style.transform = `translateX(${dir === -1 ? W : -W}px)`;
+      dragging = true;
+    }
+
+    // Move both tabs following the finger
+    const W = window.innerWidth;
+    // Clamp dx so user can't drag beyond the peek tab
+    let clampedDx = peekDirection === -1
+      ? Math.min(0, Math.max(-W, dx))
+      : Math.max(0, Math.min(W, dx));
+
+    currentTab.style.transform = `translateX(${clampedDx}px)`;
+    // Peek tab follows: starts at ±W and ends at 0
+    peekTab.style.transform = `translateX(${(peekDirection === -1 ? W : -W) + clampedDx}px)`;
+  }, { passive: true });
+
+  body.addEventListener('touchend', (e) => {
+    if (!dragging) {
+      cleanup();
+      return;
+    }
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const W = window.innerWidth;
+    const ratio = Math.abs(dx) / W;
+
+    if (ratio >= THRESHOLD) {
+      // Commit: snap to completion
+      const targetCurrent = peekDirection === -1 ? -W : W;
+      currentTab.classList.add('swipe-snap');
+      peekTab.classList.add('swipe-snap');
+      currentTab.style.transform = `translateX(${targetCurrent}px)`;
+      peekTab.style.transform = 'translateX(0)';
+
+      const oldTab = currentTab;
+      const newTab = peekTab;
+      const newTabId = newTab.id;
+
+      let doneHandled = false;
+      const onDone = () => {
+        if (doneHandled) return;
+        doneHandled = true;
+        oldTab.classList.remove('active', 'swipe-dragging', 'swipe-snap');
+        oldTab.style.transform = '';
+        newTab.classList.remove('swipe-peek', 'swipe-snap');
+        clearPeekStyles(newTab);
+        newTab.classList.add('active');
+
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        const btn = document.querySelector(`.tab-button[data-tab="${newTabId}"]`);
+        if (btn) btn.classList.add('active');
+
+        refreshHomeHeightSyncLoop();
+      };
+
+      newTab.addEventListener('transitionend', onDone, { once: true });
+      // Fallback if transitionend doesn't fire
+      setTimeout(onDone, 300);
+    } else {
+      // Cancel: snap back
+      currentTab.classList.add('swipe-snap');
+      peekTab.classList.add('swipe-snap');
+      currentTab.style.transform = 'translateX(0)';
+      const W2 = peekDirection === -1 ? W : -W;
+      peekTab.style.transform = `translateX(${W2}px)`;
+
+      const pt = peekTab;
+      const ct = currentTab;
+      let snapHandled = false;
+      const onSnapBack = () => {
+        if (snapHandled) return;
+        snapHandled = true;
+        ct.classList.remove('swipe-dragging', 'swipe-snap');
+        ct.style.transform = '';
+        pt.classList.remove('swipe-peek', 'swipe-snap');
+        clearPeekStyles(pt);
+      };
+      pt.addEventListener('transitionend', onSnapBack, { once: true });
+      setTimeout(onSnapBack, 300);
+    }
+
+    currentTab = null;
+    peekTab = null;
+    peekDirection = 0;
+    dragging = false;
+    tracking = false;
+    locked = false;
+  }, { passive: true });
+
+  body.addEventListener('touchcancel', () => {
+    cleanup();
   }, { passive: true });
 }
 
@@ -1561,7 +1738,8 @@ function activateTab(tabId) {
     // Remove estado ativo de botões e conteúdos
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(tab => {
-      tab.classList.remove('active', 'swipe-in-left', 'swipe-in-right');
+      tab.classList.remove('active', 'swipe-dragging', 'swipe-peek', 'swipe-snap');
+      tab.style.transform = '';
     });
 
     // Marca botão correspondente como ativo se existir
@@ -1578,31 +1756,6 @@ function activateTab(tabId) {
     refreshHomeHeightSyncLoop();
   } catch (e) {
     console.warn('Erro ao ativar aba', tabId, e);
-  }
-}
-
-// Ativa tab com animação de slide (chamado pelo swipe)
-function activateTabWithSwipe(tabId, direction) {
-  try {
-    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(tab => {
-      tab.classList.remove('active', 'swipe-in-left', 'swipe-in-right');
-    });
-
-    const btn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
-    if (btn) btn.classList.add('active');
-
-    const content = document.getElementById(tabId);
-    if (content) {
-      content.classList.add('active', `swipe-in-${direction}`);
-      content.addEventListener('animationend', () => {
-        content.classList.remove('swipe-in-left', 'swipe-in-right');
-      }, { once: true });
-      try { content.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { }
-    }
-    refreshHomeHeightSyncLoop();
-  } catch (e) {
-    console.warn('Erro ao ativar aba com swipe', tabId, e);
   }
 }
 
