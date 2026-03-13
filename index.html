@@ -76,6 +76,7 @@
           <button class="desktop-action-item" data-action="abrir-horarios-completos">Horários completos</button>
           <button class="desktop-action-item" data-action="abrir-novidades">Novidades</button>
           <button class="desktop-action-item" data-action="abrir-atividades">Atividades</button>
+          <button class="desktop-action-item" data-action="abrir-configuracoes">Configurações</button>
         </div>
       </div>
     </div>
@@ -121,14 +122,14 @@
           <label for="pass">Senha:</label>
           <input type="password" id="pass" name="pass" required />
           <div class="password-info">
-            <button type="submit">Consultar</button>
-            <label style="margin-left:10px; font-size:0.95em; width: auto;">
+            <button type="submit" class="login-action-btn">Consultar</button>
+            <button type="button" id="logout-btn" class="logout-inline-btn login-action-btn">
+              Sair
+            </button>
+            <label class="remember-login-label" for="manter-logado">
               <input type="checkbox" id="manter-logado" />
               Manter logado
             </label>
-            <button type="button" id="logout-btn" style="margin-left:10px; font-size:0.95em;">
-              Sair
-            </button>
           </div>
           <div class="error" id="error"></div>
           <div id="loading" style="display:none;">Carregando o Sigaa é demorado...</div>
@@ -193,6 +194,19 @@
         <button class="view-toggle-btn" data-view="semanal" title="Visualização semanal">
           <span class="material-icons" style="font-size:20px">calendar_view_week</span>
         </button>
+      </div>
+    </div>
+    <div id="interactive-schedule-guide" style="display:none">
+      <h3 style="margin-bottom: 12px;">Linha do Tempo de Hoje</h3>
+      <div class="schedule-timeline-container">
+        <div class="schedule-timeline">
+          <div class="schedule-timeline-labels"></div>
+          <div class="schedule-timeline-track">
+            <div class="schedule-timeline-hours"></div>
+            <div class="schedule-timeline-events"></div>
+            <div class="schedule-timeline-needle"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div id="tabela-horarios-container">
@@ -406,6 +420,26 @@
       </table>
     </div>
   </div>
+
+  <div class="tab-content" id="tab-configuracoes">
+    <div class="settings-layout">
+      <div class="settings-card">
+        <h3 class="settings-title">Configurações</h3>
+        <div class="settings-card-body">
+          <label class="settings-option" for="auto-tomorrow-toggle" title="Após terminar as aulas de hoje, exibe amanhã na seção Hoje">
+            <input type="checkbox" id="auto-tomorrow-toggle" />
+            <span>Hoje -> Amanhã automático na aba Horários</span>
+          </label>
+          <p class="settings-help">Quando ativado, ao fim das aulas do dia atual a seção Hoje passa a mostrar os horários de amanhã.</p>
+        </div>
+      </div>
+      <div class="settings-info-card">
+        <h4>Como funciona</h4>
+        <p>Esse ajuste afeta apenas a seção Hoje da aba Horários.</p>
+        <p>Se estiver ativo, o app monitora o fim da última aula do dia e troca automaticamente para os horários de amanhã.</p>
+      </div>
+    </div>
+  </div>
   <script src="boletim.js"></script>
   <script src="script.js"></script>
   <!-- Floating action button (mobile) -->
@@ -414,6 +448,7 @@
     <div id="mobile-fab-menu" class="fab-menu" role="menu" aria-hidden="true">
       <button class="fab-item" data-action="abrir-horarios-completos">Horários completos</button>
       <button class="fab-item" data-action="abrir-novidades">Novidades</button>
+      <button class="fab-item" data-action="abrir-configuracoes">Configurações</button>
       <button class="fab-item fab-item-expand" id="fab-expand-btn" title="Fixar expandido" style="display:none;">Fixar</button>
       <button class="fab-item fab-item-minimize" id="fab-minimize-btn" title="Minimizar">−</button>
     </div>

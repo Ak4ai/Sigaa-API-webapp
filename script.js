@@ -290,9 +290,66 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(ajustarTabsMobileOcultar, 120);
   // Inicia toggle de visualização lista/semanal
   initViewToggle();
+  // Inicia toggle de troca automática Hoje -> Amanhã
+  initAutoTomorrowToggle();
   // Inicia swipe para trocar de tab no mobile
   initSwipeTabs();
 });
+
+const AUTO_TOMORROW_KEY = 'sigaa-auto-tomorrow-after-classes';
+
+function isAutoTomorrowEnabled() {
+  return localStorage.getItem(AUTO_TOMORROW_KEY) === '1';
+}
+
+function getTodayPanelTargetDay(horarios) {
+  const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+  const now = new Date();
+  const hojeIdx = now.getDay();
+  const hojeNome = diasSemana[hojeIdx];
+
+  if (!isAutoTomorrowEnabled()) {
+    return { targetDay: hojeNome, switchedToTomorrow: false, todayName: hojeNome, tomorrowName: diasSemana[(hojeIdx + 1) % 7] };
+  }
+
+  const todayClasses = (horarios || []).filter(item => item.dia === hojeNome);
+  if (todayClasses.length === 0) {
+    return { targetDay: hojeNome, switchedToTomorrow: false, todayName: hojeNome, tomorrowName: diasSemana[(hojeIdx + 1) % 7] };
+  }
+
+  let latestEndHour = -1;
+  todayClasses.forEach(({ horário }) => {
+    const parts = String(horário || '').split('-');
+    if (parts.length === 2) {
+      latestEndHour = Math.max(latestEndHour, parseHora(parts[1]));
+    }
+  });
+
+  const currentHour = now.getHours() + now.getMinutes() / 60;
+  const shouldSwitch = latestEndHour >= 0 && currentHour >= latestEndHour;
+  const tomorrowName = diasSemana[(hojeIdx + 1) % 7];
+
+  return {
+    targetDay: shouldSwitch ? tomorrowName : hojeNome,
+    switchedToTomorrow: shouldSwitch,
+    todayName: hojeNome,
+    tomorrowName
+  };
+}
+
+function initAutoTomorrowToggle() {
+  const toggle = document.getElementById('auto-tomorrow-toggle');
+  if (!toggle) return;
+
+  toggle.checked = isAutoTomorrowEnabled();
+  toggle.addEventListener('change', () => {
+    localStorage.setItem(AUTO_TOMORROW_KEY, toggle.checked ? '1' : '0');
+    if (horariosGlobais && horariosGlobais.length > 0) {
+      preencherTabelaSimplificada(horariosGlobais);
+      atualizarViewAtiva();
+    }
+  });
+}
 
 // Botão de logout/apagar informações
 document.getElementById('logout-btn').addEventListener('click', () => {
@@ -441,19 +498,24 @@ document.getElementById('logout-btn').addEventListener('click', () => {
       fab.style.display = 'none';
     }, 300);
   }
+
+  // 17. Limpa o guia interativo de horários
+  if (scheduleInterval) clearInterval(scheduleInterval);
+  const interactiveGuide = document.getElementById('interactive-schedule-guide');
+  if (interactiveGuide) interactiveGuide.style.display = 'none';
 });
 
 // Salva os dados para filtrar depois
 let frequenciasGlobais = [];
 let atividadesGlobais = [];
 let novidadesGlobais = [];
+let scheduleInterval = null;
 let __homeHeightSyncInterval = null;
 
 function isHomeTabActive() {
   const homeTab = document.getElementById('tab-home');
   return !!homeTab && homeTab.classList.contains('active') && document.visibilityState === 'visible';
 }
-
 function runHomeHeightSyncTick() {
   if (!isHomeTabActive()) return;
   atualizarHomePainelNovidadesAtividades();
@@ -957,13 +1019,20 @@ function preencherTabelaSimplificada(horarios) {
         horariosPorDia[dia].push(item);
     });
 
-    // Preencher tabela "Hoje" ou mostrar aviso se sábado/domingo
-    const diasSemana = [
-        'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'
-    ];
-    const hojeIdx = new Date().getDay();
-    const hojeNome = diasSemana[hojeIdx];
+    // Preencher tabela "Hoje" (ou "Amanhã" quando toggle estiver ativo e aulas do dia já tiverem acabado)
+    const { targetDay, switchedToTomorrow, todayName, tomorrowName } = getTodayPanelTargetDay(horarios);
+    const hojeNome = todayName;
     const tabelaHojeContainer = document.getElementById('tabela-hoje-container');
+    const tituloHoje = tabelaHojeContainer ? tabelaHojeContainer.querySelector('h3') : null;
+    if (tituloHoje) {
+      if (switchedToTomorrow) {
+        tituloHoje.textContent = 'Amanhã';
+      } else if (isAutoTomorrowEnabled()) {
+        tituloHoje.textContent = 'Hoje (Amanhã automático)';
+      } else {
+        tituloHoje.textContent = 'Hoje';
+      }
+    }
 
     if ((hojeNome === 'Sábado' || hojeNome === 'Domingo') && tabelaHojeContainer) {
         // Adiciona aviso
@@ -973,9 +1042,9 @@ function preencherTabelaSimplificada(horarios) {
         aviso.innerHTML = `<strong>Hoje é ${hojeNome}.</strong> Não há horários cadastrados para finais de semana.`;
         tabelaHojeContainer.insertBefore(aviso, tabelaHojeContainer.querySelector('h3').nextSibling);
         if (tabelaHoje) tabelaHoje.style.display = 'none';
-    } else if (diasMap[hojeNome] && horariosPorDia[hojeNome] && horariosPorDia[hojeNome].length > 0 && tabelaHoje && tbodyHoje) {
+      } else if (diasMap[targetDay] && horariosPorDia[targetDay] && horariosPorDia[targetDay].length > 0 && tabelaHoje && tbodyHoje) {
         tabelaHoje.style.display = '';
-        horariosPorDia[hojeNome].forEach(({ disciplina, turma, dia, período, horário }) => {
+        horariosPorDia[targetDay].forEach(({ disciplina, turma, dia, período, horário }) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${disciplina}</td>
@@ -986,6 +1055,13 @@ function preencherTabelaSimplificada(horarios) {
             `;
             tbodyHoje.appendChild(tr);
         });
+        } else if (switchedToTomorrow && tabelaHojeContainer) {
+          const aviso = document.createElement('div');
+          aviso.id = 'aviso-hoje-fds';
+          aviso.style = 'background: #e8f2ff; color: #24527a; border: 1px solid #bbdefb; padding: 12px; border-radius: 6px; margin-bottom: 8px;';
+          aviso.innerHTML = `<strong>Aulas de ${todayName} encerradas.</strong> Não há horários cadastrados para amanhã (${tomorrowName}).`;
+          tabelaHojeContainer.insertBefore(aviso, tabelaHojeContainer.querySelector('h3').nextSibling);
+          if (tabelaHoje) tabelaHoje.style.display = 'none';
     }
 
     // Preencher cada tabela dos dias da semana
@@ -1008,7 +1084,224 @@ function preencherTabelaSimplificada(horarios) {
             });
         }
     });
+
+    renderInteractiveGuide(horarios);
 }
+
+// ===== Interactive Schedule Guide =====
+function renderInteractiveGuide(horarios) {
+  const guideContainer = document.getElementById('interactive-schedule-guide');
+  const labelsContainer = document.querySelector('.schedule-timeline-labels');
+  const hoursContainer = document.querySelector('.schedule-timeline-hours');
+  const eventsContainer = document.querySelector('.schedule-timeline-events');
+  const trackContainer = document.querySelector('.schedule-timeline-track');
+  const needle = document.querySelector('.schedule-timeline-needle');
+
+  if (!guideContainer || !labelsContainer || !hoursContainer || !eventsContainer || !trackContainer || !needle) return;
+
+  // Limpa o conteúdo anterior
+  labelsContainer.innerHTML = '';
+  hoursContainer.innerHTML = '';
+  eventsContainer.innerHTML = '';
+  if (scheduleInterval) clearInterval(scheduleInterval);
+
+  const { targetDay } = getTodayPanelTargetDay(horarios);
+
+  const todayClasses = horarios.filter(h => h.dia === targetDay).sort((a, b) => {
+    return parseHora(a.horário.split('-')[0]) - parseHora(b.horário.split('-')[0]);
+  });
+
+  if (todayClasses.length === 0) {
+    guideContainer.style.display = 'none';
+    return;
+  }
+
+  guideContainer.style.display = 'block';
+
+  let minH = 24, maxH = 0;
+  todayClasses.forEach(({ horário }) => {
+    const [ini, fim] = horário.split('-');
+    minH = Math.min(minH, Math.floor(parseHora(ini)));
+    maxH = Math.max(maxH, Math.ceil(parseHora(fim)));
+  });
+
+  // Adiciona uma margem de uma hora antes e depois, se possível
+  minH = Math.max(6, minH - 1);
+  maxH = Math.min(23, maxH + 1);
+  
+  const totalHours = maxH - minH;
+  let pinnedEventEl = null;
+
+  const selectionLayer = document.createElement('div');
+  selectionLayer.className = 'schedule-timeline-selection-layer';
+  trackContainer.appendChild(selectionLayer);
+
+  function clearRangePreview() {
+    selectionLayer.innerHTML = '';
+    trackContainer.querySelectorAll('.schedule-timeline-range-marker').forEach(marker => marker.remove());
+    eventsContainer.querySelectorAll('.schedule-timeline-event.is-active').forEach(eventEl => {
+      if (eventEl !== pinnedEventEl) eventEl.classList.remove('is-active');
+    });
+  }
+
+  function createRangeChip(position, label, edgeClass = '') {
+    const chip = document.createElement('div');
+    chip.className = `schedule-timeline-range-chip${edgeClass ? ` ${edgeClass}` : ''}`;
+    chip.style.left = `${position}%`;
+    chip.textContent = label;
+    selectionLayer.appendChild(chip);
+  }
+
+  function createRangeMarker(position) {
+    const marker = document.createElement('div');
+    marker.className = 'schedule-timeline-range-marker';
+    marker.style.left = `${position}%`;
+    trackContainer.appendChild(marker);
+  }
+
+  function showRangePreview(eventEl, startPosition, endPosition, startLabel, endLabel, persist = false) {
+    clearRangePreview();
+    if (pinnedEventEl && pinnedEventEl !== eventEl) {
+      pinnedEventEl.classList.remove('is-active');
+    }
+
+    if (persist) {
+      pinnedEventEl = pinnedEventEl === eventEl ? null : eventEl;
+    }
+
+    const activeEventEl = persist ? pinnedEventEl : eventEl;
+    if (!activeEventEl) return;
+
+    activeEventEl.classList.add('is-active');
+    createRangeMarker(startPosition);
+    createRangeMarker(endPosition);
+    createRangeChip(startPosition, startLabel, startPosition <= 3 ? 'is-edge-start' : '');
+    createRangeChip(endPosition, endLabel, endPosition >= 97 ? 'is-edge-end' : '');
+  }
+
+  function restorePinnedPreview() {
+    if (!pinnedEventEl) {
+      clearRangePreview();
+      return;
+    }
+
+    showRangePreview(
+      pinnedEventEl,
+      Number(pinnedEventEl.dataset.startPosition),
+      Number(pinnedEventEl.dataset.endPosition),
+      pinnedEventEl.dataset.startLabel,
+      pinnedEventEl.dataset.endLabel,
+      false
+    );
+    pinnedEventEl.classList.add('is-active');
+  }
+
+  // Renderiza a régua em intervalos de 15 minutos com diferentes níveis visuais.
+  for (let minute = minH * 60; minute <= maxH * 60; minute += 15) {
+    const minuteOffset = minute - minH * 60;
+    const position = (minuteOffset / (totalHours * 60)) * 100;
+    const hour = Math.floor(minute / 60);
+    const minuteInHour = minute % 60;
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'schedule-timeline-label';
+    labelEl.style.left = `${position}%`;
+
+    if (minuteInHour === 0) {
+      labelEl.textContent = `${String(hour).padStart(2, '0')}:00`;
+    } else if (minuteInHour === 30) {
+      labelEl.textContent = ':30';
+      labelEl.classList.add('is-half');
+    } else {
+      labelEl.textContent = String(minuteInHour).padStart(2, '0');
+      labelEl.classList.add('is-quarter');
+    }
+
+    if (minute === minH * 60) labelEl.classList.add('is-edge-start');
+    if (minute === maxH * 60) labelEl.classList.add('is-edge-end');
+    labelsContainer.appendChild(labelEl);
+
+    const hourEl = document.createElement('div');
+    hourEl.className = 'schedule-timeline-hour';
+    hourEl.style.left = `${position}%`;
+
+    if (minuteInHour === 30) {
+      hourEl.classList.add('is-half');
+    } else if (minuteInHour !== 0) {
+      hourEl.classList.add('is-quarter');
+    }
+
+    hoursContainer.appendChild(hourEl);
+  }
+
+  // Renderiza os eventos
+  todayClasses.forEach(c => {
+    const { disciplina, horário } = c;
+    const [startStr, endStr] = horário.split('-');
+    const startHour = parseHora(startStr);
+    const endHour = parseHora(endStr);
+    const durationMinutes = Math.max(1, Math.round((endHour - startHour) * 60));
+
+    const left = ((startHour - minH) / totalHours) * 100;
+    const width = ((endHour - startHour) / totalHours) * 100;
+
+    const eventEl = document.createElement('div');
+    eventEl.className = 'schedule-timeline-event';
+    if (durationMinutes <= 45) {
+      eventEl.classList.add('is-tight');
+    } else if (durationMinutes <= 75) {
+      eventEl.classList.add('is-compact');
+    }
+    eventEl.style.left = `${left}%`;
+    eventEl.style.width = `${width}%`;
+    eventEl.dataset.startPosition = String(left);
+    eventEl.dataset.endPosition = String(left + width);
+    eventEl.dataset.startLabel = startStr;
+    eventEl.dataset.endLabel = endStr;
+    eventEl.textContent = disciplina;
+    eventEl.title = `${disciplina} (${horário})`;
+    eventEl.style.backgroundColor = getDisciplinaColor(disciplina);
+    eventEl.tabIndex = 0;
+    eventEl.addEventListener('mouseenter', () => showRangePreview(eventEl, left, left + width, startStr, endStr));
+    eventEl.addEventListener('mouseleave', restorePinnedPreview);
+    eventEl.addEventListener('focus', () => showRangePreview(eventEl, left, left + width, startStr, endStr));
+    eventEl.addEventListener('blur', restorePinnedPreview);
+    eventEl.addEventListener('click', () => {
+      if (pinnedEventEl === eventEl) {
+        pinnedEventEl.classList.remove('is-active');
+        pinnedEventEl = null;
+        clearRangePreview();
+        return;
+      }
+
+      showRangePreview(eventEl, left, left + width, startStr, endStr, true);
+    });
+    eventsContainer.appendChild(eventEl);
+  });
+  
+  updateNeedlePosition(minH, totalHours);
+  scheduleInterval = setInterval(() => updateNeedlePosition(minH, totalHours), 60000); // Atualiza a cada minuto
+}
+
+function updateNeedlePosition(minH, totalHours) {
+  const needle = document.querySelector('.schedule-timeline-needle');
+  if (!needle) return;
+
+  const now = new Date();
+  const currentHour = now.getHours() + now.getMinutes() / 60;
+  const formattedTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  if (currentHour >= minH && currentHour <= minH + totalHours) {
+    const position = ((currentHour - minH) / totalHours) * 100;
+    needle.style.left = `${position}%`;
+    needle.setAttribute('data-time', formattedTime);
+    needle.style.display = 'block';
+  } else {
+    needle.removeAttribute('data-time');
+    needle.style.display = 'none';
+  }
+}
+
 
 // ===== Visualização Semanal (Google Calendar style) =====
 const weeklyEventColors = [
@@ -1289,14 +1582,19 @@ function initViewToggle() {
   const listaContainer = document.getElementById('tabela-horarios-container');
   const weeklyContainer = document.getElementById('weekly-view-container');
   const threeDayContainer = document.getElementById('three-day-view-container');
+  const interactiveGuide = document.getElementById('interactive-schedule-guide');
 
   function ativarView(view, renderData) {
     btns.forEach(b => b.classList.remove('active'));
     const target = document.querySelector(`.view-toggle-btn[data-view="${view}"]`);
     if (target) target.classList.add('active');
+    
     listaContainer.style.display = 'none';
     weeklyContainer.style.display = 'none';
     threeDayContainer.style.display = 'none';
+    interactiveGuide.style.display = 'none';
+    if(scheduleInterval) clearInterval(scheduleInterval);
+
     if (view === 'semanal') {
       weeklyContainer.style.display = '';
       if (renderData) preencherVisualizacaoSemanal(horariosGlobais);
@@ -1305,6 +1603,8 @@ function initViewToggle() {
       if (renderData) preencherVisualizacao3Dias(horariosGlobais);
     } else {
       listaContainer.style.display = '';
+      interactiveGuide.style.display = 'block';
+      if (renderData) renderInteractiveGuide(horariosGlobais);
     }
     localStorage.setItem('sigaa-horarios-view', view);
   }
@@ -1314,10 +1614,8 @@ function initViewToggle() {
   });
 
   // Restaura a última visualização salva (sem renderizar — dados ainda não chegaram)
-  const saved = localStorage.getItem('sigaa-horarios-view');
-  if (saved && saved !== 'lista') {
-    ativarView(saved, false);
-  }
+  const saved = localStorage.getItem('sigaa-horarios-view') || 'lista';
+  ativarView(saved, false);
 }
 
 // Atualiza a visualização de calendário ativa (chamado após dados carregarem)
@@ -1327,6 +1625,8 @@ function atualizarViewAtiva() {
     preencherVisualizacaoSemanal(horariosGlobais);
   } else if (saved === '3dias') {
     preencherVisualizacao3Dias(horariosGlobais);
+  } else {
+    renderInteractiveGuide(horariosGlobais);
   }
 }
 
@@ -1791,8 +2091,6 @@ function activateTab(tabId) {
     const content = document.getElementById(tabId);
     if (content) {
       content.classList.add('active');
-      // rola suavemente até o conteúdo se estiver fora da view
-      try { content.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { }
     }
     refreshHomeHeightSyncLoop();
   } catch (e) {
@@ -2296,6 +2594,8 @@ document.addEventListener('DOMContentLoaded', () => {
         activateTab('tab-novidades');
       } else if (action === 'abrir-atividades') {
         activateTab('tab-atividades');
+      } else if (action === 'abrir-configuracoes') {
+        activateTab('tab-configuracoes');
       }
       closeDesktopMenu();
     });
@@ -2411,6 +2711,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (action === 'abrir-atividades') {
       // ativa diretamente a aba de atividades
       activateTab('tab-atividades');
+      closeFab();
+    } else if (action === 'abrir-configuracoes') {
+      activateTab('tab-configuracoes');
       closeFab();
     }
   });
