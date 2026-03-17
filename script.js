@@ -808,18 +808,28 @@ function updateClassProgressBar(horarios) {
     const remainingMinutes = Math.floor(remainingHours * 60);
     const remainingSeconds = Math.floor((remainingHours * 60 - remainingMinutes) * 60);
     
+    const nameEl = document.getElementById('active-class-name');
     const timeEl = document.getElementById('active-class-time');
     const countdownEl = document.getElementById('active-class-countdown');
     const roomEl = document.getElementById('active-class-room-small');
     const fillEl = document.getElementById('progress-bar-fill');
     const percentEl = document.getElementById('progress-percentage');
     
+    if (nameEl) nameEl.textContent = currentClass.disciplina || '-';
     if (timeEl) timeEl.textContent = `${startStr} - ${endStr}`;
     if (countdownEl) {
       const countdownStr = `${String(remainingMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
       countdownEl.textContent = countdownStr;
     }
-    if (roomEl) roomEl.querySelector('strong').textContent = currentClass.sala || '-';
+    
+    // Atualiza sala corretamente
+    if (roomEl) {
+      const strongEl = roomEl.querySelector('strong');
+      if (strongEl) {
+        strongEl.textContent = currentClass.sala || '-';
+      }
+    }
+    
     if (fillEl) fillEl.style.width = `${progressPercent}%`;
     if (percentEl) percentEl.textContent = `${Math.round(progressPercent)}%`;
     
@@ -833,7 +843,12 @@ function updateClassProgressBar(horarios) {
     const roomEl = document.getElementById('next-class-room');
     
     if (nameEl) nameEl.textContent = nextClass.disciplina || '-';
-    if (roomEl) roomEl.querySelector('strong').textContent = nextClass.sala || '-';
+    if (roomEl) {
+      const strongEl = roomEl.querySelector('strong');
+      if (strongEl) {
+        strongEl.textContent = nextClass.sala || '-';
+      }
+    }
     
     container.style.display = 'block';
   } else {
