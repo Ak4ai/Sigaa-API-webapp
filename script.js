@@ -134,22 +134,39 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function getFirstNameFromDadosInstitucionais(dados, fallback = '') {
+  if (!dados || typeof dados !== 'object') {
+    return (fallback || '').trim();
+  }
+
+  const prioritizedKeys = ['Nome do Usuario', 'Nome do Aluno', 'Nome'];
+  let nomeCompleto = '';
+
+  for (const key of prioritizedKeys) {
+    if (dados[key]) {
+      nomeCompleto = String(dados[key]).trim();
+      if (nomeCompleto) break;
+    }
+  }
+
+  if (!nomeCompleto) {
+    const dynamicKey = Object.keys(dados).find((key) => key.toLowerCase().includes('nome'));
+    if (dynamicKey) {
+      nomeCompleto = String(dados[dynamicKey] || '').trim();
+    }
+  }
+
+  if (!nomeCompleto) {
+    return (fallback || '').trim();
+  }
+
+  return nomeCompleto.split(/\s+/)[0] || (fallback || '').trim();
+}
+
 function getFirstNameFromUser(user) {
   const profile = getProfileByUser(user);
   const dados = profile?.data?.dadosInstitucionais || {};
-  const nomeCompleto = (
-    dados.Nome ||
-    dados.nome ||
-    dados['Nome do aluno'] ||
-    dados['nome do aluno'] ||
-    ''
-  ).toString().trim();
-
-  if (nomeCompleto) {
-    return nomeCompleto.split(/\s+/)[0];
-  }
-
-  return (user || '').trim() || 'Perfil';
+  return getFirstNameFromDadosInstitucionais(dados, (user || '').trim() || 'Perfil');
 }
 
 function obterConsultaInicialSalva() {
@@ -197,7 +214,8 @@ function atualizarSelectPerfisSalvos() {
     profiles.forEach(profile => {
       const option = document.createElement('option');
       option.value = profile.user;
-      option.textContent = profile.user;
+      const primeiroNome = getFirstNameFromDadosInstitucionais(profile?.data?.dadosInstitucionais, profile.user);
+      option.textContent = primeiroNome || profile.user;
       select.appendChild(option);
     });
 
