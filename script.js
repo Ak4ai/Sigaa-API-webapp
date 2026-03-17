@@ -811,7 +811,7 @@ function updateClassProgressBar(horarios) {
     const nameEl = document.getElementById('active-class-name');
     const timeEl = document.getElementById('active-class-time');
     const countdownEl = document.getElementById('active-class-countdown');
-    const roomEl = document.getElementById('active-class-room-small');
+    const roomTextEl = document.getElementById('active-class-room-text');
     const fillEl = document.getElementById('progress-bar-fill');
     const percentEl = document.getElementById('progress-percentage');
     
@@ -822,12 +822,11 @@ function updateClassProgressBar(horarios) {
       countdownEl.textContent = countdownStr;
     }
     
-    // Atualiza sala corretamente
-    if (roomEl) {
-      const strongEl = roomEl.querySelector('strong');
-      if (strongEl) {
-        strongEl.textContent = currentClass.sala || '-';
-      }
+    // Atualiza sala - debug
+    const sala = currentClass.sala || '-';
+    console.log('[CLASS PROGRESS] Aula atual:', currentClass.disciplina, '| Sala:', sala);
+    if (roomTextEl) {
+      roomTextEl.textContent = sala;
     }
     
     if (fillEl) fillEl.style.width = `${progressPercent}%`;
