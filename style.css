@@ -2004,6 +2004,7 @@ span#fechar-aviso-span {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .compare-mode-toggle {
@@ -2023,6 +2024,7 @@ span#fechar-aviso-span {
   cursor: pointer;
   transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  flex-shrink: 0;
 }
 
 .compare-mode-toggle input {
