@@ -70,6 +70,29 @@ body {
   gap: 10px;
 }
 
+.desktop-saved-profiles {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.desktop-saved-profiles label {
+  margin: 0;
+  color: #1b4f80;
+  font-size: 14px;
+  font-weight: 600;
+  width: auto;
+}
+
+#desktop-saved-profile-select {
+  min-width: 170px;
+  max-width: 220px;
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
 .desktop-actions-separator {
   width: 1px;
   height: 30px;
@@ -180,6 +203,11 @@ label, input {
 
 input {
   padding: 8px;
+}
+
+.saved-profiles-container {
+  display: none;
+  margin-bottom: 12px;
 }
 
 table {
@@ -339,6 +367,28 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   background-color: #bbdefb;
 }
 
+/* Colunas de comparação na tabela Hoje */
+#tabela-horarios-hoje.comparison-mode tbody td.compare-col {
+  background: #fff3e0;
+  border-color: #ffcc80;
+  color: #655236;
+}
+
+#tabela-horarios-hoje.comparison-mode tbody tr:nth-child(even) td.compare-col {
+  background: #ffe7c6;
+}
+
+#tabela-horarios-hoje.comparison-mode tbody tr:hover td.compare-col {
+  background: #ffe0ba !important;
+  border-color: #ffb74d;
+}
+
+#tabela-horarios-hoje.comparison-mode thead th.compare-col {
+    background: #ffe7c6 !important;
+    border-color: #ffcc80;
+    color: #655236 !important;
+}
+
 /* Esconde o wrapper quando a tabela Hoje está oculta (ex: fim de semana) */
 .tabela-wrapper-hoje:has(#tabela-horarios-hoje[style*="display: none"]) {
   display: none;
@@ -349,6 +399,14 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
 
   .desktop-quick-actions {
     display: none;
+  }
+
+  .saved-profiles-container {
+    display: block;
+  }
+
+  .desktop-saved-profiles {
+    display: none !important;
   }
 
   .page-header {
@@ -1109,6 +1167,126 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   text-align: center;
 }
 
+.tabela-horarios.comparison-mode th,
+.tabela-horarios.comparison-mode td {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.tabela-horarios.comparison-mode {
+  table-layout: fixed;
+}
+
+.tabela-horarios.comparison-mode th:nth-child(1),
+.tabela-horarios.comparison-mode td:nth-child(1),
+.tabela-horarios.comparison-mode th:nth-child(2),
+.tabela-horarios.comparison-mode td:nth-child(2) {
+  width: 23%;
+  min-width: 23%;
+  max-width: 23%;
+}
+
+.tabela-horarios.comparison-mode th:nth-child(3),
+.tabela-horarios.comparison-mode td:nth-child(3),
+.tabela-horarios.comparison-mode th:nth-child(4),
+.tabela-horarios.comparison-mode td:nth-child(4) {
+  width: 15%;
+  min-width: 15%;
+  max-width: 15%;
+}
+
+.tabela-horarios.comparison-mode th:nth-child(5),
+.tabela-horarios.comparison-mode td:nth-child(5) {
+  width: 12%;
+  min-width: 12%;
+  max-width: 12%;
+}
+
+.tabela-horarios.comparison-mode th:nth-child(6),
+.tabela-horarios.comparison-mode td:nth-child(6) {
+  width: 12%;
+  min-width: 12%;
+  max-width: 12%;
+}
+
+.tabela-horarios.comparison-mode th:nth-child(3),
+.tabela-horarios.comparison-mode td:nth-child(3) {
+  display: table-cell;
+}
+
+.tabela-horarios.comparison-mode th:nth-child(4),
+.tabela-horarios.comparison-mode td:nth-child(4) {
+  display: table-cell;
+}
+
+.tabela-horarios.comparison-mode thead tr:first-child th {
+  background: #f2f2f2;
+  color: #1f1f1f;
+  text-align: center;
+}
+
+.tabela-horarios.comparison-mode thead tr:first-child th.compare-col {
+  background: #ef6c00;
+}
+
+.tabela-horarios.comparison-mode:not(#tabela-horarios-hoje) thead tr:nth-child(2) th.compare-col,
+.tabela-horarios.comparison-mode:not(#tabela-horarios-hoje) tbody td.compare-col {
+  background: #fff3e0;
+  border-color: #ffcc80;
+}
+
+th.compare-col {
+  background: #ffe7c6 !important;
+  border-color: #ffcc80;
+  color:#655236 !important;
+}
+
+.tabela-horarios.comparison-mode:not(#tabela-horarios-hoje) tbody td:nth-child(1),
+.tabela-horarios.comparison-mode:not(#tabela-horarios-hoje) tbody td:nth-child(3) {
+  background: #eaf3ff;
+  border-color: #bcd7fb;
+}
+
+.tabela-horarios.comparison-mode:not(#tabela-horarios-hoje) tbody tr:nth-child(even) td:nth-child(1),
+.tabela-horarios.comparison-mode:not(#tabela-horarios-hoje) tbody tr:nth-child(even) td:nth-child(3) {
+  background: #dceeff;
+}
+
+.tabela-horarios.comparison-mode:not(#tabela-horarios-hoje) tbody tr:nth-child(even) td.compare-col {
+  background: #ffe7c6;
+}
+
+.tabela-horarios.comparison-mode:not(#tabela-horarios-hoje) tbody tr:hover td:nth-child(1),
+.tabela-horarios.comparison-mode:not(#tabela-horarios-hoje) tbody tr:hover td:nth-child(3) {
+  background: #d5e8ff;
+}
+
+.tabela-horarios.comparison-mode:not(#tabela-horarios-hoje) tbody tr:hover td.compare-col {
+  background: #ffe0ba;
+}
+
+.tabela-horarios.comparison-mode thead tr:nth-child(2) th {
+  text-align: center;
+}
+
+.tabela-horarios.comparison-mode thead tr:nth-child(2) th:not(.compare-col) {
+  background: #1a73e8;
+  color: #fff;
+  border-color: #0f5fc4;
+}
+
+.tabela-horarios.comparison-mode thead tr:nth-child(2) th.compare-col {
+  background: #ef6c00;
+  color: #fff;
+  border-color: #d05d00;
+}
+
 #loading {
   margin-top: 10px;
   font-weight: bold;
@@ -1812,30 +1990,106 @@ span#fechar-aviso-span {
 /* ===== Toggle de visualização (lista / semanal) ===== */
 .view-toggle-group {
   display: inline-flex;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  overflow: hidden;
+  align-items: center;
+  gap: 8px;
 }
+
+.compare-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-right: 2px;
+  padding: 4px 8px;
+  border: 1px solid #dde6ef;
+  border-radius: 999px;
+  background: #f9fbfd;
+  color: #3d546d;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.compare-mode-toggle input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 28px;
+  height: 16px;
+  margin: 0;
+  border-radius: 999px;
+  border: 1px solid #c6d4e2;
+  background: #dbe4ee;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.compare-mode-toggle input::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.compare-mode-toggle input:checked {
+  background: #1565c0;
+  border-color: #1258aa;
+}
+
+.compare-mode-toggle input:checked::before {
+  transform: translateX(12px);
+}
+
+.compare-mode-toggle input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.25);
+}
+
+.compare-mode-toggle:hover {
+  border-color: #c9d9ea;
+  background: #f3f8ff;
+}
+
+.compare-mode-toggle input:disabled + span {
+  opacity: 0.55;
+}
+
+.compare-mode-toggle input:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
 .view-toggle-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   background: #fff;
-  border: none;
-  padding: 6px 12px;
+  border: 1px solid #d6dee8;
+  border-radius: 8px;
+  min-width: 44px;
+  height: 34px;
+  padding: 0 10px;
   cursor: pointer;
-  color: #555;
-  transition: background 0.2s, color 0.2s;
-}
-.view-toggle-btn + .view-toggle-btn {
-  border-left: 1px solid #ccc;
+  color: #556270;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 .view-toggle-btn.active {
   background: #1565c0;
+  border-color: #1565c0;
   color: #fff;
+  box-shadow: 0 3px 10px rgba(21, 101, 192, 0.22);
 }
 .view-toggle-btn:hover:not(.active) {
-  background: #e3f2fd;
+  background: #f3f8ff;
+  border-color: #c2d6ec;
 }
 
 .schedule-auto-next-toggle {
@@ -2031,9 +2285,11 @@ span#fechar-aviso-span {
 }
 .wc-event-title {
   font-weight: 600;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  word-break: break-word;
 }
 .wc-event-time {
   font-size: 10px;
@@ -2347,8 +2603,27 @@ span#fechar-aviso-span {
   
   .schedule-timeline-events {
     position: relative;
-    height: 36px;
+    height: 44px;
     z-index: 2;
+  }
+
+  .schedule-timeline-events.has-compare {
+    height: 102px;
+  }
+
+  .schedule-timeline-events-row {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 44px;
+  }
+
+  .schedule-timeline-events-row-main {
+    top: 0;
+  }
+
+  .schedule-timeline-events-row-compare {
+    top: 52px;
   }
   
   .schedule-timeline-event {
@@ -2363,17 +2638,27 @@ span#fechar-aviso-span {
     color: white;
     font-size: 12px;
     font-weight: 500;
-    overflow: hidden;
-    white-space: normal;
     word-break: break-word;
-    line-height: 1.12;
+    line-height: 1.1;
     text-align: center;
     box-shadow: 0 3px 8px rgba(15, 23, 42, 0.14);
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
     cursor: pointer;
     transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  }
+
+  .schedule-timeline-event-label {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    max-width: 100%;
+    max-height: 2.2em;
+    line-height: inherit;
+    word-break: break-word;
   }
 
   .schedule-timeline-event.is-compact {
@@ -2393,6 +2678,11 @@ span#fechar-aviso-span {
     box-shadow: 0 5px 12px rgba(15, 23, 42, 0.18);
     filter: saturate(1.04);
   }
+
+  .schedule-timeline-event.is-compare {
+    border-color: rgba(255, 225, 181, 0.7);
+    box-shadow: 0 3px 8px rgba(191, 92, 0, 0.22);
+  }
   
   .schedule-timeline-needle {
     position: absolute;
@@ -2404,6 +2694,12 @@ span#fechar-aviso-span {
     z-index: 3;
     pointer-events: none;
     transition: left 0.5s linear;
+  }
+
+  .schedule-timeline-needle.schedule-timeline-needle-compare {
+    background-color: #ff8f00;
+    top: 48px;
+    bottom: -4px;
   }
 
   .schedule-timeline-needle::before {
@@ -2435,6 +2731,31 @@ span#fechar-aviso-span {
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
     border-bottom: 8px solid red;
+  }
+
+  .schedule-timeline-needle.schedule-timeline-needle-compare::before {
+    border-color: #ffd08a;
+    color: #bf5c00;
+  }
+
+  .schedule-timeline-needle.schedule-timeline-needle-compare::after {
+    border-bottom-color: #ff8f00;
+  }
+
+  .schedule-timeline-range-marker.is-compare {
+    background: rgba(239, 108, 0, 0.42);
+  }
+
+  .schedule-timeline-range-marker.is-compare::before {
+    background: #ffd089;
+    border-color: rgba(239, 108, 0, 0.55);
+    box-shadow: 0 0 0 2px rgba(255, 160, 64, 0.2);
+  }
+
+  .schedule-timeline-range-chip.is-compare {
+    background: rgba(255, 179, 102, 0.35);
+    border-color: rgba(255, 211, 157, 0.6);
+    color: #fff7ee;
   }
   
   @media (max-width: 768px) {

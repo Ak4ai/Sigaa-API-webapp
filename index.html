@@ -67,6 +67,13 @@
         <button class="tab-button" data-tab="tab-atividades" title="Atividades"><span class="material-icons tab-icon">assignment</span><span class="tab-label">Atividades</span></button>
       </div>
 
+      <div id="desktop-saved-profiles-container" class="desktop-saved-profiles" style="display:none;">
+        <label for="desktop-saved-profile-select">Perfil:</label>
+        <select id="desktop-saved-profile-select" name="desktop-saved-profile-select" aria-label="Selecionar usuário salvo">
+          <option value="">Usuários salvos</option>
+        </select>
+      </div>
+
       <div id="desktop-quick-actions" class="desktop-quick-actions" aria-hidden="false">
         <span class="desktop-actions-separator" aria-hidden="true"></span>
         <button id="desktop-actions-toggle" class="desktop-actions-toggle" aria-label="Abrir menu rápido" title="Menu rápido">
@@ -118,6 +125,13 @@
         <form id="sigaa-form">
           <label for="user">CPF (sem pontos ou traços):</label>
           <input type="text" id="user" name="user" required />
+
+          <div id="saved-profiles-container" class="saved-profiles-container" style="display:none;">
+            <label for="saved-profile-select">Usuários salvos:</label>
+            <select id="saved-profile-select" name="saved-profile-select">
+              <option value="">Selecione um usuário salvo</option>
+            </select>
+          </div>
 
           <label for="pass">Senha:</label>
           <input type="password" id="pass" name="pass" required />
@@ -185,6 +199,10 @@
         Baixar .ics
       </button>
       <div class="view-toggle-group" style="margin-left:auto">
+        <label class="compare-mode-toggle" for="comparison-mode-toggle">
+          <input type="checkbox" id="comparison-mode-toggle" />
+          <span>Comparar</span>
+        </label>
         <button class="view-toggle-btn active" data-view="lista" title="Visualização em lista">
           <span class="material-icons" style="font-size:20px">view_list</span>
         </button>

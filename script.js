@@ -3,6 +3,293 @@
 
 // URL base da API — em desenvolvimento local o server.js injeta window.API_BASE_URL via index.html
 const API_BASE = window.API_BASE_URL || 'https://ak4ai-sigaa.duckdns.org';
+const STORAGE_LAST_CONSULTA = 'sigaaUltimaConsulta';
+const STORAGE_SAVED_PROFILES = 'sigaaPerfisSalvos';
+const STORAGE_SELECTED_PROFILE = 'sigaaPerfilSelecionado';
+const STORAGE_COMPARISON_MODE = 'sigaaComparisonMode';
+const MAX_SAVED_PROFILES = 2;
+
+function isComparisonModeEnabled() {
+  return localStorage.getItem(STORAGE_COMPARISON_MODE) === '1';
+}
+
+function setComparisonModeEnabled(enabled) {
+  localStorage.setItem(STORAGE_COMPARISON_MODE, enabled ? '1' : '0');
+}
+
+function getComparisonProfilesContext() {
+  const profiles = getSavedProfiles();
+  const selectedUser = getSelectedProfileUser() || (profiles[0]?.user || '');
+  const compareProfile = profiles.find(profile => profile.user !== selectedUser) || null;
+  const compareHorarios = compareProfile?.data?.horariosSimplificados || [];
+  const canCompare = profiles.length >= 2;
+  const enabled = canCompare && isComparisonModeEnabled() && compareHorarios.length > 0;
+
+  return {
+    enabled,
+    canCompare,
+    mainUser: selectedUser,
+    compareUser: compareProfile?.user || '',
+    compareHorarios
+  };
+}
+
+function updateComparisonToggleState() {
+  const toggle = document.getElementById('comparison-mode-toggle');
+  if (!toggle) return;
+
+  const ctx = getComparisonProfilesContext();
+  if (!ctx.canCompare) {
+    toggle.checked = false;
+    toggle.disabled = true;
+    toggle.title = 'Salve 2 perfis para ativar a comparação';
+    setComparisonModeEnabled(false);
+    return;
+  }
+
+  toggle.disabled = false;
+  toggle.checked = isComparisonModeEnabled();
+  toggle.title = '';
+}
+
+function initComparisonModeToggle() {
+  const toggle = document.getElementById('comparison-mode-toggle');
+  if (!toggle || toggle.dataset.bound === '1') return;
+
+  toggle.dataset.bound = '1';
+  toggle.addEventListener('change', () => {
+    setComparisonModeEnabled(toggle.checked);
+    preencherTabelaSimplificada(horariosGlobais || []);
+    atualizarViewAtiva();
+  });
+
+  updateComparisonToggleState();
+}
+
+function getSavedProfiles() {
+  const raw = localStorage.getItem(STORAGE_SAVED_PROFILES);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(item => item && typeof item.user === 'string' && item.user.trim() && item.data)
+      .map(item => ({
+        user: item.user.trim(),
+        data: item.data,
+        updatedAt: Number(item.updatedAt) || Date.now()
+      }));
+  } catch (e) {
+    console.warn('Falha ao ler perfis salvos:', e);
+    return [];
+  }
+}
+
+function setSavedProfiles(profiles) {
+  localStorage.setItem(STORAGE_SAVED_PROFILES, JSON.stringify(profiles.slice(0, MAX_SAVED_PROFILES)));
+}
+
+function getSelectedProfileUser() {
+  const selected = localStorage.getItem(STORAGE_SELECTED_PROFILE);
+  return selected ? selected.trim() : '';
+}
+
+function setSelectedProfileUser(user) {
+  if (!user) {
+    localStorage.removeItem(STORAGE_SELECTED_PROFILE);
+    return;
+  }
+  localStorage.setItem(STORAGE_SELECTED_PROFILE, user);
+}
+
+function saveConsultaForUser(user, data) {
+  const normalizedUser = (user || '').trim();
+  localStorage.setItem(STORAGE_LAST_CONSULTA, JSON.stringify(data));
+  if (!normalizedUser) return;
+
+  const currentProfiles = getSavedProfiles().filter(item => item.user !== normalizedUser);
+  currentProfiles.unshift({
+    user: normalizedUser,
+    data,
+    updatedAt: Date.now()
+  });
+
+  setSavedProfiles(currentProfiles);
+  setSelectedProfileUser(normalizedUser);
+  atualizarSelectPerfisSalvos();
+}
+
+function getProfileByUser(user) {
+  const normalizedUser = (user || '').trim();
+  if (!normalizedUser) return null;
+  return getSavedProfiles().find(profile => profile.user === normalizedUser) || null;
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getFirstNameFromUser(user) {
+  const profile = getProfileByUser(user);
+  const dados = profile?.data?.dadosInstitucionais || {};
+  const nomeCompleto = (
+    dados.Nome ||
+    dados.nome ||
+    dados['Nome do aluno'] ||
+    dados['nome do aluno'] ||
+    ''
+  ).toString().trim();
+
+  if (nomeCompleto) {
+    return nomeCompleto.split(/\s+/)[0];
+  }
+
+  return (user || '').trim() || 'Perfil';
+}
+
+function obterConsultaInicialSalva() {
+  const profiles = getSavedProfiles();
+  if (profiles.length > 0) {
+    const selectedUser = getSelectedProfileUser();
+    const selectedProfile = profiles.find(profile => profile.user === selectedUser) || profiles[0];
+    setSelectedProfileUser(selectedProfile.user);
+    localStorage.setItem(STORAGE_LAST_CONSULTA, JSON.stringify(selectedProfile.data));
+    return selectedProfile.data;
+  }
+
+  const dadosLegados = localStorage.getItem(STORAGE_LAST_CONSULTA);
+  if (!dadosLegados) return null;
+  try {
+    return JSON.parse(dadosLegados);
+  } catch (e) {
+    console.warn('Erro ao ler consulta salva:', e);
+    return null;
+  }
+}
+
+function getProfileSelectBindings() {
+  return [
+    {
+      container: document.getElementById('saved-profiles-container'),
+      select: document.getElementById('saved-profile-select')
+    },
+    {
+      container: document.getElementById('desktop-saved-profiles-container'),
+      select: document.getElementById('desktop-saved-profile-select')
+    }
+  ];
+}
+
+function atualizarSelectPerfisSalvos() {
+  const profiles = getSavedProfiles();
+  const bindings = getProfileSelectBindings();
+
+  bindings.forEach(({ container, select }) => {
+    if (!container || !select) return;
+
+    select.innerHTML = '<option value="">Selecione um usuário salvo</option>';
+
+    profiles.forEach(profile => {
+      const option = document.createElement('option');
+      option.value = profile.user;
+      option.textContent = profile.user;
+      select.appendChild(option);
+    });
+
+    container.style.display = profiles.length > 0 ? '' : 'none';
+  });
+
+  const selectedUser = getSelectedProfileUser();
+  let targetValue = '';
+  if (selectedUser && profiles.some(profile => profile.user === selectedUser)) {
+    targetValue = selectedUser;
+  } else if (profiles.length > 0) {
+    targetValue = profiles[0].user;
+  }
+
+  bindings.forEach(({ select }) => {
+    if (!select) return;
+    select.value = targetValue;
+  });
+
+  updateComparisonToggleState();
+}
+
+function initSelectPerfisSalvos() {
+  const bindings = getProfileSelectBindings();
+
+  bindings.forEach(({ select }) => {
+    if (!select || select.dataset.bound === '1') return;
+
+    select.dataset.bound = '1';
+    select.addEventListener('change', () => {
+      const selectedUser = select.value;
+      if (!selectedUser) return;
+
+      const profile = getProfileByUser(selectedUser);
+      if (!profile || !profile.data) return;
+
+      setSelectedProfileUser(selectedUser);
+      localStorage.setItem(STORAGE_LAST_CONSULTA, JSON.stringify(profile.data));
+      aplicarDadosConsulta(profile.data);
+
+      const userInput = document.getElementById('user');
+      if (userInput) userInput.value = selectedUser;
+
+      bindings.forEach(({ select: otherSelect }) => {
+        if (!otherSelect) return;
+        otherSelect.value = selectedUser;
+      });
+    });
+  });
+}
+
+function aplicarDadosConsulta(data, tempoResposta) {
+  if (!data) return;
+
+  removerEstiloSemDados();
+
+  if (data.dadosInstitucionais) {
+    const inst = { ...data.dadosInstitucionais };
+    if (data.horariosSimplificados && data.horariosSimplificados.length > 0) {
+      inst['Semestre'] = data.horariosSimplificados[0].semestre;
+    }
+    renderizarDadosInstitucionais(inst, data.horariosSimplificados?.[0]?.semestre, tempoResposta);
+  }
+
+  horariosGlobais = data.horariosSimplificados || [];
+  preencherTabelaSimplificada(data.horariosSimplificados || []);
+  atualizarViewAtiva();
+  preencherTabelaDetalhada(data.horariosDetalhados || []);
+
+  if (data.avisosPorDisciplina) {
+    const novidadesFormatadas = data.avisosPorDisciplina.flatMap(({ disciplina, avisos }) =>
+      avisos.map(({ data: dataAviso, descricao }) => ({ disciplina, data: dataAviso, descricao }))
+    );
+    preencherTabelaNovidades(novidadesFormatadas);
+    frequenciasGlobais = data.avisosPorDisciplina;
+    preencherSelectorFrequencias(frequenciasGlobais);
+    preencherTabelaFrequencias(frequenciasGlobais, 'todas');
+
+    notasGlobais = data.avisosPorDisciplina;
+    preencherSelectorNotas(notasGlobais);
+    preencherTabelaNotas(notasGlobais, 'todas');
+  } else {
+    preencherTabelaNovidades([]);
+    frequenciasGlobais = [];
+    notasGlobais = [];
+  }
+
+  atividadesGlobais = extrairAtividades(data);
+  preencherTabelaAtividades(atividadesGlobais);
+
+  document.getElementById('tabela-horarios-detalhados').style.display = '';
+}
 
 document.addEventListener('DOMContentLoaded', function () {
   var btnExportar = document.getElementById('exportar-pdf-btn');
@@ -117,7 +404,7 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     saveTokenWithExpiry(token, storageType);
 
         // 2. Usa token para buscar dados
-        await consultarComToken(token);
+        await consultarComToken(token, user);
     } catch (error) {
         console.error('Erro no login:', error);
         errorDiv.textContent = error.message;
@@ -126,7 +413,7 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     }
 });
 
-async function consultarComToken(token) {
+async function consultarComToken(token, userFromLogin = '') {
     const errorDiv = document.getElementById('error');
     const dadosDiv = document.getElementById('dados-institucionais');
     const loadingDiv = document.getElementById('loading');
@@ -193,53 +480,9 @@ async function consultarComToken(token) {
         console.log(`⏱ Tempo de resposta da API: ${duracaoSegundos}s`);
         if (!response.ok) throw new Error(data.error || 'Erro ao buscar dados');
 
-        // Salva os dados no localStorage (opcional)
-        localStorage.setItem('sigaaUltimaConsulta', JSON.stringify(data));
-        removerEstiloSemDados();
-        // Limpa dados anteriores
-        // ...preencher tabelas e dados institucionais...
-        if (data.dadosInstitucionais) {
-            const inst = { ...data.dadosInstitucionais };
-
-            // Adiciona o semestre do primeiro horário simplificado, se existir
-            if (data.horariosSimplificados && data.horariosSimplificados.length > 0) {
-                inst['Semestre'] = data.horariosSimplificados[0].semestre;
-            }
-
-            renderizarDadosInstitucionais(inst, data.horariosSimplificados[0]?.semestre, duracaoSegundos);
-        }
-
-        horariosGlobais = data.horariosSimplificados || [];
-        preencherTabelaSimplificada(data.horariosSimplificados);
-        atualizarViewAtiva();
-        preencherTabelaDetalhada(data.horariosDetalhados);
-
-        if (data.avisosPorDisciplina) {
-          const novidadesFormatadas = data.avisosPorDisciplina.flatMap(({ disciplina, avisos }) =>
-            avisos.map(({ data, descricao }) => ({ disciplina, data, descricao }))
-          );
-          preencherTabelaNovidades(novidadesFormatadas);
-          frequenciasGlobais = data.avisosPorDisciplina;
-          preencherSelectorFrequencias(frequenciasGlobais);
-          preencherTabelaFrequencias(frequenciasGlobais, "todas");
-        
-          // Adicione estas linhas para carregar as notas ao abrir a página
-          notasGlobais = data.avisosPorDisciplina;
-          preencherSelectorNotas(notasGlobais);
-          preencherTabelaNotas(notasGlobais, "todas");
-        } else {
-          preencherTabelaNovidades([]);
-          frequenciasGlobais = [];
-          notasGlobais = [];
-        }
-
-        // Atividades (campo opcional do backend)
-        // Atividades (campo opcional do backend + fallback por avisos)
-        atividadesGlobais = extrairAtividades(data);
-        preencherTabelaAtividades(atividadesGlobais);
-
-        //document.getElementById('tabela-horarios').style.display = '';
-        document.getElementById('tabela-horarios-detalhados').style.display = '';
+        const selectedUser = (userFromLogin || document.getElementById('user')?.value || getSelectedProfileUser() || '').trim();
+        saveConsultaForUser(selectedUser, data);
+        aplicarDadosConsulta(data, duracaoSegundos);
 
   } catch (error) {
     console.error('Erro ao consultar com token:', error);
@@ -282,14 +525,18 @@ window.addEventListener('DOMContentLoaded', () => {
       return;
     }
     console.log('Token encontrado, realizando consulta automática...');
-    consultarComToken(token);
+    consultarComToken(token, getSelectedProfileUser());
   }
+  initSelectPerfisSalvos();
+  atualizarSelectPerfisSalvos();
   // Ajusta o layout inicial (altura do container de novidades)
   setTimeout(ajustarAlturaNovidades, 60);
   // Ajusta visibilidade das tabs em mobile (esconde Horários/Novidades se necessário)
   setTimeout(ajustarTabsMobileOcultar, 120);
   // Inicia toggle de visualização lista/semanal
   initViewToggle();
+  // Inicia switch de comparação de horários entre os 2 perfis salvos
+  initComparisonModeToggle();
   // Inicia toggle de troca automática Hoje -> Amanhã
   initAutoTomorrowToggle();
   // Inicia swipe para trocar de tab no mobile
@@ -361,6 +608,9 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 
   // 2. Remove dados salvos do localStorage
   localStorage.removeItem('sigaaUltimaConsulta');
+  localStorage.removeItem(STORAGE_SAVED_PROFILES);
+  localStorage.removeItem(STORAGE_SELECTED_PROFILE);
+  localStorage.removeItem(STORAGE_COMPARISON_MODE);
   localStorage.removeItem('sigaa_aviso_fechado');
 
   // 3. Limpa variáveis globais em memória
@@ -449,6 +699,9 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   const passInput = document.getElementById('pass');
   if (userInput) userInput.value = '';
   if (passInput) passInput.value = '';
+
+  atualizarSelectPerfisSalvos();
+  updateComparisonToggleState();
 
   // 12. Limpa erros e loading
   const errorDiv = document.getElementById('error');
@@ -979,8 +1232,144 @@ function exportarParaGoogleCalendar() {
 }
 // ───────────────────────────────────────────────────────────────────────────
 
+function ordenarHorarios(lista) {
+  return [...(lista || [])].sort((a, b) => {
+    const horaA = parseHora(String(a?.horário || '00:00-00:00').split('-')[0]);
+    const horaB = parseHora(String(b?.horário || '00:00-00:00').split('-')[0]);
+    return horaA - horaB;
+  });
+}
+
+function getHorarioComparisonKey(item) {
+  return `${item?.período || ''}|${item?.horário || ''}`;
+}
+
+function construirLinhasComparacao(mainList, compareList) {
+  const orderedMain = ordenarHorarios(mainList);
+  const orderedCompare = ordenarHorarios(compareList);
+  const mainBuckets = {};
+  const compareBuckets = {};
+
+  orderedMain.forEach(item => {
+    const key = getHorarioComparisonKey(item);
+    if (!mainBuckets[key]) mainBuckets[key] = [];
+    mainBuckets[key].push(item);
+  });
+
+  orderedCompare.forEach(item => {
+    const key = getHorarioComparisonKey(item);
+    if (!compareBuckets[key]) compareBuckets[key] = [];
+    compareBuckets[key].push(item);
+  });
+
+  const orderedKeys = [];
+  orderedMain.forEach(item => {
+    const key = getHorarioComparisonKey(item);
+    if (!orderedKeys.includes(key)) orderedKeys.push(key);
+  });
+  orderedCompare.forEach(item => {
+    const key = getHorarioComparisonKey(item);
+    if (!orderedKeys.includes(key)) orderedKeys.push(key);
+  });
+
+  return orderedKeys.flatMap(key => {
+    const m = mainBuckets[key] || [];
+    const c = compareBuckets[key] || [];
+    const total = Math.max(m.length, c.length, 1);
+    const result = [];
+    for (let i = 0; i < total; i++) {
+      result.push({ main: m[i] || null, compare: c[i] || null });
+    }
+    return result;
+  });
+}
+
+function atualizarCabecalhoTabelaHorario(table, comparisonEnabled, mainUser, compareUser) {
+  const thead = table?.querySelector('thead');
+  if (!thead) return;
+
+  if (!comparisonEnabled) {
+    thead.innerHTML = `
+      <tr>
+        <th>Disciplina</th>
+        <th>Turma</th>
+        <th>Dia</th>
+        <th>Período</th>
+        <th>Horário</th>
+      </tr>
+    `;
+    table.classList.remove('comparison-mode');
+    return;
+  }
+
+  const mainName = escapeHtml(getFirstNameFromUser(mainUser));
+  const compareName = escapeHtml(getFirstNameFromUser(compareUser));
+  const mainUserTitle = escapeHtml(mainUser || 'Principal');
+  const compareUserTitle = escapeHtml(compareUser || 'Comparação');
+
+  thead.innerHTML = `
+    <tr>
+      <th colspan="2">Disciplina</th>
+      <th colspan="2">Turma</th>
+      <th rowspan="2">Período</th>
+      <th rowspan="2">Horário</th>
+    </tr>
+    <tr>
+      <th title="${mainUserTitle}">${mainName}</th>
+      <th class="compare-col" title="${compareUserTitle}">${compareName}</th>
+      <th title="${mainUserTitle}">${mainName}</th>
+      <th class="compare-col" title="${compareUserTitle}">${compareName}</th>
+    </tr>
+  `;
+  table.classList.add('comparison-mode');
+}
+
+function preencherTabelaDia(table, mainList, compareList, comparisonCtx) {
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+
+  const comparisonEnabled = comparisonCtx.enabled;
+  atualizarCabecalhoTabelaHorario(table, comparisonEnabled, comparisonCtx.mainUser, comparisonCtx.compareUser);
+  tbody.innerHTML = '';
+
+  if (!comparisonEnabled) {
+    const orderedMain = ordenarHorarios(mainList);
+    orderedMain.forEach(({ disciplina, turma, dia, período, horário }) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${disciplina || ''}</td>
+        <td>${turma || ''}</td>
+        <td>${dia || ''}</td>
+        <td>${período || ''}</td>
+        <td>${horário || ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    table.style.display = orderedMain.length > 0 ? '' : 'none';
+    return;
+  }
+
+  const rows = construirLinhasComparacao(mainList, compareList);
+  rows.forEach(({ main, compare }) => {
+    const periodoCompartilhado = main?.período || compare?.período || '-';
+    const horarioCompartilhado = main?.horário || compare?.horário || '-';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${main?.disciplina || '-'}</td>
+      <td class="compare-col">${compare?.disciplina || '-'}</td>
+      <td>${main?.turma || '-'}</td>
+      <td class="compare-col">${compare?.turma || '-'}</td>
+      <td>${periodoCompartilhado}</td>
+      <td>${horarioCompartilhado}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  table.style.display = rows.length > 0 ? '' : 'none';
+}
+
 function preencherTabelaSimplificada(horarios) {
-    // Mapear dias para ids das tabelas
     const diasMap = {
         'Segunda-feira': 'tabela-horarios-segunda',
         'Terça-feira': 'tabela-horarios-terca',
@@ -989,37 +1378,44 @@ function preencherTabelaSimplificada(horarios) {
         'Sexta-feira': 'tabela-horarios-sexta'
     };
 
-    // Limpar todos os tbodys e esconder as tabelas
+    const comparisonCtx = getComparisonProfilesContext();
+    const horariosComparacao = comparisonCtx.enabled ? comparisonCtx.compareHorarios : [];
+
     Object.values(diasMap).forEach(id => {
         const table = document.getElementById(id);
         if (table) {
             table.style.display = 'none';
             const tbody = table.querySelector('tbody');
             if (tbody) tbody.innerHTML = '';
+            table.classList.remove('comparison-mode');
         }
     });
 
-    // Limpar tabela "Hoje"
     const tabelaHoje = document.getElementById('tabela-horarios-hoje');
     const tbodyHoje = tabelaHoje ? tabelaHoje.querySelector('tbody') : null;
     if (tabelaHoje && tbodyHoje) {
         tabelaHoje.style.display = 'none';
+        tabelaHoje.classList.remove('comparison-mode');
         tbodyHoje.innerHTML = '';
     }
 
-    // Remover aviso anterior se existir
     let avisoHoje = document.getElementById('aviso-hoje-fds');
     if (avisoHoje) avisoHoje.remove();
 
-    // Agrupar horários por dia
     const horariosPorDia = {};
-    horarios.forEach(item => {
+    (horarios || []).forEach(item => {
         const dia = item.dia;
         if (!horariosPorDia[dia]) horariosPorDia[dia] = [];
         horariosPorDia[dia].push(item);
     });
 
-    // Preencher tabela "Hoje" (ou "Amanhã" quando toggle estiver ativo e aulas do dia já tiverem acabado)
+    const horariosComparacaoPorDia = {};
+    (horariosComparacao || []).forEach(item => {
+        const dia = item.dia;
+        if (!horariosComparacaoPorDia[dia]) horariosComparacaoPorDia[dia] = [];
+        horariosComparacaoPorDia[dia].push(item);
+    });
+
     const { targetDay, switchedToTomorrow, todayName, tomorrowName } = getTodayPanelTargetDay(horarios);
     const hojeNome = todayName;
     const tabelaHojeContainer = document.getElementById('tabela-hoje-container');
@@ -1035,27 +1431,20 @@ function preencherTabelaSimplificada(horarios) {
     }
 
     if ((hojeNome === 'Sábado' || hojeNome === 'Domingo') && tabelaHojeContainer) {
-        // Adiciona aviso
         const aviso = document.createElement('div');
         aviso.id = 'aviso-hoje-fds';
         aviso.style = 'background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 12px; border-radius: 6px; margin-bottom: 8px;';
         aviso.innerHTML = `<strong>Hoje é ${hojeNome}.</strong> Não há horários cadastrados para finais de semana.`;
         tabelaHojeContainer.insertBefore(aviso, tabelaHojeContainer.querySelector('h3').nextSibling);
         if (tabelaHoje) tabelaHoje.style.display = 'none';
-      } else if (diasMap[targetDay] && horariosPorDia[targetDay] && horariosPorDia[targetDay].length > 0 && tabelaHoje && tbodyHoje) {
-        tabelaHoje.style.display = '';
-        horariosPorDia[targetDay].forEach(({ disciplina, turma, dia, período, horário }) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${disciplina}</td>
-                <td>${turma}</td>
-                <td>${dia}</td>
-                <td>${período}</td>
-                <td>${horário}</td>
-            `;
-            tbodyHoje.appendChild(tr);
-        });
-        } else if (switchedToTomorrow && tabelaHojeContainer) {
+      } else if (diasMap[targetDay] && tabelaHoje && tbodyHoje) {
+        const mainHoje = horariosPorDia[targetDay] || [];
+        const compareHoje = horariosComparacaoPorDia[targetDay] || [];
+        if (mainHoje.length > 0 || compareHoje.length > 0) {
+          preencherTabelaDia(tabelaHoje, mainHoje, compareHoje, comparisonCtx);
+          tabelaHoje.style.display = '';
+        }
+      } else if (switchedToTomorrow && tabelaHojeContainer) {
           const aviso = document.createElement('div');
           aviso.id = 'aviso-hoje-fds';
           aviso.style = 'background: #e8f2ff; color: #24527a; border: 1px solid #bbdefb; padding: 12px; border-radius: 6px; margin-bottom: 8px;';
@@ -1064,32 +1453,23 @@ function preencherTabelaSimplificada(horarios) {
           if (tabelaHoje) tabelaHoje.style.display = 'none';
     }
 
-    // Preencher cada tabela dos dias da semana
     Object.entries(diasMap).forEach(([dia, id]) => {
         const table = document.getElementById(id);
-        const tbody = table.querySelector('tbody');
-        const lista = horariosPorDia[dia] || [];
-        if (lista.length > 0) {
-            table.style.display = '';
-            lista.forEach(({ disciplina, turma, dia, período, horário }) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${disciplina}</td>
-                    <td>${turma}</td>
-                    <td>${dia}</td>
-                    <td>${período}</td>
-                    <td>${horário}</td>
-                `;
-                tbody.appendChild(tr);
-            });
+        const listaMain = horariosPorDia[dia] || [];
+        const listaCompare = horariosComparacaoPorDia[dia] || [];
+        if (!table) return;
+
+        if (listaMain.length > 0 || listaCompare.length > 0) {
+          preencherTabelaDia(table, listaMain, listaCompare, comparisonCtx);
+          table.style.display = '';
         }
     });
 
-    renderInteractiveGuide(horarios);
+    renderInteractiveGuide(horarios, horariosComparacao, comparisonCtx);
 }
 
 // ===== Interactive Schedule Guide =====
-function renderInteractiveGuide(horarios) {
+function renderInteractiveGuide(horarios, horariosComparacao = [], comparisonCtx = null) {
   const guideContainer = document.getElementById('interactive-schedule-guide');
   const labelsContainer = document.querySelector('.schedule-timeline-labels');
   const hoursContainer = document.querySelector('.schedule-timeline-hours');
@@ -1103,23 +1483,34 @@ function renderInteractiveGuide(horarios) {
   labelsContainer.innerHTML = '';
   hoursContainer.innerHTML = '';
   eventsContainer.innerHTML = '';
+  trackContainer.querySelectorAll('.schedule-timeline-selection-layer').forEach(el => el.remove());
+  trackContainer.querySelectorAll('.schedule-timeline-range-marker').forEach(el => el.remove());
+  trackContainer.querySelectorAll('.schedule-timeline-needle-compare').forEach(el => el.remove());
+
   if (scheduleInterval) clearInterval(scheduleInterval);
 
   const { targetDay } = getTodayPanelTargetDay(horarios);
 
-  const todayClasses = horarios.filter(h => h.dia === targetDay).sort((a, b) => {
+  const todayClasses = (horarios || []).filter(h => h.dia === targetDay).sort((a, b) => {
     return parseHora(a.horário.split('-')[0]) - parseHora(b.horário.split('-')[0]);
   });
 
-  if (todayClasses.length === 0) {
+  const compareClasses = (horariosComparacao || []).filter(h => h.dia === targetDay).sort((a, b) => {
+    return parseHora(a.horário.split('-')[0]) - parseHora(b.horário.split('-')[0]);
+  });
+
+  const hasCompare = !!(comparisonCtx?.enabled && compareClasses.length > 0);
+
+  if (todayClasses.length === 0 && compareClasses.length === 0) {
     guideContainer.style.display = 'none';
     return;
   }
 
   guideContainer.style.display = 'block';
+  eventsContainer.classList.toggle('has-compare', hasCompare);
 
   let minH = 24, maxH = 0;
-  todayClasses.forEach(({ horário }) => {
+  [...todayClasses, ...compareClasses].forEach(({ horário }) => {
     const [ini, fim] = horário.split('-');
     minH = Math.min(minH, Math.floor(parseHora(ini)));
     maxH = Math.max(maxH, Math.ceil(parseHora(fim)));
@@ -1144,22 +1535,22 @@ function renderInteractiveGuide(horarios) {
     });
   }
 
-  function createRangeChip(position, label, edgeClass = '') {
+  function createRangeChip(position, label, edgeClass = '', isCompare = false) {
     const chip = document.createElement('div');
-    chip.className = `schedule-timeline-range-chip${edgeClass ? ` ${edgeClass}` : ''}`;
+    chip.className = `schedule-timeline-range-chip${edgeClass ? ` ${edgeClass}` : ''}${isCompare ? ' is-compare' : ''}`;
     chip.style.left = `${position}%`;
     chip.textContent = label;
     selectionLayer.appendChild(chip);
   }
 
-  function createRangeMarker(position) {
+  function createRangeMarker(position, isCompare = false) {
     const marker = document.createElement('div');
-    marker.className = 'schedule-timeline-range-marker';
+    marker.className = `schedule-timeline-range-marker${isCompare ? ' is-compare' : ''}`;
     marker.style.left = `${position}%`;
     trackContainer.appendChild(marker);
   }
 
-  function showRangePreview(eventEl, startPosition, endPosition, startLabel, endLabel, persist = false) {
+  function showRangePreview(eventEl, startPosition, endPosition, startLabel, endLabel, persist = false, isCompare = false) {
     clearRangePreview();
     if (pinnedEventEl && pinnedEventEl !== eventEl) {
       pinnedEventEl.classList.remove('is-active');
@@ -1173,10 +1564,10 @@ function renderInteractiveGuide(horarios) {
     if (!activeEventEl) return;
 
     activeEventEl.classList.add('is-active');
-    createRangeMarker(startPosition);
-    createRangeMarker(endPosition);
-    createRangeChip(startPosition, startLabel, startPosition <= 3 ? 'is-edge-start' : '');
-    createRangeChip(endPosition, endLabel, endPosition >= 97 ? 'is-edge-end' : '');
+    createRangeMarker(startPosition, isCompare);
+    createRangeMarker(endPosition, isCompare);
+    createRangeChip(startPosition, startLabel, startPosition <= 3 ? 'is-edge-start' : '', isCompare);
+    createRangeChip(endPosition, endLabel, endPosition >= 97 ? 'is-edge-end' : '', isCompare);
   }
 
   function restorePinnedPreview() {
@@ -1191,7 +1582,8 @@ function renderInteractiveGuide(horarios) {
       Number(pinnedEventEl.dataset.endPosition),
       pinnedEventEl.dataset.startLabel,
       pinnedEventEl.dataset.endLabel,
-      false
+      false,
+      pinnedEventEl.dataset.compare === '1'
     );
     pinnedEventEl.classList.add('is-active');
   }
@@ -1234,8 +1626,18 @@ function renderInteractiveGuide(horarios) {
     hoursContainer.appendChild(hourEl);
   }
 
-  // Renderiza os eventos
-  todayClasses.forEach(c => {
+  const mainRow = document.createElement('div');
+  mainRow.className = 'schedule-timeline-events-row schedule-timeline-events-row-main';
+  eventsContainer.appendChild(mainRow);
+
+  let compareRow = null;
+  if (hasCompare) {
+    compareRow = document.createElement('div');
+    compareRow.className = 'schedule-timeline-events-row schedule-timeline-events-row-compare';
+    eventsContainer.appendChild(compareRow);
+  }
+
+  function appendTimelineEvent(c, targetRow, isCompare = false) {
     const { disciplina, horário } = c;
     const [startStr, endStr] = horário.split('-');
     const startHour = parseHora(startStr);
@@ -1246,7 +1648,7 @@ function renderInteractiveGuide(horarios) {
     const width = ((endHour - startHour) / totalHours) * 100;
 
     const eventEl = document.createElement('div');
-    eventEl.className = 'schedule-timeline-event';
+    eventEl.className = `schedule-timeline-event${isCompare ? ' is-compare' : ''}`;
     if (durationMinutes <= 45) {
       eventEl.classList.add('is-tight');
     } else if (durationMinutes <= 75) {
@@ -1258,13 +1660,17 @@ function renderInteractiveGuide(horarios) {
     eventEl.dataset.endPosition = String(left + width);
     eventEl.dataset.startLabel = startStr;
     eventEl.dataset.endLabel = endStr;
-    eventEl.textContent = disciplina;
+    eventEl.dataset.compare = isCompare ? '1' : '0';
+    const labelEl = document.createElement('span');
+    labelEl.className = 'schedule-timeline-event-label';
+    labelEl.textContent = disciplina;
+    eventEl.appendChild(labelEl);
     eventEl.title = `${disciplina} (${horário})`;
-    eventEl.style.backgroundColor = getDisciplinaColor(disciplina);
+    eventEl.style.backgroundColor = isCompare ? getDisciplinaWarmColor(disciplina) : getDisciplinaColor(disciplina);
     eventEl.tabIndex = 0;
-    eventEl.addEventListener('mouseenter', () => showRangePreview(eventEl, left, left + width, startStr, endStr));
+    eventEl.addEventListener('mouseenter', () => showRangePreview(eventEl, left, left + width, startStr, endStr, false, isCompare));
     eventEl.addEventListener('mouseleave', restorePinnedPreview);
-    eventEl.addEventListener('focus', () => showRangePreview(eventEl, left, left + width, startStr, endStr));
+    eventEl.addEventListener('focus', () => showRangePreview(eventEl, left, left + width, startStr, endStr, false, isCompare));
     eventEl.addEventListener('blur', restorePinnedPreview);
     eventEl.addEventListener('click', () => {
       if (pinnedEventEl === eventEl) {
@@ -1274,18 +1680,23 @@ function renderInteractiveGuide(horarios) {
         return;
       }
 
-      showRangePreview(eventEl, left, left + width, startStr, endStr, true);
+      showRangePreview(eventEl, left, left + width, startStr, endStr, true, isCompare);
     });
-    eventsContainer.appendChild(eventEl);
-  });
+    targetRow.appendChild(eventEl);
+  }
+
+  todayClasses.forEach(c => appendTimelineEvent(c, mainRow, false));
+  if (hasCompare && compareRow) {
+    compareClasses.forEach(c => appendTimelineEvent(c, compareRow, true));
+  }
   
   updateNeedlePosition(minH, totalHours);
-  scheduleInterval = setInterval(() => updateNeedlePosition(minH, totalHours), 60000); // Atualiza a cada minuto
+  scheduleInterval = setInterval(() => updateNeedlePosition(minH, totalHours), 60000);
 }
 
 function updateNeedlePosition(minH, totalHours) {
-  const needle = document.querySelector('.schedule-timeline-needle');
-  if (!needle) return;
+  const needleMain = document.querySelector('.schedule-timeline-needle');
+  if (!needleMain) return;
 
   const now = new Date();
   const currentHour = now.getHours() + now.getMinutes() / 60;
@@ -1293,12 +1704,12 @@ function updateNeedlePosition(minH, totalHours) {
 
   if (currentHour >= minH && currentHour <= minH + totalHours) {
     const position = ((currentHour - minH) / totalHours) * 100;
-    needle.style.left = `${position}%`;
-    needle.setAttribute('data-time', formattedTime);
-    needle.style.display = 'block';
+    needleMain.style.left = `${position}%`;
+    needleMain.setAttribute('data-time', formattedTime);
+    needleMain.style.display = 'block';
   } else {
-    needle.removeAttribute('data-time');
-    needle.style.display = 'none';
+    needleMain.removeAttribute('data-time');
+    needleMain.style.display = 'none';
   }
 }
 
@@ -1309,8 +1720,14 @@ const weeklyEventColors = [
   '#558b2f', '#9e9d24', '#f9a825', '#ff8f00', '#ef6c00',
   '#d84315', '#6a1b9a', '#4527a0', '#283593', '#c62828'
 ];
+const warmComparisonColors = [
+  '#ff8f00', '#ef6c00', '#f4511e', '#ff7043', '#fb8c00',
+  '#e65100', '#ff6f00', '#f57c00', '#e64a19', '#ff5722'
+];
 const disciplinaColorMap = {};
+const disciplinaWarmColorMap = {};
 let nextColorIdx = 0;
+let nextWarmColorIdx = 0;
 
 function getDisciplinaColor(disciplina) {
   if (!disciplinaColorMap[disciplina]) {
@@ -1318,6 +1735,14 @@ function getDisciplinaColor(disciplina) {
     nextColorIdx++;
   }
   return disciplinaColorMap[disciplina];
+}
+
+function getDisciplinaWarmColor(disciplina) {
+  if (!disciplinaWarmColorMap[disciplina]) {
+    disciplinaWarmColorMap[disciplina] = warmComparisonColors[nextWarmColorIdx % warmComparisonColors.length];
+    nextWarmColorIdx++;
+  }
+  return disciplinaWarmColorMap[disciplina];
 }
 
 function parseHora(str) {
@@ -1604,7 +2029,10 @@ function initViewToggle() {
     } else {
       listaContainer.style.display = '';
       interactiveGuide.style.display = 'block';
-      if (renderData) renderInteractiveGuide(horariosGlobais);
+      if (renderData) {
+        const comparisonCtx = getComparisonProfilesContext();
+        renderInteractiveGuide(horariosGlobais, comparisonCtx.enabled ? comparisonCtx.compareHorarios : [], comparisonCtx);
+      }
     }
     localStorage.setItem('sigaa-horarios-view', view);
   }
@@ -1626,7 +2054,8 @@ function atualizarViewAtiva() {
   } else if (saved === '3dias') {
     preencherVisualizacao3Dias(horariosGlobais);
   } else {
-    renderInteractiveGuide(horariosGlobais);
+    const comparisonCtx = getComparisonProfilesContext();
+    renderInteractiveGuide(horariosGlobais, comparisonCtx.enabled ? comparisonCtx.compareHorarios : [], comparisonCtx);
   }
 }
 
@@ -2146,7 +2575,9 @@ function removerEstiloSemDados() {
 window.addEventListener('DOMContentLoaded', () => {
   const homeContent = document.getElementById('home-content');
   const tabHome = document.getElementById('tab-home');
-  const dadosSalvos = localStorage.getItem('sigaaUltimaConsulta');
+  initSelectPerfisSalvos();
+  atualizarSelectPerfisSalvos();
+  const dadosSalvos = obterConsultaInicialSalva();
 
   if (!dadosSalvos) {
     // Adapta a interface para novo usuário
@@ -2172,55 +2603,12 @@ window.addEventListener('DOMContentLoaded', () => {
     return; // Não tenta preencher tabelas
   }
 
-  if (dadosSalvos) {
-    try {
-      const data = JSON.parse(dadosSalvos);
+  aplicarDadosConsulta(dadosSalvos);
 
-      // Preenche os dados institucionais
-      if (data.dadosInstitucionais) {
-        const dadosDiv = document.getElementById('dados-institucionais');
-        const inst = { ...data.dadosInstitucionais };
-
-        // Adiciona o semestre do primeiro horário simplificado, se existir
-        if (data.horariosSimplificados && data.horariosSimplificados.length > 0) {
-            inst['Semestre'] = data.horariosSimplificados[0].semestre;
-        }
-
-        renderizarDadosInstitucionais(inst, data.horariosSimplificados[0]?.semestre);
-      }
-
-      // Preenche tabelas
-      horariosGlobais = data.horariosSimplificados || [];
-      preencherTabelaSimplificada(data.horariosSimplificados || []);
-      atualizarViewAtiva();
-      preencherTabelaDetalhada(data.horariosDetalhados || []);
-
-      if (data.avisosPorDisciplina) {
-        const novidadesFormatadas = data.avisosPorDisciplina.flatMap(({ disciplina, avisos }) =>
-          avisos.map(({ data, descricao }) => ({ disciplina, data, descricao }))
-        );
-        preencherTabelaNovidades(novidadesFormatadas);
-        frequenciasGlobais = data.avisosPorDisciplina;
-        preencherSelectorFrequencias(frequenciasGlobais);
-        preencherTabelaFrequencias(frequenciasGlobais, "todas");
-      
-        // Adicione estas linhas para carregar as notas ao abrir a página
-        notasGlobais = data.avisosPorDisciplina;
-        preencherSelectorNotas(notasGlobais);
-        preencherTabelaNotas(notasGlobais, "todas");
-      } else {
-        preencherTabelaNovidades([]);
-        frequenciasGlobais = [];
-        notasGlobais = [];
-      }
-
-      //document.getElementById('tabela-horarios').style.display = '';
-      document.getElementById('tabela-horarios-detalhados').style.display = '';
-      atividadesGlobais = extrairAtividades(data);
-      preencherTabelaAtividades(atividadesGlobais);
-    } catch (e) {
-      console.warn('Erro ao carregar dados salvos:', e);
-    }
+  const selectedUser = getSelectedProfileUser();
+  if (selectedUser) {
+    const userInput = document.getElementById('user');
+    if (userInput) userInput.value = selectedUser;
   }
 });
 
