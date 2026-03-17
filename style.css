@@ -1132,6 +1132,18 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
     font-size: 13px;
     padding: 6px 4px;
   }
+
+  .tabela-horarios.comparison-mode td .comparison-cell-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+    max-height: 3.6em;
+  }
+
   h1 {
     align-items: center;
     justify-content: center;
@@ -2289,6 +2301,7 @@ span#fechar-aviso-span {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   word-break: break-word;
 }
 .wc-event-time {
@@ -2654,6 +2667,7 @@ span#fechar-aviso-span {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
     max-width: 100%;
     max-height: 2.2em;

@@ -1374,12 +1374,12 @@ function preencherTabelaDia(table, mainList, compareList, comparisonCtx) {
     const horarioCompartilhado = main?.horário || compare?.horário || '-';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${main?.disciplina || '-'}</td>
-      <td class="compare-col">${compare?.disciplina || '-'}</td>
-      <td>${main?.turma || '-'}</td>
-      <td class="compare-col">${compare?.turma || '-'}</td>
-      <td>${periodoCompartilhado}</td>
-      <td>${horarioCompartilhado}</td>
+      <td><span class="comparison-cell-text">${main?.disciplina || '-'}</span></td>
+      <td class="compare-col"><span class="comparison-cell-text">${compare?.disciplina || '-'}</span></td>
+      <td><span class="comparison-cell-text">${main?.turma || '-'}</span></td>
+      <td class="compare-col"><span class="comparison-cell-text">${compare?.turma || '-'}</span></td>
+      <td><span class="comparison-cell-text">${periodoCompartilhado}</span></td>
+      <td><span class="comparison-cell-text">${horarioCompartilhado}</span></td>
     `;
     tbody.appendChild(tr);
   });
