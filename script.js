@@ -819,7 +819,7 @@ function updateClassProgressBar(horarios) {
     if (nameEl) nameEl.textContent = currentClass.disciplina || '-';
     if (timeEl) timeEl.textContent = `${startStr} - ${endStr}`;
     if (countdownEl) {
-      const countdownStr = `${String(remainingMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+      const countdownStr = `${String(remainingHours).padStart(2, '0')}:${String(remainingMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
       countdownEl.textContent = countdownStr;
     }
     
