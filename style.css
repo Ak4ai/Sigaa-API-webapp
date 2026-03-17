@@ -2032,8 +2032,8 @@ span#fechar-aviso-span {
 .compare-mode-toggle input {
   appearance: none;
   -webkit-appearance: none;
-  width: 60px;
-  height: 28px;
+  width: 51px;
+  height: 50%;
   margin: 0;
   border-radius: 999px;
   border: none;
@@ -2048,13 +2048,17 @@ span#fechar-aviso-span {
   flex-shrink: 0;
 }
 
+.compare-mode-toggle {
+  margin: 0 !important;
+}
+
 .compare-mode-toggle input::before {
   content: '';
   position: absolute;
   top: 50%;
   left: 2px;
-  width: 24px;
-  height: 24px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.2);
