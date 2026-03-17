@@ -2014,7 +2014,7 @@ span#fechar-aviso-span {
   padding: 4px 8px;
   border: 1px solid #dde6ef;
   border-radius: 999px;
-  background: #f9fbfd;
+  background: linear-gradient(135deg, #f9fbfd, #f3f8ff);
   color: #3d546d;
   font-size: 12px;
   font-weight: 600;
@@ -2022,47 +2022,54 @@ span#fechar-aviso-span {
   white-space: nowrap;
   cursor: pointer;
   transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
 .compare-mode-toggle input {
   appearance: none;
   -webkit-appearance: none;
-  width: 28px;
-  height: 16px;
+  width: 36px;
+  height: 20px;
   margin: 0;
   border-radius: 999px;
-  border: 1px solid #c6d4e2;
-  background: #dbe4ee;
+  border: none;
+  background: #e0e7f1;
   position: relative;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
 }
 
 .compare-mode-toggle input::before {
   content: '';
   position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 12px;
-  height: 12px;
+  top: 50%;
+  left: 2px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
-  transition: transform 0.2s ease;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.2);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+  transform: translateY(-50%);
 }
 
 .compare-mode-toggle input:checked {
-  background: #1565c0;
-  border-color: #1258aa;
+  background: linear-gradient(135deg, #1565c0, #1e88e5);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(21, 101, 192, 0.25);
 }
 
 .compare-mode-toggle input:checked::before {
-  transform: translateX(12px);
+  transform: translateY(-50%) translateX(16px);
+  box-shadow: 0 2px 4px rgba(21, 101, 192, 0.35);
 }
 
 .compare-mode-toggle input:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.25);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12), 0 0 0 3px rgba(21, 101, 192, 0.3);
 }
 
 .compare-mode-toggle:hover {
