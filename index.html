@@ -189,15 +189,36 @@
   </div>
 
   <div class="tab-content" id="tab-simplificada">
+    <!-- Barra de Progresso de Aula -->
+    <div id="class-progress-bar-container" style="margin-bottom: 16px; display: none;">
+      <div style="background: linear-gradient(to bottom, #f8fafc, #f0f4f9); border-radius: 8px; padding: 14px; border: 1px solid #d9e5ef; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);">
+        <!-- Próxima aula -->
+        <div id="next-class-info" style="display: none;">
+          <div style="font-size: 11px; color: #0f3f7a; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 6px; text-transform: uppercase;">Próxima Aula</div>
+          <div style="font-size: 14px; color: #1a3e6e; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <strong id="next-class-name" style="flex: 1; color: #0f3f7a;"></strong>
+            <span id="next-class-room" style="color: #555; font-size: 12px; background: rgba(0, 123, 255, 0.08); padding: 4px 8px; border-radius: 4px;">Sala: <strong></strong></span>
+          </div>
+        </div>
+        <!-- Aula em progresso -->
+        <div id="active-class-info" style="display: none;">
+          <div style="font-size: 11px; color: #0f3f7a; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 8px; text-transform: uppercase;">Aula em Progresso</div>
+          <div style="background: white; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e8f0fe; gap: 10px;">
+            <span style="font-size: 14px; color: #0f3f7a; font-weight: 600;"><strong id="active-class-time"></strong></span>
+            <span id="active-class-countdown" style="font-size: 13px; color: white; background: linear-gradient(135deg, #007bff, #0056b3); padding: 4px 10px; border-radius: 4px; font-weight: 600; font-family: 'Courier New', monospace; min-width: 60px; text-align: center;">--:--</span>
+            <span id="active-class-room-small" style="color: #666; font-size: 11px; background: rgba(0, 123, 255, 0.12); padding: 3px 7px; border-radius: 3px;">Sala: <strong></strong></span>
+          </div>
+          <div style="width: 100%; height: 6px; background: #e8f0fe; border-radius: 3px; overflow: hidden; border: 1px solid #d0e3f7;">
+            <div id="progress-bar-fill" style="height: 100%; background: linear-gradient(90deg, #007bff, #0056b3); width: 0%; transition: width 0.3s ease; border-radius: 3px; box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);"></div>
+          </div>
+          <div style="font-size: 11px; color: #666; margin-top: 6px; text-align: right; font-weight: 500;">
+            <span id="progress-percentage">0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-      <button id="exportar-gcal-btn" onclick="abrirNoGoogleCalendar()" style="display:flex;align-items:center;gap:8px;background:#1a73e8;color:white;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
-        Adicionar ao Google Agenda
-      </button>
-      <button onclick="exportarParaGoogleCalendar()" style="display:flex;align-items:center;gap:8px;background:#555;color:white;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-        Baixar .ics
-      </button>
       <div class="view-toggle-group" style="margin-left:auto">
         <label class="compare-mode-toggle" for="comparison-mode-toggle">
           <input type="checkbox" id="comparison-mode-toggle" />
@@ -328,6 +349,16 @@
     </div>
     <div id="weekly-view-container" style="display:none">
       <div class="weekly-calendar"></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;justify-content:flex-end;">
+      <button id="exportar-gcal-btn" onclick="abrirNoGoogleCalendar()" style="display:flex;align-items:center;gap:8px;background:#1a73e8;color:white;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+        Adicionar ao Google Agenda
+      </button>
+      <button onclick="exportarParaGoogleCalendar()" style="display:flex;align-items:center;gap:8px;background:#555;color:white;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Baixar .ics
+      </button>
     </div>
   </div>
 

@@ -134,6 +134,130 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function normalizeTextForMatch(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+}
+
+function extractSiglaFromCodigoPrefix(disciplina) {
+  const text = String(disciplina || '').trim();
+  // Ex.: G05FOFT0.01 - FUNDAMENTOS ...  => FOFT
+  const match = text.match(/^[A-Z]\d{2}([A-Z]{2,6})\d(?:\.\d+)?\s*-/i);
+  return match ? match[1].toUpperCase() : '';
+}
+
+function buildSiglaFromWords(text) {
+  const stopWords = new Set(['DE', 'DA', 'DO', 'DAS', 'DOS', 'E', 'COM', 'EM', 'PARA']);
+  const tokens = normalizeTextForMatch(text)
+    .replace(/^[A-Z]\d{2}[A-Z]{2,6}\d(?:\.\d+)?\s*-\s*/i, '')
+    .replace(/\([^)]*\)/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter(token => !stopWords.has(token));
+
+  if (tokens.length === 0) return '';
+  if (tokens.length === 1) return tokens[0].slice(0, 4);
+  return tokens.slice(0, 4).map(token => token[0]).join('');
+}
+
+function generateDisciplinaSigla(disciplina) {
+  const raw = String(disciplina || '').trim();
+  if (!raw || raw === '-') return '-';
+
+  const normalized = normalizeTextForMatch(raw)
+    .replace(/^[A-Z]\d{2}[A-Z]{2,6}\d(?:\.\d+)?\s*-\s*/i, '')
+    .trim();
+
+  // Se já vier sigla entre parênteses no final, prioriza ela (ex.: ... (OFT))
+  const parenthesisSigla = raw.match(/\(([A-Z]{2,10})\)\s*$/i);
+  if (parenthesisSigla) {
+    return parenthesisSigla[1].toUpperCase();
+  }
+
+  const directMap = {
+    'EQUACAO DIFERENCIAL ORDINARIA': 'EDO',
+    'CALCULO COM FUNCOES DE VARIAS VARIAVEIS II': 'CFVV II',
+    'MECANICA DOS SOLIDOS II': 'MEC SOL',
+    'PESQUISA OPERACIONAL': 'PO'
+  };
+  if (directMap[normalized]) {
+    return directMap[normalized];
+  }
+
+  // LABORATORIO DE ... => LAB - <sigla base>
+  if (normalized.startsWith('LABORATORIO')) {
+    const baseName = normalized.replace(/^LABORATORIO\s*(DE\s*)?/, '').trim();
+    const codeSigla = extractSiglaFromCodigoPrefix(raw);
+    const baseSigla = codeSigla || buildSiglaFromWords(baseName) || 'LAB';
+    return `LAB - ${baseSigla}`;
+  }
+
+  // Disciplinas de mecânica sem regra específica
+  if (normalized.includes('MECANICA')) {
+    return 'MEC';
+  }
+
+  // Base principal: sigla do código da disciplina
+  const codeSigla = extractSiglaFromCodigoPrefix(raw);
+  if (codeSigla) {
+    return codeSigla;
+  }
+
+  // Fallback: gera pelas palavras do nome
+  return buildSiglaFromWords(normalized) || raw;
+}
+
+function getDisciplinaLabelForComparisonMobile(disciplina) {
+  if (!window.matchMedia('(max-width: 1040px)').matches) {
+    return disciplina || '-';
+  }
+  return generateDisciplinaSigla(disciplina);
+}
+
+function openDisciplinaInfoModal(info) {
+  document.getElementById('disciplina-info-modal')?.remove();
+
+  const perfil = escapeHtml(info?.perfil || '-');
+  const disciplina = escapeHtml(info?.disciplina || '-');
+  const turma = escapeHtml(info?.turma || '-');
+  const periodo = escapeHtml(info?.periodo || '-');
+  const horario = escapeHtml(info?.horario || '-');
+  const dia = escapeHtml(info?.dia || '-');
+  const sala = escapeHtml(info?.sala || '-');
+
+  const modal = document.createElement('div');
+  modal.id = 'disciplina-info-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
+      <div style="padding:20px 24px 12px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center">
+        <strong style="font-size:16px">Detalhes da Disciplina</strong>
+        <button aria-label="Fechar" style="background:none;border:none;font-size:22px;cursor:pointer;color:#555;padding:0 4px">&times;</button>
+      </div>
+      <div style="padding:16px 24px 22px">
+        <div style="display:inline-block;background:#e8f0fe;color:#1a73e8;border:1px solid #d2e3fc;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600;margin-bottom:12px">${perfil}</div>
+        <h4 style="margin:0 0 14px;font-size:16px;line-height:1.35;color:#1f1f1f">${disciplina}</h4>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px 10px;font-size:14px;color:#2b2b2b">
+          <div style="color:#666">Turma</div><div><strong>${turma}</strong></div>
+          <div style="color:#666">Dia</div><div><strong>${dia}</strong></div>
+          <div style="color:#666">Período</div><div><strong>${periodo}</strong></div>
+          <div style="color:#666">Horário</div><div><strong>${horario}</strong></div>
+          <div style="color:#666">Sala</div><div><strong>${sala}</strong></div>
+        </div>
+      </div>
+    </div>`;
+
+  const closeBtn = modal.querySelector('button');
+  closeBtn?.addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+  document.body.appendChild(modal);
+}
+
 function getFirstNameFromDadosInstitucionais(dados, fallback = '') {
   if (!dados || typeof dados !== 'object') {
     return (fallback || '').trim();
@@ -282,6 +406,7 @@ function aplicarDadosConsulta(data, tempoResposta) {
 
   horariosGlobais = data.horariosSimplificados || [];
   preencherTabelaSimplificada(data.horariosSimplificados || []);
+  startClassProgressBarUpdates(data.horariosSimplificados || []);
   atualizarViewAtiva();
   preencherTabelaDetalhada(data.horariosDetalhados || []);
 
@@ -602,6 +727,137 @@ function getTodayPanelTargetDay(horarios) {
   };
 }
 
+// ===== Barra de Progresso de Aula =====
+let classProgressBarInterval = null;
+
+function getNextClass(horarios) {
+  const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+  const now = new Date();
+  const hojeIdx = now.getDay();
+  const hojeNome = diasSemana[hojeIdx];
+  const currentHour = now.getHours() + now.getMinutes() / 60;
+
+  const todayClasses = (horarios || []).filter(item => item.dia === hojeNome).sort((a, b) => {
+    return parseHora(a.horário.split('-')[0]) - parseHora(b.horário.split('-')[0]);
+  });
+
+  for (const cls of todayClasses) {
+    const [startStr] = cls.horário.split('-');
+    const startHour = parseHora(startStr);
+    if (startHour > currentHour) {
+      return cls;
+    }
+  }
+
+  return null;
+}
+
+function getCurrentClass(horarios) {
+  const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+  const now = new Date();
+  const hojeIdx = now.getDay();
+  const hojeNome = diasSemana[hojeIdx];
+  const currentHour = now.getHours() + now.getMinutes() / 60;
+  const DELAY_MINUTES = 5 / 60; // 5 minutos em horas
+
+  const todayClasses = (horarios || []).filter(item => item.dia === hojeNome).sort((a, b) => {
+    return parseHora(a.horário.split('-')[0]) - parseHora(b.horário.split('-')[0]);
+  });
+
+  for (const cls of todayClasses) {
+    const [startStr, endStr] = cls.horário.split('-');
+    const startHour = parseHora(startStr);
+    const endHour = parseHora(endStr);
+    
+    // Aula em progresso se: (currentHour >= startHour + 5min) E (currentHour < endHour)
+    if (currentHour >= startHour + DELAY_MINUTES && currentHour < endHour) {
+      return cls;
+    }
+  }
+
+  return null;
+}
+
+function updateClassProgressBar(horarios) {
+  const container = document.getElementById('class-progress-bar-container');
+  const nextClassInfo = document.getElementById('next-class-info');
+  const activeClassInfo = document.getElementById('active-class-info');
+  
+  if (!container || !nextClassInfo || !activeClassInfo) return;
+
+  const currentClass = getCurrentClass(horarios);
+  const nextClass = getNextClass(horarios);
+
+  if (currentClass) {
+    // Mostra aula em progresso
+    nextClassInfo.style.display = 'none';
+    activeClassInfo.style.display = 'block';
+    
+    const [startStr, endStr] = currentClass.horário.split('-');
+    const startHour = parseHora(startStr);
+    const endHour = parseHora(endStr);
+    const now = new Date();
+    const currentHour = now.getHours() + now.getMinutes() / 60;
+    
+    const totalDuration = endHour - startHour;
+    const progressHours = Math.max(0, currentHour - startHour);
+    const progressPercent = Math.min(100, (progressHours / totalDuration) * 100);
+    
+    // Calcula o tempo faltante em minutos e segundos
+    const remainingHours = Math.max(0, endHour - currentHour);
+    const remainingMinutes = Math.floor(remainingHours * 60);
+    const remainingSeconds = Math.floor((remainingHours * 60 - remainingMinutes) * 60);
+    
+    const timeEl = document.getElementById('active-class-time');
+    const countdownEl = document.getElementById('active-class-countdown');
+    const roomEl = document.getElementById('active-class-room-small');
+    const fillEl = document.getElementById('progress-bar-fill');
+    const percentEl = document.getElementById('progress-percentage');
+    
+    if (timeEl) timeEl.textContent = `${startStr} - ${endStr}`;
+    if (countdownEl) {
+      const countdownStr = `${String(remainingMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+      countdownEl.textContent = countdownStr;
+    }
+    if (roomEl) roomEl.querySelector('strong').textContent = currentClass.sala || '-';
+    if (fillEl) fillEl.style.width = `${progressPercent}%`;
+    if (percentEl) percentEl.textContent = `${Math.round(progressPercent)}%`;
+    
+    container.style.display = 'block';
+  } else if (nextClass) {
+    // Mostra próxima aula
+    activeClassInfo.style.display = 'none';
+    nextClassInfo.style.display = 'block';
+    
+    const nameEl = document.getElementById('next-class-name');
+    const roomEl = document.getElementById('next-class-room');
+    
+    if (nameEl) nameEl.textContent = nextClass.disciplina || '-';
+    if (roomEl) roomEl.querySelector('strong').textContent = nextClass.sala || '-';
+    
+    container.style.display = 'block';
+  } else {
+    // Nenhuma próxima aula
+    container.style.display = 'none';
+  }
+}
+
+function startClassProgressBarUpdates(horarios) {
+  if (classProgressBarInterval) clearInterval(classProgressBarInterval);
+  
+  updateClassProgressBar(horarios);
+  classProgressBarInterval = setInterval(() => {
+    updateClassProgressBar(horarios);
+  }, 1000); // Atualiza a cada 1 segundo para contador regressivo em tempo real
+}
+
+function stopClassProgressBarUpdates() {
+  if (classProgressBarInterval) {
+    clearInterval(classProgressBarInterval);
+    classProgressBarInterval = null;
+  }
+}
+
 function initAutoTomorrowToggle() {
   const toggle = document.getElementById('auto-tomorrow-toggle');
   if (!toggle) return;
@@ -619,6 +875,9 @@ function initAutoTomorrowToggle() {
 // Botão de logout/apagar informações
 document.getElementById('logout-btn').addEventListener('click', () => {
   if (!confirm('Tem certeza que deseja sair?\nSeus dados salvos serão apagados.')) return;
+
+  // 0. Para atualizações da barra de progresso
+  stopClassProgressBarUpdates();
 
   // 1. Remove tokens do storage
   clearStoredTokenInfo();
@@ -1372,15 +1631,50 @@ function preencherTabelaDia(table, mainList, compareList, comparisonCtx) {
   rows.forEach(({ main, compare }) => {
     const periodoCompartilhado = main?.período || compare?.período || '-';
     const horarioCompartilhado = main?.horário || compare?.horário || '-';
+    const disciplinaMain = main?.disciplina || '-';
+    const disciplinaCompare = compare?.disciplina || '-';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><span class="comparison-cell-text">${main?.disciplina || '-'}</span></td>
-      <td class="compare-col"><span class="comparison-cell-text">${compare?.disciplina || '-'}</span></td>
+      <td><span class="comparison-cell-text comparison-discipline-link comparison-discipline-main" role="button" tabindex="0" title="${escapeHtml(disciplinaMain)}">${escapeHtml(getDisciplinaLabelForComparisonMobile(disciplinaMain))}</span></td>
+      <td class="compare-col"><span class="comparison-cell-text comparison-discipline-link comparison-discipline-compare" role="button" tabindex="0" title="${escapeHtml(disciplinaCompare)}">${escapeHtml(getDisciplinaLabelForComparisonMobile(disciplinaCompare))}</span></td>
       <td><span class="comparison-cell-text">${main?.turma || '-'}</span></td>
       <td class="compare-col"><span class="comparison-cell-text">${compare?.turma || '-'}</span></td>
       <td><span class="comparison-cell-text">${periodoCompartilhado}</span></td>
       <td><span class="comparison-cell-text">${horarioCompartilhado}</span></td>
     `;
+
+    const bindOpenModal = (element, info) => {
+      if (!element || !info?.disciplina || info.disciplina === '-') return;
+      const open = () => openDisciplinaInfoModal(info);
+      element.addEventListener('click', open);
+      element.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          open();
+        }
+      });
+    };
+
+    bindOpenModal(tr.querySelector('.comparison-discipline-main'), {
+      perfil: getFirstNameFromUser(comparisonCtx.mainUser),
+      disciplina: disciplinaMain,
+      turma: main?.turma || '-',
+      dia: main?.dia || compare?.dia || '-',
+      periodo: periodoCompartilhado,
+      horario: horarioCompartilhado,
+      sala: main?.sala || '-'
+    });
+
+    bindOpenModal(tr.querySelector('.comparison-discipline-compare'), {
+      perfil: getFirstNameFromUser(comparisonCtx.compareUser),
+      disciplina: disciplinaCompare,
+      turma: compare?.turma || '-',
+      dia: compare?.dia || main?.dia || '-',
+      periodo: periodoCompartilhado,
+      horario: horarioCompartilhado,
+      sala: compare?.sala || '-'
+    });
+
     tbody.appendChild(tr);
   });
 
