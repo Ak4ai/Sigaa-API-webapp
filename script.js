@@ -822,11 +822,10 @@ function updateClassProgressBar(horarios) {
       countdownEl.textContent = countdownStr;
     }
     
-    // Atualiza sala - debug
-    const sala = currentClass.sala || '-';
-    console.log('[CLASS PROGRESS] Aula atual:', currentClass.disciplina, '| Sala:', sala);
+    // Usa turma que já vem nos dados da aula
+    const turma = currentClass.turma || '-';
     if (roomTextEl) {
-      roomTextEl.textContent = sala;
+      roomTextEl.textContent = turma;
     }
     
     if (fillEl) fillEl.style.width = `${progressPercent}%`;
@@ -845,7 +844,7 @@ function updateClassProgressBar(horarios) {
     if (roomEl) {
       const strongEl = roomEl.querySelector('strong');
       if (strongEl) {
-        strongEl.textContent = nextClass.sala || '-';
+        strongEl.textContent = nextClass.turma || '-';
       }
     }
     
