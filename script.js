@@ -797,16 +797,16 @@ function updateClassProgressBar(horarios) {
     const startHour = parseHora(startStr);
     const endHour = parseHora(endStr);
     const now = new Date();
-    const currentHour = now.getHours() + now.getMinutes() / 60;
+    const currentHour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
     
     const totalDuration = endHour - startHour;
     const progressHours = Math.max(0, currentHour - startHour);
     const progressPercent = Math.min(100, (progressHours / totalDuration) * 100);
     
-    // Calcula o tempo faltante em minutos e segundos
-    const remainingHours = Math.max(0, endHour - currentHour);
-    const remainingMinutes = Math.floor(remainingHours * 60);
-    const remainingSeconds = Math.floor((remainingHours * 60 - remainingMinutes) * 60);
+    // Calcula o tempo faltante em minutos e segundos (com precisão de segundos)
+    const totalRemainingSeconds = Math.max(0, Math.round((endHour - currentHour) * 3600));
+    const remainingMinutes = Math.floor(totalRemainingSeconds / 60);
+    const remainingSeconds = totalRemainingSeconds % 60;
     
     const nameEl = document.getElementById('active-class-name');
     const timeEl = document.getElementById('active-class-time');
