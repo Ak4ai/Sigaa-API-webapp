@@ -2012,26 +2012,28 @@ span#fechar-aviso-span {
   align-items: center;
   gap: 7px;
   margin-right: 2px;
-  padding: 4px 8px;
+  padding: 0 8px;
   border: 1px solid #dde6ef;
   border-radius: 999px;
   background: linear-gradient(135deg, #f9fbfd, #f3f8ff);
   color: #3d546d;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 34px;
   white-space: nowrap;
   cursor: pointer;
   transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  width: auto;
+  height: 34px;
   flex-shrink: 0;
 }
 
 .compare-mode-toggle input {
   appearance: none;
   -webkit-appearance: none;
-  width: 36px;
-  height: 20px;
+  width: 60px;
+  height: 28px;
   margin: 0;
   border-radius: 999px;
   border: none;
@@ -2043,6 +2045,7 @@ span#fechar-aviso-span {
   align-items: center;
   justify-content: flex-start;
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
+  flex-shrink: 0;
 }
 
 .compare-mode-toggle input::before {
@@ -2050,8 +2053,8 @@ span#fechar-aviso-span {
   position: absolute;
   top: 50%;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.2);
@@ -2065,7 +2068,7 @@ span#fechar-aviso-span {
 }
 
 .compare-mode-toggle input:checked::before {
-  transform: translateY(-50%) translateX(16px);
+  transform: translateY(-50%) translateX(32px);
   box-shadow: 0 2px 4px rgba(21, 101, 192, 0.35);
 }
 
