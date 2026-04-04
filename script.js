@@ -550,7 +550,10 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
         await consultarComToken(token, user);
     } catch (error) {
         console.error('Erro no login:', error);
-        errorDiv.textContent = error.message;
+        const isNetworkError = error.name === 'AbortError' || error.name === 'TypeError' || error.message === 'Failed to fetch';
+        errorDiv.textContent = isNetworkError
+          ? 'Servidor inacessível. Verifique sua conexão ou tente novamente mais tarde.'
+          : error.message;
     } finally {
         loadingDiv.style.display = 'none';
     }
@@ -574,8 +577,10 @@ async function consultarComToken(token, userFromLogin = '') {
         // ID único deste cliente para rastrear posição na fila
         const clientId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-        // Usa AbortController para poder parar o fetch se necessário
+        // Usa AbortController para timeout do fetch principal (180s)
         const controller = new AbortController();
+        const FETCH_TIMEOUT_MS = 180_000;
+        const fetchTimeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
         // Inicia fetch (pode ficar na fila do backend)
         const fetchPromise = fetch(`${API_BASE}/api/scraper`, {
@@ -583,30 +588,45 @@ async function consultarComToken(token, userFromLogin = '') {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, clientId }),
             signal: controller.signal
-        });
+        }).finally(() => clearTimeout(fetchTimeoutId));
 
         // Mostra display de fila imediatamente (o fetch pode demorar)
         updateQueueDisplay(-1, 60000); // -1 = "entrando na fila..."
 
         // Polling da fila a cada 2s usando clientId para posição exata
-        // NUNCA esconde o display — só atualiza. O hide é feito no finally.
+        // Para automaticamente após 3 falhas de rede consecutivas
         console.log(`[FILA] clientId deste request: ${clientId}`);
+        let pollNetworkErrors = 0;
+        const MAX_POLL_ERRORS = 3;
         queuePollInterval = setInterval(async () => {
             try {
-                const statusResp = await fetch(`${API_BASE}/api/queue-status?clientId=${clientId}`, { method: 'GET' });
+                const pollController = new AbortController();
+                const pollTimeout = setTimeout(() => pollController.abort(), 5000);
+                const statusResp = await fetch(`${API_BASE}/api/queue-status?clientId=${clientId}`, {
+                    method: 'GET',
+                    signal: pollController.signal
+                });
+                clearTimeout(pollTimeout);
+                pollNetworkErrors = 0; // reset em caso de sucesso
                 const statusData = await statusResp.json();
                 console.log(`[FILA] poll response:`, statusData);
                 if (statusData.position > 0) {
-                    // position = posição exata deste cliente na fila
                     updateQueueDisplay(statusData.position, statusData.avgTimeMs);
                 } else if (statusData.position === -1) {
-                    // Ainda não apareceu no servidor — mostra "entrando na fila"
                     updateQueueDisplay(-1, statusData.avgTimeMs);
                 } else {
-                    // position = 0 — não encontrado (já terminou ou erro)
                     updateQueueDisplay(1, statusData.avgTimeMs);
                 }
-            } catch (e) { /* ignora erros de polling */ }
+            } catch (e) {
+                pollNetworkErrors++;
+                console.warn(`[FILA] erro de polling (${pollNetworkErrors}/${MAX_POLL_ERRORS}):`, e.message);
+                if (pollNetworkErrors >= MAX_POLL_ERRORS) {
+                    clearInterval(queuePollInterval);
+                    queuePollInterval = null;
+                    controller.abort(); // aborta o fetch principal também
+                    console.error('[FILA] Servidor inacessível. Polling encerrado.');
+                }
+            }
         }, 2000);
 
         const response = await fetchPromise;
@@ -629,7 +649,10 @@ async function consultarComToken(token, userFromLogin = '') {
 
   } catch (error) {
     console.error('Erro ao consultar com token:', error);
-    errorDiv.textContent = error.message;
+    const isNetworkError = error.name === 'AbortError' || error.name === 'TypeError' || error.message === 'Failed to fetch';
+    errorDiv.textContent = isNetworkError
+      ? 'Servidor inacessível. Verifique sua conexão ou tente novamente mais tarde.'
+      : error.message;
     // para contador com flag de erro
     stopScrapeCounter(false);
     if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
@@ -1125,6 +1148,10 @@ function preencherSelectorFrequencias(avisosPorDisciplina) {
   select.innerHTML = '<option value="todas">Todas</option>';
   avisosPorDisciplina.forEach(disc => {
     const nome = disc.disciplina;
+    const nAulas = Number(disc.numeroAulasDefinidas) || 0;
+    const freqLen = (disc.frequencia || []).length;
+    // Ignora entradas sem aulas e sem registros (atividades/listas avulsas)
+    if (nAulas === 0 && freqLen === 0) return;
     if (![...select.options].some(opt => opt.value === nome)) {
       const option = document.createElement('option');
       option.value = nome;
@@ -1162,12 +1189,14 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
     `;
     avisosPorDisciplina.forEach(disc => {
       const { disciplina, numeroAulasDefinidas = 0, frequencia = [] } = disc;
+      const nAulas = Number(numeroAulasDefinidas) || 0;
+      // Ignora entradas sem aulas definidas e sem registros de frequência (atividades/listas avulsas)
+      if (nAulas === 0 && frequencia.length === 0) return;
       let totalFaltas = 0;
       frequencia.forEach(f => {
         const match = f.status.match(/(\d+)\s*Falta/);
         if (match) totalFaltas += parseInt(match[1]);
       });
-      const nAulas = Number(numeroAulasDefinidas) || 0;
       const presenca = nAulas > 0 ? (((nAulas - totalFaltas) / nAulas) * 100).toFixed(1) : '';
       const frequenciasNecessarias = Math.ceil(0.75 * nAulas);
       const faltasRestantes = nAulas - frequenciasNecessarias - totalFaltas;
