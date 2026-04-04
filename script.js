@@ -2,7 +2,7 @@
 // <script src="boletim.js"></script> deve estar incluído no index.html antes de script.js para garantir que a função esteja disponível
 
 // URL base da API — em desenvolvimento local o server.js injeta window.API_BASE_URL via index.html
-const API_BASE = window.API_BASE_URL || 'http://163.176.42.177:8080';
+const API_BASE = window.API_BASE_URL || 'https://ak4ai-sigaa.duckdns.org';
 const STORAGE_LAST_CONSULTA = 'sigaaUltimaConsulta';
 const STORAGE_SAVED_PROFILES = 'sigaaPerfisSalvos';
 const STORAGE_SELECTED_PROFILE = 'sigaaPerfilSelecionado';
