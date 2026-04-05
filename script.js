@@ -2,7 +2,8 @@
 // <script src="boletim.js"></script> deve estar incluído no index.html antes de script.js para garantir que a função esteja disponível
 
 // URL base da API — em desenvolvimento local o server.js injeta window.API_BASE_URL via index.html
-const API_BASE = window.API_BASE_URL || 'https://ak4ai-sigaa.duckdns.org';
+// Nota: https://ak4ai-sigaa.duckdns.org pode falhar por proxy/firewall, usar HTTP como fallback
+const API_BASE = window.API_BASE_URL || 'http://163.176.42.177:8080';
 const STORAGE_LAST_CONSULTA = 'sigaaUltimaConsulta';
 const STORAGE_SAVED_PROFILES = 'sigaaPerfisSalvos';
 const STORAGE_SELECTED_PROFILE = 'sigaaPerfilSelecionado';
@@ -570,12 +571,13 @@ async function consultarComToken(token, userFromLogin = '') {
   let queuePollInterval = null;
 
   try {
-    // inicia contador visível no formulário
+    // Gera clientId ANTES de iniciar o scraper
+    const clientId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    __currentClientId = clientId;  // Armazena globalmente para polling de progresso
+    
+    // inicia contador visível no formulário (agora possui __currentClientId válido)
     startScrapeCounter();
     const inicio = performance.now();
-
-        // ID único deste cliente para rastrear posição na fila
-        const clientId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
         // Usa AbortController para timeout do fetch principal (180s)
         const controller = new AbortController();
@@ -3657,6 +3659,120 @@ function startElapsedSinceUpdate(timestamp) {
 }
 
 // ── Exibição de fila de espera ────────────────────────────────────────────
+// ── Animação de Barra de Progresso (novo sistema) ───────────────────┐
+let __progressBarInterval = null;
+let __progressPollInterval = null;  // polling real do backend
+let __progressStartTime = null;
+let __progressEstimatedTotal = 30000; // Tempo estimado padrão: 30s
+let __currentClientId = null;  // ID do cliente para tracking de progresso
+
+function updateProgressBar(percent) {
+  const bar = document.getElementById('progress-bar-fill-main');
+  const percentEl = document.getElementById('progress-text-percent');
+  const statusEl = document.getElementById('progress-text-status');
+  
+  if (!bar) return;
+  
+  bar.style.width = percent + '%';
+  if (percentEl) percentEl.textContent = Math.round(percent) + '%';
+  
+  // Mensagem dinâmica baseada no progresso
+  if (statusEl) {
+    if (percent < 30) {
+      statusEl.textContent = '🔄 Conectando ao SIGAA...';
+    } else if (percent < 60) {
+      statusEl.textContent = '📚 Extraindo seus dados...';
+    } else if (percent < 90) {
+      statusEl.textContent = '⚙️ Processando informações...';
+    } else {
+      statusEl.textContent = '✅ Finalizando...';
+    }
+  }
+}
+
+function startProgressBarAnimation(estimatedMs = 35000) {
+  __progressStartTime = Date.now();
+  __progressEstimatedTotal = estimatedMs;
+  
+  // Para animação anterior se houver
+  if (__progressBarInterval) clearInterval(__progressBarInterval);
+  
+  // Animar a barra usando uma curva suave (easeInOutCubic modificada)
+  __progressBarInterval = setInterval(() => {
+    const elapsed = Date.now() - __progressStartTime;
+    const ratio = Math.min(elapsed / __progressEstimatedTotal, 0.95); // Máx 95% até finish
+    
+    // Curva suave que começa rápida e desacelera
+    const easeProgress = ratio < 0.5 
+      ? 2 * ratio * ratio 
+      : 1 - Math.pow(-2 * ratio + 2, 2) / 2;
+    
+    updateProgressBar(easeProgress * 100);
+  }, 100);
+}
+
+function finishProgressBar() {
+  if (__progressBarInterval) clearInterval(__progressBarInterval);
+  __progressBarInterval = null;
+  updateProgressBar(100);
+  
+  // Esconde após 500ms
+  setTimeout(() => {
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
+  }, 500);
+}
+
+// ── Polling Real de Progresso (backend) ──────────────────────────────
+function startPollingProgress(clientId) {
+  if (!clientId) {
+    console.warn(`[PROGRESS] clientId vazio, polling não iniciado`);
+    return;
+  }
+  __currentClientId = clientId;
+  console.log(`[PROGRESS] Iniciando polling com clientId: ${clientId}`);
+  
+  // Para polling anterior se houver
+  if (__progressPollInterval) clearInterval(__progressPollInterval);
+  
+  // Polling a cada 500ms para valores REAIS do backend
+  __progressPollInterval = setInterval(async () => {
+    try {
+      const pollController = new AbortController();
+      const pollTimeout = setTimeout(() => pollController.abort(), 5000);
+      const url = `${API_BASE}/api/scraper-progress?clientId=${clientId}`;
+      console.log(`[PROGRESS] Polling: ${url}`);
+      const response = await fetch(url, {
+        method: 'GET',
+        signal: pollController.signal
+      });
+      clearTimeout(pollTimeout);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`[PROGRESS] ${data.progress}% - ${data.status}`);
+        updateProgressBar(data.progress);
+        
+        // Continua polling até hideQueueDisplay() parar (quando fetch completa)
+      } else {
+        console.warn(`[PROGRESS] HTTP ${response.status}`);
+      }
+    } catch (e) {
+      console.warn(`[PROGRESS] erro de polling:`, e.message);
+      // Continua tentando
+    }
+  }, 500);  // 500ms para ser responsivo
+}
+
+function stopPollingProgress() {
+  if (__progressPollInterval) {
+    clearInterval(__progressPollInterval);
+    __progressPollInterval = null;
+  }
+}
+
+// ── Fim animação de barra ────────────────────────────────────────────┘
+
 function updateQueueDisplay(position, avgTimeMs) {
     let el = document.getElementById('queue-status-display');
     if (!el) {
@@ -3696,6 +3812,10 @@ function updateQueueDisplay(position, avgTimeMs) {
 function hideQueueDisplay() {
     const el = document.getElementById('queue-status-display');
     if (el) el.style.display = 'none';
+    
+    // Para polling de progresso e finaliza a barra
+    stopPollingProgress();
+    finishProgressBar();
 }
 // ── Fim fila de espera ───────────────────────────────────────────────────
 
@@ -3704,13 +3824,21 @@ function startScrapeCounter() {
   // se havia um contador de tempo desde a última atualização, pare-o
   stopElapsedSinceUpdate();
   __scrapeCounterStartTime = Date.now();
+  
+  console.log(`[SCRAPE] startScrapeCounter - __currentClientId: ${__currentClientId}`);
+  
+  // NOVO: Inicia polling REAL de progresso (backend)
+  const loading = document.getElementById('loading');
+  if (loading) loading.style.display = 'block';
+  startPollingProgress(__currentClientId);  // Polling real em vez de estimativa
+  
   const form = document.getElementById('sigaa-form');
   if (!form) return;
   let el = document.getElementById('scrape-timer');
   if (!el) {
     el = document.createElement('div');
     el.id = 'scrape-timer';
-    el.style.cssText = 'margin-top:8px;color:#555;font-size:0.95em;';
+    el.style.cssText = 'margin-top:8px;color:#555;font-size:0.95em;display:none;'; // hidden
     form.appendChild(el);
   }
   el.style.opacity = '1';
