@@ -2,8 +2,7 @@
 // <script src="boletim.js"></script> deve estar incluído no index.html antes de script.js para garantir que a função esteja disponível
 
 // URL base da API — em desenvolvimento local o server.js injeta window.API_BASE_URL via index.html
-// Nota: https://ak4ai-sigaa.duckdns.org pode falhar por proxy/firewall, usar HTTP como fallback
-const API_BASE = window.API_BASE_URL || 'http://163.176.42.177:8080';
+const API_BASE = window.API_BASE_URL || 'https://ak4ai-sigaa.duckdns.org';
 const STORAGE_LAST_CONSULTA = 'sigaaUltimaConsulta';
 const STORAGE_SAVED_PROFILES = 'sigaaPerfisSalvos';
 const STORAGE_SELECTED_PROFILE = 'sigaaPerfilSelecionado';
@@ -585,11 +584,28 @@ async function consultarComToken(token, userFromLogin = '') {
         const fetchTimeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
         // Inicia fetch (pode ficar na fila do backend)
+        // Tenta HTTPS primeiro (via proxy), fallback para HTTP se falhar
         const fetchPromise = fetch(`${API_BASE}/api/scraper`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, clientId }),
-            signal: controller.signal
+            signal: controller.signal,
+            mode: 'cors',
+            credentials: 'omit'
+        }).catch(err => {
+            // Se HTTPS fails, tenta HTTP como fallback
+            console.warn(`[FETCH] Erro HTTPS, tentando HTTP fallback:`, err.message);
+            if (API_BASE.includes('https')) {
+                const httpFallback = API_BASE.replace('https://', 'http://').replace(':443', ':8080');
+                return fetch(`${httpFallback}/api/scraper`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, clientId }),
+                    signal: controller.signal,
+                    mode: 'cors'
+                });
+            }
+            throw err;
         }).finally(() => clearTimeout(fetchTimeoutId));
 
         // Mostra display de fila imediatamente (o fetch pode demorar)
