@@ -147,24 +147,60 @@
           </div>
           <div class="error" id="error"></div>
           
-          <!-- BARRA DE PROGRESSO DINÂMICA -->
-          <div id="loading" style="display:none; margin-top: 16px;">
-            <div style="background: linear-gradient(to bottom, #f0f7ff, #f8fafc); padding: 16px; border-radius: 8px; border: 1px solid #d4e8ff;">
-              <div style="font-size: 13px; color: #0f3f7a; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.4px;">
-                🔄 Carregando seus dados
+          <!-- BARRA DE PROGRESSO NO TOPO (visível em qualquer aba) -->
+          <div id="top-progress-bar" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 4px;
+            background: linear-gradient(90deg, #2196F3 0%, #1976D2 100%);
+            z-index: 9999;
+            transition: width 0.3s ease;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.5);
+          "></div>
+
+          <!-- OVERLAY MODAL ESCURO COM SPINNER CENTRALIZADO -->
+          <div id="loading-overlay" style="
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(15, 63, 122, 0.85) 0%, rgba(25, 118, 210, 0.85) 100%);
+            backdrop-filter: blur(4px);
+            border-radius: 8px;
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 24px;
+          ">
+            <!-- Spinner Circular Azul -->
+            <svg viewBox="0 0 100 100" style="width: 100px; height: 100px; filter: drop-shadow(0 4px 12px rgba(33, 150, 243, 0.4));">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="4"></circle>
+              <circle id="overlay-progress-circle" cx="50" cy="50" r="40" fill="none" stroke="#2196F3" 
+                stroke-width="4" stroke-linecap="round" style="
+                stroke-dasharray: 251.2; 
+                stroke-dashoffset: 251.2; 
+                transition: stroke-dashoffset 0.3s ease; 
+                transform: rotate(-90deg); 
+                transform-origin: 50% 50%;
+                filter: drop-shadow(0 0 6px rgba(33, 150, 243, 0.6));
+              "></circle>
+            </svg>
+
+            <!-- Texto de progresso -->
+            <div style="text-align: center; color: white;">
+              <div style="font-size: 18px; font-weight: 600; margin-bottom: 6px;">
+                <span id="overlay-percent">0%</span>
               </div>
-              
-              <!-- Barra de progresso -->
-              <div style="width: 100%; height: 8px; background: #e3f2fd; border-radius: 4px; overflow: hidden; margin-bottom: 10px; border: 1px solid #bbdefb;">
-                <div id="progress-bar-fill-main" style="height: 100%; background: linear-gradient(90deg, #2196F3 0%, #1976D2 100%); width: 0%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 4px; box-shadow: 0 0 8px rgba(33, 150, 243, 0.4);"></div>
-              </div>
-              
-              <!-- Percentual + Status -->
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span id="progress-text-status" style="font-size: 12px; color: #666; font-weight: 500;">Processando...</span>
-                <span id="progress-text-percent" style="font-size: 13px; color: #1976D2; font-weight: 600;">0%</span>
-              </div>
+              <div id="overlay-status" style="font-size: 13px; color: rgba(255, 255, 255, 0.85); font-weight: 500;">Iniciando...</div>
             </div>
+
+            <!-- Container para Queue Status Display -->
+            <div id="queue-status-container" style="width: 100%; max-width: 400px; padding: 0px 20px;"></div>
           </div>
         </form>
         <div id="dados-institucionais"></div>

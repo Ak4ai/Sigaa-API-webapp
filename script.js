@@ -528,9 +528,9 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
 
     const errorDiv = document.getElementById('error');
     const dadosDiv = document.getElementById('dados-institucionais');
-    const loadingDiv = document.getElementById('loading');
+    const overlayDiv = document.getElementById('loading-overlay');
     errorDiv.textContent = '';
-    loadingDiv.style.display = 'block';
+    if (overlayDiv) overlayDiv.style.display = 'flex';
 
     try {
         // 1. Login e salva token
@@ -555,17 +555,17 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
           ? 'Servidor inacessível. Verifique sua conexão ou tente novamente mais tarde.'
           : error.message;
     } finally {
-        loadingDiv.style.display = 'none';
+        if (overlayDiv) overlayDiv.style.display = 'none';
     }
 });
 
 async function consultarComToken(token, userFromLogin = '') {
     const errorDiv = document.getElementById('error');
     const dadosDiv = document.getElementById('dados-institucionais');
-    const loadingDiv = document.getElementById('loading');
+    const overlayDiv = document.getElementById('loading-overlay');
     errorDiv.textContent = '';
     dadosDiv.innerHTML = '';
-    loadingDiv.style.display = 'block';
+    if (overlayDiv) overlayDiv.style.display = 'flex';
 
   let queuePollInterval = null;
 
@@ -679,7 +679,8 @@ async function consultarComToken(token, userFromLogin = '') {
     const fimGeral = performance.now();
     const duracaoSegundosGeral = Math.max(1, Math.round((fimGeral - (typeof inicio !== 'undefined' ? inicio : fimGeral)) / 1000));
     stopScrapeCounter(true, duracaoSegundosGeral);
-    loadingDiv.style.display = 'none';
+    const overlayDiv = document.getElementById('loading-overlay');
+    if (overlayDiv) overlayDiv.style.display = 'none';
     if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
     hideQueueDisplay();
   }
@@ -1038,8 +1039,8 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   // 12. Limpa erros e loading
   const errorDiv = document.getElementById('error');
   if (errorDiv) errorDiv.textContent = '';
-  const loadingDiv = document.getElementById('loading');
-  if (loadingDiv) loadingDiv.style.display = 'none';
+  const overlayDiv = document.getElementById('loading-overlay');
+  if (overlayDiv) overlayDiv.style.display = 'none';
 
   // 13. Volta para a tab Home
   document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -3683,25 +3684,33 @@ let __progressEstimatedTotal = 30000; // Tempo estimado padrão: 30s
 let __currentClientId = null;  // ID do cliente para tracking de progresso
 
 function updateProgressBar(percent) {
-  const bar = document.getElementById('progress-bar-fill-main');
-  const percentEl = document.getElementById('progress-text-percent');
-  const statusEl = document.getElementById('progress-text-status');
+  // ── Barra no topo ─────────────────────────
+  const topBar = document.getElementById('top-progress-bar');
+  if (topBar) topBar.style.width = percent + '%';
   
-  if (!bar) return;
+  // ── Rodinha circular no overlay (novo) ──────────────
+  const overlayCircle = document.getElementById('overlay-progress-circle');
+  if (overlayCircle) {
+    const circumference = 2 * Math.PI * 40; // raio = 40
+    const offset = circumference * (1 - percent / 100);
+    overlayCircle.style.strokeDashoffset = offset;
+  }
   
-  bar.style.width = percent + '%';
-  if (percentEl) percentEl.textContent = Math.round(percent) + '%';
+  // ── Percentual no overlay (novo) ─────────────────
+  const overlayPercent = document.getElementById('overlay-percent');
+  if (overlayPercent) overlayPercent.textContent = Math.round(percent) + '%';
   
-  // Mensagem dinâmica baseada no progresso
-  if (statusEl) {
+  // ── Status contextual (novo no overlay) ─────────────────
+  const overlayStatus = document.getElementById('overlay-status');
+  if (overlayStatus) {
     if (percent < 30) {
-      statusEl.textContent = '🔄 Conectando ao SIGAA...';
+      overlayStatus.textContent = '🔓 Login realizado...';
     } else if (percent < 60) {
-      statusEl.textContent = '📚 Extraindo seus dados...';
+      overlayStatus.textContent = '📚 Extraindo dados...';
     } else if (percent < 90) {
-      statusEl.textContent = '⚙️ Processando informações...';
+      overlayStatus.textContent = '⚙️ Processando...';
     } else {
-      statusEl.textContent = '✅ Finalizando...';
+      overlayStatus.textContent = '✅ Finalizando...';
     }
   }
 }
@@ -3732,10 +3741,12 @@ function finishProgressBar() {
   __progressBarInterval = null;
   updateProgressBar(100);
   
-  // Esconde após 500ms
+  // Esconde overlay e barra no topo após 500ms
   setTimeout(() => {
-    const loading = document.getElementById('loading');
-    if (loading) loading.style.display = 'none';
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.style.display = 'none';
+    const topBar = document.getElementById('top-progress-bar');
+    if (topBar) topBar.style.width = '0%';
   }, 500);
 }
 
@@ -3791,12 +3802,14 @@ function stopPollingProgress() {
 
 function updateQueueDisplay(position, avgTimeMs) {
     let el = document.getElementById('queue-status-display');
+    const container = document.getElementById('queue-status-container');
+    if (!container) return; // Container não existe, não fazer nada
+    
     if (!el) {
         el = document.createElement('div');
         el.id = 'queue-status-display';
-        el.style.cssText = 'margin-top:10px;padding:12px 16px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;font-size:0.95em;color:#795548;display:flex;align-items:center;gap:10px;';
-        const form = document.getElementById('sigaa-form');
-        if (form) form.appendChild(el);
+        el.style.cssText = 'padding:14px 16px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);border-radius:8px;font-size:0.95em;color:white;display:flex;align-items:center;gap:10px;position:relative;z-index:1001;font-weight:500;backdrop-filter:blur(4px); margin: 0px 15px';
+        container.appendChild(el);
     }
     el.style.display = 'flex';
 
@@ -3804,12 +3817,12 @@ function updateQueueDisplay(position, avgTimeMs) {
 
     if (position === -1) {
         el.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ffa000" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
             <span><b>Conectando à fila...</b></span>`;
     } else if (position <= 1) {
         el.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#4caf50" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-            <span><b>Sua consulta está sendo processada agora...</b> <span style="color:#999">~${avgSec}s por consulta</span></span>`;
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            <span><b>Sua consulta está sendo processada agora...</b><br><span style="color:rgba(255,255,255,0.8);font-size:0.88em">~${avgSec}s por consulta</span></span>`;
     } else {
         const waitSec = avgSec * position;
         const waitMin = Math.floor(waitSec / 60);
@@ -3817,10 +3830,10 @@ function updateQueueDisplay(position, avgTimeMs) {
         const tempoStr = waitMin > 0 ? `~${waitMin}min ${waitRemSec}s` : `~${waitSec}s`;
 
         el.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ffa000" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
             <span>
                 <b>Posição na fila: ${position}º</b><br>
-                <span style="font-size:0.88em;color:#999">Tempo estimado de espera: ${tempoStr}</span>
+                <span style="font-size:0.88em;color:rgba(255,255,255,0.8)">Tempo estimado: ${tempoStr}</span>
             </span>`;
     }
 }
@@ -3843,10 +3856,8 @@ function startScrapeCounter() {
   
   console.log(`[SCRAPE] startScrapeCounter - __currentClientId: ${__currentClientId}`);
   
-  // NOVO: Inicia polling REAL de progresso (backend)
-  const loading = document.getElementById('loading');
-  if (loading) loading.style.display = 'block';
-  startPollingProgress(__currentClientId);  // Polling real em vez de estimativa
+  // Inicia polling REAL de progresso (backend)
+  startPollingProgress(__currentClientId);
   
   const form = document.getElementById('sigaa-form');
   if (!form) return;
@@ -4059,13 +4070,6 @@ function hideLoading() {
   ajustarMaxHeightNovidades();
 }
 
-// Garante ajuste automático mesmo se display mudar por outros meios
-const loading = document.getElementById('loading');
-if (loading) {
-  const observer = new MutationObserver(ajustarMaxHeightNovidades);
-  observer.observe(loading, { attributes: true, attributeFilter: ['style'] });
-}
-
-// Também ajusta ao redimensionar ou carregar a página
+// Ajusta altura máxima das novidades ao redimensionar ou carregar a página
 window.addEventListener('resize', ajustarMaxHeightNovidades);
 window.addEventListener('DOMContentLoaded', ajustarMaxHeightNovidades);

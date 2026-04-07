@@ -1713,6 +1713,21 @@ input#manter-logado {
   box-shadow: 0 8px 20px rgba(16, 62, 93, 0.1);
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* Overlay Modal Escuro para Loading */
+/* Spinner Container e Loading */
+#loading-overlay {
+  display: none !important;
+}
+
+#loading-overlay[style*="display: flex"] {
+  display: flex !important;
+}
+
+#loading-overlay[style*="display: none"] {
+  display: none !important;
 }
 
 #sigaa-form label {
