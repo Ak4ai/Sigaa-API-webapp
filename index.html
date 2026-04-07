@@ -11,6 +11,19 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  
+  <!-- BARRA DE PROGRESSO NO TOPO (visível em qualquer aba) -->
+  <div id="top-progress-bar" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 4px;
+    background: linear-gradient(90deg, #2196F3 0%, #1976D2 100%);
+    z-index: 9999;
+    transition: width 0.3s ease;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.5);
+  "></div>
 </head>
 <script>
   if ('serviceWorker' in navigator) {
@@ -146,19 +159,6 @@
             </label>
           </div>
           <div class="error" id="error"></div>
-          
-          <!-- BARRA DE PROGRESSO NO TOPO (visível em qualquer aba) -->
-          <div id="top-progress-bar" style="
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 0%;
-            height: 4px;
-            background: linear-gradient(90deg, #2196F3 0%, #1976D2 100%);
-            z-index: 9999;
-            transition: width 0.3s ease;
-            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.5);
-          "></div>
 
           <!-- OVERLAY MODAL ESCURO COM SPINNER CENTRALIZADO -->
           <div id="loading-overlay" style="
