@@ -7,7 +7,16 @@ const STORAGE_LAST_CONSULTA = 'sigaaUltimaConsulta';
 const STORAGE_SAVED_PROFILES = 'sigaaPerfisSalvos';
 const STORAGE_SELECTED_PROFILE = 'sigaaPerfilSelecionado';
 const STORAGE_COMPARISON_MODE = 'sigaaComparisonMode';
+const STORAGE_SKIP_SCHEDULE = 'sigaaSkipSchedule';
 const MAX_SAVED_PROFILES = 2;
+
+function isSkipScheduleEnabled() {
+  return localStorage.getItem(STORAGE_SKIP_SCHEDULE) === '1';
+}
+
+function setSkipScheduleEnabled(enabled) {
+  localStorage.setItem(STORAGE_SKIP_SCHEDULE, enabled ? '1' : '0');
+}
 
 function isComparisonModeEnabled() {
   return localStorage.getItem(STORAGE_COMPARISON_MODE) === '1';
@@ -588,7 +597,7 @@ async function consultarComToken(token, userFromLogin = '') {
         const fetchPromise = fetch(`${API_BASE}/api/scraper`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, clientId }),
+            body: JSON.stringify({ token, clientId, skipSchedule: isSkipScheduleEnabled() }),
             signal: controller.signal,
             mode: 'cors',
             credentials: 'omit'
@@ -600,7 +609,7 @@ async function consultarComToken(token, userFromLogin = '') {
                 return fetch(`${httpFallback}/api/scraper`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token, clientId }),
+                    body: JSON.stringify({ token, clientId, skipSchedule: isSkipScheduleEnabled() }),
                     signal: controller.signal,
                     mode: 'cors'
                 });
@@ -724,6 +733,8 @@ window.addEventListener('DOMContentLoaded', () => {
   initComparisonModeToggle();
   // Inicia toggle de troca automática Hoje -> Amanhã
   initAutoTomorrowToggle();
+  // Inicia toggle para pular scrap de horários
+  initSkipScheduleToggle();
   // Inicia swipe para trocar de tab no mobile
   initSwipeTabs();
 });
@@ -925,6 +936,16 @@ function initAutoTomorrowToggle() {
       preencherTabelaSimplificada(horariosGlobais);
       atualizarViewAtiva();
     }
+  });
+}
+
+function initSkipScheduleToggle() {
+  const toggle = document.getElementById('skip-schedule-toggle');
+  if (!toggle) return;
+
+  toggle.checked = isSkipScheduleEnabled();
+  toggle.addEventListener('change', () => {
+    setSkipScheduleEnabled(toggle.checked);
   });
 }
 
