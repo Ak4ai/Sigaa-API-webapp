@@ -551,6 +551,14 @@
         <p>Esse ajuste afeta apenas a seção Hoje da aba Horários.</p>
         <p>Se estiver ativo, o app monitora o fim da última aula do dia e troca automaticamente para os horários de amanhã.</p>
       </div>
+      <div class="settings-debug-card" id="settings-debug-card">
+        <div class="settings-debug-header">
+          <h4>Log de depuração</h4>
+          <button type="button" id="debug-log-clear-btn" class="settings-debug-clear-btn">Limpar</button>
+        </div>
+        <p class="settings-debug-help">Mensagens de console, erros e exceções não tratadas aparecem aqui para facilitar a investigação de problemas.</p>
+        <pre id="debug-log-output" class="settings-debug-output" aria-live="polite">Aguardando logs...</pre>
+      </div>
     </div>
   </div>
   <script src="boletim.js"></script>

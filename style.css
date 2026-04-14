@@ -2252,6 +2252,66 @@ span#fechar-aviso-span {
   margin-bottom: 0;
 }
 
+.settings-debug-card {
+  grid-column: 1 / -1;
+  border: 1px solid #bbdefb;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #dbeafe;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  padding: 12px;
+}
+
+.settings-debug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.settings-debug-header h4 {
+  margin: 0;
+  color: #bfdbfe;
+  font-size: 0.95rem;
+}
+
+.settings-debug-clear-btn {
+  border: 1px solid #60a5fa;
+  background: #1d4ed8;
+  color: #eff6ff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.settings-debug-clear-btn:hover {
+  background: #1e40af;
+}
+
+.settings-debug-help {
+  margin: 0 0 10px;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.settings-debug-output {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #1e3a8a;
+  border-radius: 10px;
+  background: #020617;
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  min-height: 180px;
+  max-height: 300px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* ===== Visualização semanal (Google Calendar style) ===== */
 .weekly-calendar {
   display: grid;
@@ -2386,6 +2446,12 @@ span#fechar-aviso-span {
 
   .settings-layout {
     grid-template-columns: 1fr;
+  }
+
+  .settings-debug-output {
+    min-height: 160px;
+    max-height: 260px;
+    font-size: 0.74rem;
   }
   .wc-header {
     padding: 6px 2px;

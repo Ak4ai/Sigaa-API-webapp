@@ -9,6 +9,101 @@ const STORAGE_SELECTED_PROFILE = 'sigaaPerfilSelecionado';
 const STORAGE_COMPARISON_MODE = 'sigaaComparisonMode';
 const STORAGE_SKIP_SCHEDULE = 'sigaaSkipSchedule';
 const MAX_SAVED_PROFILES = 2;
+const DEBUG_LOG_MAX_ENTRIES = 250;
+
+const debugConsoleState = {
+  initialized: false,
+  entries: []
+};
+
+const originalConsole = {
+  log: console.log.bind(console),
+  info: console.info.bind(console),
+  warn: console.warn.bind(console),
+  error: console.error.bind(console),
+  debug: console.debug.bind(console)
+};
+
+function formatDebugConsoleArg(value) {
+  if (value instanceof Error) {
+    return value.stack || `${value.name}: ${value.message}`;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch (e) {
+    return String(value);
+  }
+}
+
+function appendDebugConsoleEntry(level, args) {
+  const timestamp = new Date().toLocaleTimeString('pt-BR', { hour12: false });
+  const message = (args || []).map(formatDebugConsoleArg).join(' ');
+  const line = `[${timestamp}] [${String(level || 'log').toUpperCase()}] ${message}`;
+
+  debugConsoleState.entries.push(line);
+  if (debugConsoleState.entries.length > DEBUG_LOG_MAX_ENTRIES) {
+    debugConsoleState.entries.shift();
+  }
+
+  renderDebugConsoleOutput();
+}
+
+function renderDebugConsoleOutput() {
+  const output = document.getElementById('debug-log-output');
+  if (!output) return;
+
+  output.textContent = debugConsoleState.entries.length
+    ? debugConsoleState.entries.join('\n')
+    : 'Sem logs capturados até o momento.';
+
+  output.scrollTop = output.scrollHeight;
+}
+
+function initDebugConsolePanel() {
+  const clearBtn = document.getElementById('debug-log-clear-btn');
+  if (clearBtn && clearBtn.dataset.bound !== '1') {
+    clearBtn.dataset.bound = '1';
+    clearBtn.addEventListener('click', () => {
+      debugConsoleState.entries = [];
+      renderDebugConsoleOutput();
+    });
+  }
+
+  renderDebugConsoleOutput();
+}
+
+function initDebugConsoleCapture() {
+  if (debugConsoleState.initialized) return;
+  debugConsoleState.initialized = true;
+
+  ['log', 'info', 'warn', 'error', 'debug'].forEach((level) => {
+    console[level] = (...args) => {
+      originalConsole[level](...args);
+      appendDebugConsoleEntry(level, args);
+    };
+  });
+
+  window.addEventListener('error', (event) => {
+    const location = event?.filename ? `${event.filename}:${event.lineno || 0}` : '';
+    appendDebugConsoleEntry('error', [event?.message || 'Erro de script', location].filter(Boolean));
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event?.reason instanceof Error
+      ? (event.reason.stack || event.reason.message)
+      : formatDebugConsoleArg(event?.reason);
+    appendDebugConsoleEntry('error', ['Promise rejeitada sem tratamento:', reason]);
+  });
+
+  appendDebugConsoleEntry('info', ['Console de depuração inicializado']);
+}
+
+initDebugConsoleCapture();
 
 function isSkipScheduleEnabled() {
   return localStorage.getItem(STORAGE_SKIP_SCHEDULE) === '1';
@@ -735,6 +830,8 @@ window.addEventListener('DOMContentLoaded', () => {
   initAutoTomorrowToggle();
   // Inicia toggle para pular scrap de horários
   initSkipScheduleToggle();
+  // Inicia painel de logs na aba Configurações
+  initDebugConsolePanel();
   // Inicia swipe para trocar de tab no mobile
   initSwipeTabs();
 });
