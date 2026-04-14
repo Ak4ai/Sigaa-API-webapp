@@ -3861,9 +3861,9 @@ function applyProgressVisual(percent) {
     let visiblePercent = safePercent;
     if (safePercent >= 95) {
       const t = (safePercent - 95) / 5; // 95% -> 0, 100% -> 1
-      visiblePercent = safePercent + (t * 4); // overshoot visual até 104%
+      visiblePercent = safePercent + (t * 14); // overshoot visual até 104%
     }
-    visiblePercent = Math.max(2, Math.min(104, visiblePercent));
+    visiblePercent = Math.max(2, Math.min(124, visiblePercent));
     overlayLiquidFill.style.height = `${visiblePercent}%`;
     overlayLiquidFill.style.backgroundPositionY = '0px';
   }
