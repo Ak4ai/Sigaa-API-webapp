@@ -797,7 +797,17 @@ async function consultarComToken(token, userFromLogin = '') {
         const data = await response.json();
         console.log('Resposta da API:', data);
         console.log(`⏱ Tempo de resposta da API: ${duracaoSegundos}s`);
-        if (!response.ok) throw new Error(data.error || 'Erro ao buscar dados');
+        
+        if (!response.ok) {
+          // Verifica se é erro de notificações acadêmicas pendentes
+          if (data.type === 'ACADEMIC_NOTIFICATIONS_PENDING') {
+            console.log('⚠️  Notificações acadêmicas pendentes detectadas');
+            showAcademicNotificationsModal(data);
+            stopScrapeCounter(false);
+            return;
+          }
+          throw new Error(data.error || 'Erro ao buscar dados');
+        }
 
         const selectedUser = (userFromLogin || document.getElementById('user')?.value || getSelectedProfileUser() || '').trim();
         saveConsultaForUser(selectedUser, data);
@@ -4316,3 +4326,22 @@ function hideLoading() {
 // Ajusta altura máxima das novidades ao redimensionar ou carregar a página
 window.addEventListener('resize', ajustarMaxHeightNovidades);
 window.addEventListener('DOMContentLoaded', ajustarMaxHeightNovidades);
+
+// Fun��o para mostrar modal de notifica��es acad�micas pendentes
+function showAcademicNotificationsModal(data) {
+  const modal = document.getElementById('modal-academic-notifications');
+  if (modal) {
+    modal.style.display = 'flex';
+    
+    // Fechar modal ao clicar fora dele
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+    
+    console.log('[Modal] Notifica��es acad�micas pendentes exibidas');
+    console.log('Instru��es:', data.instructions);
+    console.log('SIGAA URL:', data.sigaaUrl);
+  }
+}

@@ -565,5 +565,33 @@
   </div>
   <!-- Minimized FAB indicator -->
   <div id="fab-minimized" class="fab-minimized" aria-hidden="true" title="Clique para expandir"></div>
+
+  <!-- Modal de Notificações Acadêmicas Pendentes -->
+  <div id="modal-academic-notifications" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-notifications">
+      <div class="modal-header">
+        <h2>⚠️ Notificações Acadêmicas Pendentes</h2>
+        <button class="modal-close-btn" aria-label="Fechar" onclick="document.getElementById('modal-academic-notifications').style.display='none';">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 16px; color: #333;">
+          Você tem <strong>notificações acadêmicas</strong> que precisam ser visualizadas no site do SIGAA antes de continuar.
+        </p>
+        <div class="notification-alert" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 14px; margin-bottom: 16px; color: #856404;">
+          <strong>O que fazer:</strong>
+          <ol style="margin: 8px 0 0 0; padding-left: 20px;">
+            <li>Clique no botão "Acessar SIGAA" abaixo</li>
+            <li>Faça login com seus dados (se necessário)</li>
+            <li>Visualize e resolva as notificações acadêmicas na página inicial</li>
+            <li>Retorne aqui e tente novamente</li>
+          </ol>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="document.getElementById('modal-academic-notifications').style.display='none';">Fechar</button>
+        <a href="https://sig.cefetmg.br/sigaa/logar.do" target="_blank" rel="noopener noreferrer" class="btn-primary">Acessar SIGAA</a>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
