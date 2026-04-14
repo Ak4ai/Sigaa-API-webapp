@@ -693,7 +693,7 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
         errorDiv.textContent = isNetworkError
           ? 'Servidor inacessível. Verifique sua conexão ou tente novamente mais tarde.'
           : error.message;
-    } finally {
+      // Em falha de login (antes de consultar), garante fechamento do overlay
         if (overlayDiv) overlayDiv.style.display = 'none';
     }
 });
@@ -790,7 +790,6 @@ async function consultarComToken(token, userFromLogin = '') {
 
         // Para o polling ao receber resposta
         if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
-        hideQueueDisplay();
 
         const fim = performance.now();
         const duracaoSegundos = ((fim - inicio) / 1000).toFixed(2);
@@ -818,8 +817,6 @@ async function consultarComToken(token, userFromLogin = '') {
     const fimGeral = performance.now();
     const duracaoSegundosGeral = Math.max(1, Math.round((fimGeral - (typeof inicio !== 'undefined' ? inicio : fimGeral)) / 1000));
     stopScrapeCounter(true, duracaoSegundosGeral);
-    const overlayDiv = document.getElementById('loading-overlay');
-    if (overlayDiv) overlayDiv.style.display = 'none';
     if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
     hideQueueDisplay();
   }
@@ -3833,34 +3830,50 @@ function startElapsedSinceUpdate(timestamp) {
 let __progressBarInterval = null;
 let __progressPollInterval = null;  // polling real do backend
 let __progressStartTime = null;
-let __progressEstimatedTotal = 30000; // Tempo estimado padrão: 30s
+let __progressEstimatedTotal = 10000; // Tempo estimado padrão: 10s
 let __currentClientId = null;  // ID do cliente para tracking de progresso
+let __progressRenderPercent = 0;
+let __progressTargetPercent = 0;
+let __progressRafId = null;
+let __progressLastFrameTs = 0;
+let __progressFinalizing = false;
+const PROGRESS_EXPECTED_TOTAL_MS = 10000; // Ajuste fino: 0 -> 100 em ~10s
+const PROGRESS_BASE_RATE = 100 / (PROGRESS_EXPECTED_TOTAL_MS / 1000); // % por segundo
+const PROGRESS_MIN_RATE = PROGRESS_BASE_RATE * 0.7;  // suavidade em deltas pequenos
+const PROGRESS_MAX_RATE = PROGRESS_BASE_RATE * 2.2;  // acompanha saltos sem "teleporte"
+const WATER_TEXTURE_DATA_URI = "data:image/png;base64,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";
 
-function updateProgressBar(percent) {
+function applyProgressVisual(percent) {
+  const safePercent = Math.max(0, Math.min(100, percent));
+
   // ── Barra no topo ─────────────────────────
   const topBar = document.getElementById('top-progress-bar');
-  if (topBar) topBar.style.width = percent + '%';
-  
-  // ── Rodinha circular no overlay (novo) ──────────────
-  const overlayCircle = document.getElementById('overlay-progress-circle');
-  if (overlayCircle) {
-    const circumference = 2 * Math.PI * 40; // raio = 40
-    const offset = circumference * (1 - percent / 100);
-    overlayCircle.style.strokeDashoffset = offset;
+  if (topBar) topBar.style.width = safePercent + '%';
+
+  // ── Logo líquida no overlay ──────────────
+  const overlayLiquidFill = document.getElementById('overlay-liquid-fill');
+  if (overlayLiquidFill) {
+    if (overlayLiquidFill.dataset.textureApplied !== '1') {
+      overlayLiquidFill.style.backgroundImage = `url('${WATER_TEXTURE_DATA_URI}')`;
+      overlayLiquidFill.dataset.textureApplied = '1';
+    }
+    const visiblePercent = Math.max(2, Math.min(100, safePercent));
+    overlayLiquidFill.style.height = `${visiblePercent}%`;
+    overlayLiquidFill.style.backgroundPositionY = '0px';
   }
-  
-  // ── Percentual no overlay (novo) ─────────────────
+
+  // ── Percentual no overlay ─────────────────
   const overlayPercent = document.getElementById('overlay-percent');
-  if (overlayPercent) overlayPercent.textContent = Math.round(percent) + '%';
-  
-  // ── Status contextual (novo no overlay) ─────────────────
+  if (overlayPercent) overlayPercent.textContent = Math.round(safePercent) + '%';
+
+  // ── Status contextual ─────────────────────
   const overlayStatus = document.getElementById('overlay-status');
   if (overlayStatus) {
-    if (percent < 30) {
+    if (safePercent < 30) {
       overlayStatus.textContent = '🔓 Login realizado...';
-    } else if (percent < 60) {
+    } else if (safePercent < 60) {
       overlayStatus.textContent = '📚 Extraindo dados...';
-    } else if (percent < 90) {
+    } else if (safePercent < 90) {
       overlayStatus.textContent = '⚙️ Processando...';
     } else {
       overlayStatus.textContent = '✅ Finalizando...';
@@ -3868,9 +3881,68 @@ function updateProgressBar(percent) {
   }
 }
 
+function ensureProgressSmoothingLoop() {
+  if (__progressRafId) return;
+
+  const tick = (now) => {
+    const dtMs = __progressLastFrameTs ? (now - __progressLastFrameTs) : 16.67;
+    __progressLastFrameTs = now;
+    const dtSec = Math.max(0.001, dtMs / 1000);
+
+    const delta = __progressTargetPercent - __progressRenderPercent;
+    if (Math.abs(delta) < 0.08) {
+      __progressRenderPercent = __progressTargetPercent;
+      applyProgressVisual(__progressRenderPercent);
+      __progressRafId = null;
+      __progressLastFrameTs = 0;
+      return;
+    }
+
+    // Ajuste fino temporal: suaviza pulos de 10 em 10 usando velocidade por segundo
+    const absDelta = Math.abs(delta);
+    const desiredRate = Math.min(PROGRESS_MAX_RATE, Math.max(PROGRESS_MIN_RATE, absDelta * 8));
+    const step = Math.min(absDelta, desiredRate * dtSec);
+    __progressRenderPercent += Math.sign(delta) * step;
+
+    applyProgressVisual(__progressRenderPercent);
+    __progressRafId = requestAnimationFrame(tick);
+  };
+
+  __progressRafId = requestAnimationFrame(tick);
+}
+
+function updateProgressBar(percent) {
+  if (__progressFinalizing) return; // evita regressão após finalizar
+  __progressTargetPercent = Math.max(0, Math.min(100, percent));
+  ensureProgressSmoothingLoop();
+}
+
+function setProgressImmediately(percent) {
+  const safePercent = Math.max(0, Math.min(100, percent));
+  __progressTargetPercent = safePercent;
+  __progressRenderPercent = safePercent;
+  if (__progressRafId) {
+    cancelAnimationFrame(__progressRafId);
+    __progressRafId = null;
+  }
+  __progressLastFrameTs = 0;
+  applyProgressVisual(safePercent);
+}
+
 function startProgressBarAnimation(estimatedMs = 35000) {
   __progressStartTime = Date.now();
   __progressEstimatedTotal = estimatedMs;
+  __progressFinalizing = false;
+
+  // Reinicia renderização visual do progresso no início da consulta
+  __progressTargetPercent = 0;
+  __progressRenderPercent = 0;
+  if (__progressRafId) {
+    cancelAnimationFrame(__progressRafId);
+    __progressRafId = null;
+  }
+  __progressLastFrameTs = 0;
+  applyProgressVisual(0);
   
   // Para animação anterior se houver
   if (__progressBarInterval) clearInterval(__progressBarInterval);
@@ -3890,17 +3962,29 @@ function startProgressBarAnimation(estimatedMs = 35000) {
 }
 
 function finishProgressBar() {
+  __progressFinalizing = true;
+
   if (__progressBarInterval) clearInterval(__progressBarInterval);
   __progressBarInterval = null;
-  updateProgressBar(100);
+
+  // Finalização imediata para evitar atrasar o fechamento do overlay
+  __progressTargetPercent = 100;
+  __progressRenderPercent = 100;
+  if (__progressRafId) {
+    cancelAnimationFrame(__progressRafId);
+    __progressRafId = null;
+  }
+  __progressLastFrameTs = 0;
+  applyProgressVisual(100);
   
-  // Esconde overlay e barra no topo após 500ms
+  // Esconde overlay e barra no topo após uma pausa para visualizar 100%
   setTimeout(() => {
     const overlay = document.getElementById('loading-overlay');
     if (overlay) overlay.style.display = 'none';
     const topBar = document.getElementById('top-progress-bar');
     if (topBar) topBar.style.width = '0%';
-  }, 500);
+    __progressFinalizing = false;
+  }, 900);
 }
 
 // ── Polling Real de Progresso (backend) ──────────────────────────────
@@ -4006,6 +4090,9 @@ function startScrapeCounter() {
   // se havia um contador de tempo desde a última atualização, pare-o
   stopElapsedSinceUpdate();
   __scrapeCounterStartTime = Date.now();
+
+  // Novo ciclo: reinicia progresso instantaneamente (sem suavizar descida 100 -> 0)
+  setProgressImmediately(0);
   
   console.log(`[SCRAPE] startScrapeCounter - __currentClientId: ${__currentClientId}`);
   

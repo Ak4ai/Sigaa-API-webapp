@@ -13,17 +13,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   
   <!-- BARRA DE PROGRESSO NO TOPO (visível em qualquer aba) -->
-  <div id="top-progress-bar" style="
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 0%;
-    height: 4px;
-    background: linear-gradient(90deg, #2196F3 0%, #1976D2 100%);
-    z-index: 9999;
-    transition: width 0.3s ease;
-    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.5);
-  "></div>
+  <div id="top-progress-bar"></div>
 </head>
 <script>
   if ('serviceWorker' in navigator) {
@@ -171,25 +161,21 @@
             background: linear-gradient(135deg, rgba(15, 63, 122, 0.85) 0%, rgba(25, 118, 210, 0.85) 100%);
             backdrop-filter: blur(4px);
             border-radius: 8px;
-            z-index: 1000;
+            border: 3px solid #f0f2f5;
+            z-index: 50;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 24px;
+            gap: 14px;
+            outline: 3px solid #1a73e8;
+            outline-offset: 1px;
           ">
-            <!-- Spinner Circular Azul -->
-            <svg viewBox="0 0 100 100" style="width: 100px; height: 100px; filter: drop-shadow(0 4px 12px rgba(33, 150, 243, 0.4));">
-              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="4"></circle>
-              <circle id="overlay-progress-circle" cx="50" cy="50" r="40" fill="none" stroke="#2196F3" 
-                stroke-width="4" stroke-linecap="round" style="
-                stroke-dasharray: 251.2; 
-                stroke-dashoffset: 251.2; 
-                transition: stroke-dashoffset 0.3s ease; 
-                transform: rotate(-90deg); 
-                transform-origin: 50% 50%;
-                filter: drop-shadow(0 0 6px rgba(33, 150, 243, 0.6));
-              "></circle>
-            </svg>
+            <!-- Logo em sistema líquido -->
+            <div class="overlay-liquid-logo" aria-hidden="true">
+              <div class="overlay-liquid-logo-surface">
+                <div id="overlay-liquid-fill" class="overlay-liquid-fill"></div>
+              </div>
+            </div>
 
             <!-- Texto de progresso -->
             <div style="text-align: center; color: white;">
