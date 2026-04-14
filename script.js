@@ -3857,7 +3857,13 @@ function applyProgressVisual(percent) {
       overlayLiquidFill.style.backgroundImage = `url('${WATER_TEXTURE_DATA_URI}')`;
       overlayLiquidFill.dataset.textureApplied = '1';
     }
-    const visiblePercent = Math.max(2, Math.min(100, safePercent));
+    // Compensa a crista variável da onda para o estado 100% parecer realmente cheio.
+    let visiblePercent = safePercent;
+    if (safePercent >= 95) {
+      const t = (safePercent - 95) / 5; // 95% -> 0, 100% -> 1
+      visiblePercent = safePercent + (t * 4); // overshoot visual até 104%
+    }
+    visiblePercent = Math.max(2, Math.min(104, visiblePercent));
     overlayLiquidFill.style.height = `${visiblePercent}%`;
     overlayLiquidFill.style.backgroundPositionY = '0px';
   }
