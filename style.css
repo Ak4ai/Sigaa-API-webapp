@@ -2267,6 +2267,14 @@ span#fechar-aviso-span {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+
+.settings-debug-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-debug-copy-btn,
   margin-bottom: 8px;
 }
 
@@ -2286,6 +2294,7 @@ span#fechar-aviso-span {
   font-weight: 600;
 }
 
+.settings-debug-copy-btn:hover,
 .settings-debug-clear-btn:hover {
   background: #1e40af;
 }

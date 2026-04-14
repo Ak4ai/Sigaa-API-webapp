@@ -554,7 +554,10 @@
       <div class="settings-debug-card" id="settings-debug-card">
         <div class="settings-debug-header">
           <h4>Log de depuração</h4>
-          <button type="button" id="debug-log-clear-btn" class="settings-debug-clear-btn">Limpar</button>
+          <div class="settings-debug-actions">
+            <button type="button" id="debug-log-copy-btn" class="settings-debug-copy-btn">Copiar</button>
+            <button type="button" id="debug-log-clear-btn" class="settings-debug-clear-btn">Limpar</button>
+          </div>
         </div>
         <p class="settings-debug-help">Mensagens de console, erros e exceções não tratadas aparecem aqui para facilitar a investigação de problemas.</p>
         <pre id="debug-log-output" class="settings-debug-output" aria-live="polite">Aguardando logs...</pre>

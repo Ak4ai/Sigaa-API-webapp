@@ -65,7 +65,42 @@ function renderDebugConsoleOutput() {
 }
 
 function initDebugConsolePanel() {
+  const copyBtn = document.getElementById('debug-log-copy-btn');
   const clearBtn = document.getElementById('debug-log-clear-btn');
+
+  if (copyBtn && copyBtn.dataset.bound !== '1') {
+    copyBtn.dataset.bound = '1';
+    copyBtn.addEventListener('click', async () => {
+      const text = debugConsoleState.entries.length
+        ? debugConsoleState.entries.join('\n')
+        : 'Sem logs capturados até o momento.';
+
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.setAttribute('readonly', '');
+          textarea.style.position = 'fixed';
+          textarea.style.left = '-9999px';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+
+        const originalLabel = copyBtn.textContent;
+        copyBtn.textContent = 'Copiado';
+        setTimeout(() => {
+          copyBtn.textContent = originalLabel || 'Copiar';
+        }, 1200);
+      } catch (err) {
+        appendDebugConsoleEntry('error', ['Falha ao copiar log:', err]);
+      }
+    });
+  }
+
   if (clearBtn && clearBtn.dataset.bound !== '1') {
     clearBtn.dataset.bound = '1';
     clearBtn.addEventListener('click', () => {
