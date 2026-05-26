@@ -94,139 +94,269 @@
 
   <!-- Conteúdo das abas -->
   <div class="tab-content active" id="tab-home">
-    <div id="home-aviso" class="home-aviso home-aviso-collapsed" style="background: #e8f5e9; border: 1px solid #b2dfdb; padding: 14px; margin-bottom: 18px; border-radius: 6px; position:relative; cursor:pointer;">
-      <div id="home-aviso-header" style="display:flex; align-items:center; justify-content:space-between;">
-        <span>
-          <strong>Bem-vindo ao Consulta SIGAA!</strong>
-          <span style="font-weight:normal; color:#388e3c; margin-left:10px;">
-            Este aplicativo foi desenvolvido com foco em <b>segurança e praticidade</b>.
+    <section id="home-consultation-shell" class="home-consultation-shell">
+      <div id="home-aviso" class="home-aviso home-aviso-collapsed" style="background: #e8f5e9; border: 1px solid #b2dfdb; padding: 14px; margin-bottom: 18px; border-radius: 6px; position:relative; cursor:pointer;">
+        <div id="home-aviso-header" style="display:flex; align-items:center; justify-content:space-between;">
+          <span>
+            <strong>Bem-vindo ao Consulta SIGAA!</strong>
+            <span style="font-weight:normal; color:#388e3c; margin-left:10px;">
+              Este aplicativo foi desenvolvido com foco em <b>segurança e praticidade</b>.
+            </span>
           </span>
-        </span>
-        <span id="fechar-aviso-span">
-          <button id="fechar-aviso" style="margin-left:10px; font-size:0.95em;">Fechar</button>
-          <button id="nao-mostrar-aviso" style="margin-left:6px; font-size:0.95em;">Não mostrar mais</button>
-        </span>
+          <span id="fechar-aviso-span">
+            <button id="fechar-aviso" style="margin-left:10px; font-size:0.95em;">Fechar</button>
+            <button id="nao-mostrar-aviso" style="margin-left:6px; font-size:0.95em;">Não mostrar mais</button>
+          </span>
+        </div>
+        <div id="home-aviso-content">
+          <p>
+            <b>Como funciona o login?</b><br>
+            - Ao fazer login, seus dados são protegidos por criptografia avançada e nunca ficam salvos no navegador.<br>
+            - Se você marcar <b>"Manter logado"</b>, o acesso automático será ativado e você não precisará digitar a senha novamente enquanto desejar.<br>
+            - Se não marcar, o acesso é temporário e será encerrado ao fechar a aba, garantindo ainda mais privacidade.<br>
+            <br>
+            <b>Consultas salvas e atualização automática:</b><br>
+            - Suas consultas ficam salvas localmente para que você possa visualizar seus dados mesmo sem estar conectado.<br>
+            - Sempre que você abrir o aplicativo, ele tentará atualizar automaticamente seus dados usando o login salvo (token), sem exigir nova senha.<br>
+            - Caso o token expire ou não haja login salvo, basta fazer login novamente.<br>
+            <br>
+            <span style="color: #388e3c;"><b>Seu acesso é seguro, rápido, prático e sob seu controle!</b></span>
+          </p>
+        </div>
       </div>
-      <div id="home-aviso-content">
-        <p>
-          <b>Como funciona o login?</b><br>
-          - Ao fazer login, seus dados são protegidos por criptografia avançada e nunca ficam salvos no navegador.<br>
-          - Se você marcar <b>"Manter logado"</b>, o acesso automático será ativado e você não precisará digitar a senha novamente enquanto desejar.<br>
-          - Se não marcar, o acesso é temporário e será encerrado ao fechar a aba, garantindo ainda mais privacidade.<br>
-          <br>
-          <b>Consultas salvas e atualização automática:</b><br>
-          - Suas consultas ficam salvas localmente para que você possa visualizar seus dados mesmo sem estar conectado.<br>
-          - Sempre que você abrir o aplicativo, ele tentará atualizar automaticamente seus dados usando o login salvo (token), sem exigir nova senha.<br>
-          - Caso o token expire ou não haja login salvo, basta fazer login novamente.<br>
-          <br>
-          <span style="color: #388e3c;"><b>Seu acesso é seguro, rápido, prático e sob seu controle!</b></span>
-        </p>
-      </div>
-    </div>
-    <div id="home-content">
-      <div id="home-content-header">
-        <form id="sigaa-form">
-          <label for="user">CPF (sem pontos ou traços):</label>
-          <input type="text" id="user" name="user" required />
+      <div id="home-content">
+        <div class="home-mode-switcher">
+          <label for="home-mode-select">Tipo de entrada</label>
+          <select id="home-mode-select" name="home-mode-select" aria-label="Selecionar tipo de entrada">
+            <option value="graduacao">Graduação</option>
+            <option value="tecnico">Técnico</option>
+            <option value="responsavel">Responsável</option>
+          </select>
+          <p class="home-mode-hint">A mudança só entra em vigor depois de clicar em Consultar. Até lá, a interface continua com a última consulta aplicada.</p>
+        </div>
 
-          <div id="saved-profiles-container" class="saved-profiles-container" style="display:none;">
-            <label for="saved-profile-select">Usuários salvos:</label>
-            <select id="saved-profile-select" name="saved-profile-select">
-              <option value="">Selecione um usuário salvo</option>
-            </select>
-          </div>
+        <div id="home-content-header">
+          <form id="sigaa-form">
+            <label for="user">CPF (sem pontos ou traços):</label>
+            <input type="text" id="user" name="user" required />
 
-          <label for="pass">Senha:</label>
-          <input type="password" id="pass" name="pass" required />
-          <div class="password-info">
-            <button type="submit" class="login-action-btn">Consultar</button>
-            <button type="button" id="logout-btn" class="logout-inline-btn login-action-btn">
-              Sair
-            </button>
-            <label class="remember-login-label" for="manter-logado">
-              <input type="checkbox" id="manter-logado" />
-              Manter logado
-            </label>
-          </div>
-          <div class="error" id="error"></div>
-
-          <!-- OVERLAY MODAL ESCURO COM SPINNER CENTRALIZADO -->
-          <div id="loading-overlay" style="
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(15, 63, 122, 0.85) 0%, rgba(25, 118, 210, 0.85) 100%);
-            backdrop-filter: blur(4px);
-            border-radius: 8px;
-            border: 3px solid #f0f2f5;
-            z-index: 50;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 14px;
-            outline: 3px solid #1a73e8;
-            outline-offset: 1px;
-          ">
-            <!-- Logo em sistema líquido -->
-            <div class="overlay-liquid-logo" aria-hidden="true">
-              <div class="overlay-liquid-logo-surface">
-                <div id="overlay-liquid-fill" class="overlay-liquid-fill"></div>
-              </div>
+            <div id="saved-profiles-container" class="saved-profiles-container" style="display:none;">
+              <label for="saved-profile-select">Usuários salvos:</label>
+              <select id="saved-profile-select" name="saved-profile-select">
+                <option value="">Selecione um usuário salvo</option>
+              </select>
             </div>
 
-            <!-- Texto de progresso -->
-            <div style="text-align: center; color: white;">
-              <div style="font-size: 18px; font-weight: 600; margin-bottom: 6px;">
-                <span id="overlay-percent">0%</span>
-              </div>
-              <div id="overlay-status" style="font-size: 13px; color: rgba(255, 255, 255, 0.85); font-weight: 500;">Iniciando...</div>
+            <label for="pass">Senha:</label>
+            <input type="password" id="pass" name="pass" required />
+            <div class="password-info">
+              <button type="submit" class="login-action-btn">Consultar</button>
+              <button type="button" id="logout-btn" class="logout-inline-btn login-action-btn">
+                Sair
+              </button>
+              <label class="remember-login-label" for="manter-logado">
+                <input type="checkbox" id="manter-logado" />
+                Manter logado
+              </label>
             </div>
+            <div class="error" id="error"></div>
 
-            <!-- Container para Queue Status Display -->
-            <div id="queue-status-container" style="width: 100%; max-width: 400px; padding: 0px 20px;"></div>
+            <!-- OVERLAY MODAL ESCURO COM SPINNER CENTRALIZADO -->
+            <div id="loading-overlay" style="
+              display: none;
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: linear-gradient(135deg, rgba(15, 63, 122, 0.85) 0%, rgba(25, 118, 210, 0.85) 100%);
+              backdrop-filter: blur(4px);
+              border-radius: 8px;
+              border: 3px solid #f0f2f5;
+              z-index: 50;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              gap: 14px;
+              outline: 3px solid #1a73e8;
+              outline-offset: 1px;
+            ">
+              <!-- Logo em sistema líquido -->
+              <div class="overlay-liquid-logo" aria-hidden="true">
+                <div class="overlay-liquid-logo-surface">
+                  <div id="overlay-liquid-fill" class="overlay-liquid-fill"></div>
+                </div>
+              </div>
+
+              <!-- Texto de progresso -->
+              <div style="text-align: center; color: white;">
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 6px;">
+                  <span id="overlay-percent">0%</span>
+                </div>
+                <div id="overlay-status" style="font-size: 13px; color: rgba(255, 255, 255, 0.85); font-weight: 500;">Iniciando...</div>
+              </div>
+
+              <!-- Container para Queue Status Display -->
+              <div id="queue-status-container" style="width: 100%; max-width: 400px; padding: 0px 20px;"></div>
+            </div>
+          </form>
+          <div id="dados-institucionais"></div>
+        </div>
+        <div id="home-listas-container">
+          <div class="novidades-toggle">
+            <button class="novidades-toggle-btn active" data-view="novidades">Novidades</button>
+            <button class="novidades-toggle-btn" data-view="atividades">Atividades</button>
           </div>
-        </form>
-        <div id="dados-institucionais"></div>
-      </div>
-      <div id="home-listas-container">
-        <div class="novidades-toggle">
-          <button class="novidades-toggle-btn active" data-view="novidades">Novidades</button>
-          <button class="novidades-toggle-btn" data-view="atividades">Atividades</button>
+          <div id="tabela-novidades-container" class="home-lista-container" data-panel="novidades">
+            <h3 class="home-painel-titulo">Novidades</h3>
+            <table id="tabela-novidades-home" style="display: none;">
+              <thead>
+                <tr>
+                  <th>Disciplina</th>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div id="novidades-home-vazio" style="display:none; padding: 16px; color: #888; font-style: italic;">Nenhuma novidade encontrada.</div>
+          </div>
+
+          <div id="tabela-atividades-container" class="home-lista-container" data-panel="atividades">
+            <h3 class="home-painel-titulo">Atividades</h3>
+            <table id="tabela-atividades-home" style="display: none;">
+              <thead>
+                <tr>
+                  <th>Disciplina</th>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div id="atividades-home-vazio" style="display:none; padding: 16px; color: #888; font-style: italic;">Nenhuma atividade encontrada.</div>
+          </div>
         </div>
-        <div id="tabela-novidades-container" class="home-lista-container" data-panel="novidades">
-          <h3 class="home-painel-titulo">Novidades</h3>
-          <table id="tabela-novidades-home" style="display: none;">
-            <thead>
-              <tr>
-                <th>Disciplina</th>
-                <th>Data</th>
-                <th>Descrição</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <div id="novidades-home-vazio" style="display:none; padding: 16px; color: #888; font-style: italic;">Nenhuma novidade encontrada.</div>
+      </div>
+    </section>
+
+    <section class="home-mode-panel is-active" data-home-mode="graduacao">
+      <div class="home-mode-shell home-mode-shell-graduacao">
+        <div class="home-mode-hero">
+          <div class="home-mode-hero-copy">
+            <span class="home-mode-eyebrow">Base graduação</span>
+            <h2>Interface padrão da consulta</h2>
+            <p>Esse modo compartilha a mesma área de consulta usada por todos os perfis, mas continua sendo a referência visual da aplicação.</p>
+          </div>
+          <div class="home-mode-hero-panel">
+            <strong>Base atual</strong>
+            <span>Todo o fluxo original continua sendo o ponto de partida</span>
+          </div>
         </div>
 
-        <div id="tabela-atividades-container" class="home-lista-container" data-panel="atividades">
-          <h3 class="home-painel-titulo">Atividades</h3>
-          <table id="tabela-atividades-home" style="display: none;">
-            <thead>
-              <tr>
-                <th>Disciplina</th>
-                <th>Data</th>
-                <th>Descrição</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <div id="atividades-home-vazio" style="display:none; padding: 16px; color: #888; font-style: italic;">Nenhuma atividade encontrada.</div>
+        <div class="home-mode-grid">
+          <article class="home-mode-card home-mode-card-featured">
+            <h3>Consulta compartilhada</h3>
+            <p>O formulário e os resultados ficam acima, acessíveis em qualquer modo selecionado.</p>
+          </article>
+          <article class="home-mode-card">
+            <h3>Layout base</h3>
+            <p>A graduação segue como a referência de estrutura para os demais perfis.</p>
+          </article>
+          <article class="home-mode-card">
+            <h3>Componentes reutilizados</h3>
+            <p>Os outros modos podem copiar esta base sem afetar o comportamento da consulta.</p>
+          </article>
+          <article class="home-mode-card">
+            <h3>Identidade visual</h3>
+            <p>O estilo muda pelo modo selecionado, mas o fluxo segue o mesmo para todos.</p>
+          </article>
         </div>
       </div>
-    </div>
+    </section>
+
+    <section class="home-mode-panel" data-home-mode="tecnico">
+      <div class="home-mode-shell home-mode-shell-tecnico">
+        <div class="home-mode-hero">
+          <div class="home-mode-hero-copy">
+            <span class="home-mode-eyebrow">Entrada técnica</span>
+            <h2>Interface técnica em construção</h2>
+            <p>Este modo já está separado da graduação para que possamos evoluir a experiência técnica sem tocar no restante da home.</p>
+          </div>
+          <div class="home-mode-hero-panel">
+            <strong>Foco atual</strong>
+            <span>Fluxo visual próprio para curso técnico</span>
+          </div>
+        </div>
+
+        <div class="home-mode-grid">
+          <article class="home-mode-card home-mode-card-featured">
+            <h3>Painel técnico</h3>
+            <p>Espaço reservado para atalhos, calendário compacto e dados prioritários do aluno técnico.</p>
+            <div class="home-mode-pill-row">
+              <span class="home-mode-pill">Calendário</span>
+              <span class="home-mode-pill">Atividades</span>
+              <span class="home-mode-pill">Avisos</span>
+            </div>
+          </article>
+          <article class="home-mode-card">
+            <h3>Próximas alterações</h3>
+            <p>Aqui entram as variações visuais e de navegação específicas do técnico, sem interferir na graduação.</p>
+          </article>
+          <article class="home-mode-card">
+            <h3>Componentes independentes</h3>
+            <p>Os blocos deste modo ficam isolados para facilitar ajustes futuros, testes e expansões.</p>
+          </article>
+          <article class="home-mode-card">
+            <h3>Base compartilhada</h3>
+            <p>Continuamos reaproveitando a mesma lógica de dados quando ela fizer sentido, mas com apresentação separada.</p>
+          </article>
+        </div>
+        <div class="home-mode-note">
+          <strong>Próximo passo:</strong> quando você quiser, posso começar a preencher este modo com blocos próprios, mantendo a graduação intacta.
+        </div>
+      </div>
+    </section>
+
+    <section class="home-mode-panel" data-home-mode="responsavel">
+      <div class="home-mode-shell home-mode-shell-responsavel">
+        <div class="home-mode-hero home-mode-hero-responsavel">
+          <div class="home-mode-hero-copy">
+            <span class="home-mode-eyebrow">Entrada responsável</span>
+            <h2>Painel para acompanhamento</h2>
+            <p>Esse modo fica separado para receber uma visão mais rápida, voltada ao acompanhamento e consulta do responsável.</p>
+          </div>
+          <div class="home-mode-hero-panel home-mode-hero-panel-contrast">
+            <strong>Visão rápida</strong>
+            <span>Acesso pensado para consulta e monitoramento</span>
+          </div>
+        </div>
+
+        <div class="home-mode-grid home-mode-grid-wide">
+          <article class="home-mode-card home-mode-card-accent">
+            <h3>Resumo do responsável</h3>
+            <p>Área para status, alertas importantes, presença e outros indicadores de leitura rápida.</p>
+          </article>
+          <article class="home-mode-card">
+            <h3>Agenda da família</h3>
+            <p>Espaço para consolidar compromissos, entregas e eventos em um layout mais objetivo.</p>
+          </article>
+          <article class="home-mode-card">
+            <h3>Notificações</h3>
+            <p>Esse bloco pode ganhar foco visual próprio sem alterar o comportamento dos demais modos.</p>
+          </article>
+          <article class="home-mode-card">
+            <h3>Controle separado</h3>
+            <p>Quando formos avançar, as mudanças deste modo vão acontecer só aqui, com independência total.</p>
+          </article>
+        </div>
+
+        <div class="home-mode-actions">
+          <button type="button" class="home-mode-action">Abrir resumo</button>
+          <button type="button" class="home-mode-action home-mode-action-secondary">Ver notificações</button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <div class="tab-content" id="tab-simplificada">

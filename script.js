@@ -8,8 +8,33 @@ const STORAGE_SAVED_PROFILES = 'sigaaPerfisSalvos';
 const STORAGE_SELECTED_PROFILE = 'sigaaPerfilSelecionado';
 const STORAGE_COMPARISON_MODE = 'sigaaComparisonMode';
 const STORAGE_SKIP_SCHEDULE = 'sigaaSkipSchedule';
+const STORAGE_HOME_MODE = 'sigaaHomeMode';
 const MAX_SAVED_PROFILES = 2;
 const DEBUG_LOG_MAX_ENTRIES = 250;
+const HOME_MODES = new Set(['graduacao', 'tecnico', 'responsavel']);
+const HOME_MODE_LAYOUTS = {
+  graduacao: {
+    showHomeAviso: true,
+    showHomeLists: true,
+    showNovidades: true,
+    showAtividades: true,
+    showToggle: true
+  },
+  tecnico: {
+    showHomeAviso: true,
+    showHomeLists: true,
+    showNovidades: false,
+    showAtividades: true,
+    showToggle: false
+  },
+  responsavel: {
+    showHomeAviso: true,
+    showHomeLists: false,
+    showNovidades: false,
+    showAtividades: false,
+    showToggle: false
+  }
+};
 
 const debugConsoleState = {
   initialized: false,
@@ -52,6 +77,42 @@ function appendDebugConsoleEntry(level, args) {
 
   renderDebugConsoleOutput();
 }
+
+// Delegated global handlers for home-aviso buttons (ensures clicks captured
+// even if DOMContentLoaded timing or overlays interfere). Uses capture to run early.
+(function setupGlobalHomeAvisoDelegation() {
+  const KEY = 'sigaa_nao_mostrar_aviso';
+  function persistDontShow() {
+    try { localStorage.setItem(KEY, '1'); return; } catch (e) { }
+    try { sessionStorage.setItem(KEY, '1'); return; } catch (e) { }
+    try {
+      const expires = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toUTCString();
+      document.cookie = `${KEY}=1; expires=${expires}; path=/; samesite=lax`;
+    } catch (e) { }
+  }
+
+  function handleClick(e) {
+    try {
+      const btn = e.target && e.target.closest && e.target.closest('#fechar-aviso, #nao-mostrar-aviso');
+      if (!btn) return;
+      e.preventDefault(); e.stopPropagation();
+      const aviso = document.getElementById('home-aviso');
+      if (btn.id === 'fechar-aviso') {
+        try { sessionStorage.setItem(KEY, '1'); } catch (e) { }
+        if (aviso) aviso.remove();
+        console.log('[Aviso] fechar clicado (delegated global)');
+        return;
+      }
+      // nao-mostrar-aviso
+      persistDontShow();
+      if (aviso) aviso.remove();
+      console.log('[Aviso] não mostrar mais clicado (delegated global)');
+    } catch (err) { /* ignore */ }
+  }
+
+  document.addEventListener('click', handleClick, true);
+  document.addEventListener('touchstart', handleClick, { passive: false, capture: true });
+})();
 
 function renderDebugConsoleOutput() {
   const output = document.getElementById('debug-log-output');
@@ -154,6 +215,96 @@ function isComparisonModeEnabled() {
 
 function setComparisonModeEnabled(enabled) {
   localStorage.setItem(STORAGE_COMPARISON_MODE, enabled ? '1' : '0');
+}
+
+function normalizeAppMode(mode) {
+  const value = String(mode || '').trim().toLowerCase();
+  return HOME_MODES.has(value) ? value : 'graduacao';
+}
+
+function getAppMode() {
+  return normalizeAppMode(localStorage.getItem(STORAGE_HOME_MODE) || 'graduacao');
+}
+
+function setAppMode(mode) {
+  localStorage.setItem(STORAGE_HOME_MODE, normalizeAppMode(mode));
+}
+
+function getAppModeLayout(mode = getAppMode()) {
+  return HOME_MODE_LAYOUTS[normalizeAppMode(mode)] || HOME_MODE_LAYOUTS.graduacao;
+}
+
+function applyHomeModeLayout(mode = getAppMode()) {
+  const layout = getAppModeLayout(mode);
+  const homeAviso = document.getElementById('home-aviso');
+  const listasContainer = document.getElementById('home-listas-container');
+  const novidadesToggle = document.querySelector('.novidades-toggle');
+  const panelNov = document.getElementById('tabela-novidades-container');
+  const panelAtiv = document.getElementById('tabela-atividades-container');
+
+  if (homeAviso) {
+    homeAviso.style.display = layout.showHomeAviso ? '' : 'none';
+  }
+
+  if (listasContainer) {
+    listasContainer.style.display = layout.showHomeLists ? '' : 'none';
+  }
+
+  if (novidadesToggle) {
+    novidadesToggle.style.display = layout.showToggle && layout.showHomeLists ? '' : 'none';
+  }
+
+  if (panelNov) {
+    panelNov.style.display = layout.showHomeLists && layout.showNovidades ? '' : 'none';
+  }
+
+  if (panelAtiv) {
+    panelAtiv.style.display = layout.showHomeLists && layout.showAtividades ? '' : 'none';
+  }
+
+  if (!layout.showHomeLists) {
+    return;
+  }
+
+  atualizarHomePainelNovidadesAtividades();
+}
+
+function syncAppModeSelect(mode) {
+  const select = document.getElementById('home-mode-select');
+  if (select && select.value !== mode) {
+    select.value = mode;
+  }
+}
+
+function applyAppMode(mode) {
+  const normalizedMode = normalizeAppMode(mode);
+  const panels = document.querySelectorAll('.home-mode-panel');
+
+  document.body.dataset.homeMode = normalizedMode;
+  document.body.dataset.appMode = normalizedMode;
+  document.documentElement.dataset.appMode = normalizedMode;
+
+  panels.forEach((panel) => {
+    const isActive = panel.dataset.homeMode === normalizedMode;
+    panel.classList.toggle('is-active', isActive);
+    panel.hidden = !isActive;
+  });
+
+  syncAppModeSelect(normalizedMode);
+  applyHomeModeLayout(normalizedMode);
+  refreshHomeHeightSyncLoop();
+}
+
+function initHomeModeSwitcher() {
+  const select = document.getElementById('home-mode-select');
+  if (!select || select.dataset.bound === '1') return;
+
+  select.dataset.bound = '1';
+  select.addEventListener('change', () => {
+    // A escolha só vira interface ativa quando a consulta for concluída com sucesso.
+  });
+
+  applyAppMode(getAppMode());
 }
 
 function getComparisonProfilesContext() {
@@ -664,6 +815,7 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     const user = document.getElementById('user').value.trim();
     const pass = document.getElementById('pass').value.trim();
     const manterLogado = document.getElementById('manter-logado').checked;
+  const selectedMode = normalizeAppMode(document.getElementById('home-mode-select')?.value || getAppMode());
 
     const errorDiv = document.getElementById('error');
     const dadosDiv = document.getElementById('dados-institucionais');
@@ -686,7 +838,7 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     saveTokenWithExpiry(token, storageType);
 
         // 2. Usa token para buscar dados
-        await consultarComToken(token, user);
+        await consultarComToken(token, user, selectedMode);
     } catch (error) {
         console.error('Erro no login:', error);
         const isNetworkError = error.name === 'AbortError' || error.name === 'TypeError' || error.message === 'Failed to fetch';
@@ -698,7 +850,7 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     }
 });
 
-async function consultarComToken(token, userFromLogin = '') {
+async function consultarComToken(token, userFromLogin = '', requestedMode = null) {
     const errorDiv = document.getElementById('error');
     const dadosDiv = document.getElementById('dados-institucionais');
     const overlayDiv = document.getElementById('loading-overlay');
@@ -809,6 +961,10 @@ async function consultarComToken(token, userFromLogin = '') {
           throw new Error(data.error || 'Erro ao buscar dados');
         }
 
+        const modeToApply = normalizeAppMode(requestedMode || getAppMode());
+        setAppMode(modeToApply);
+        applyAppMode(modeToApply);
+
         const selectedUser = (userFromLogin || document.getElementById('user')?.value || getSelectedProfileUser() || '').trim();
         saveConsultaForUser(selectedUser, data);
         aplicarDadosConsulta(data, duracaoSegundos);
@@ -835,6 +991,8 @@ async function consultarComToken(token, userFromLogin = '') {
 window.addEventListener('DOMContentLoaded', () => {
   // Inicia display do status do token e tenta usar token salvo
   startTokenTimer();
+
+  applyAppMode(getAppMode());
 
   // Marca a checkbox 'manter-logado' por padrão
   try {
@@ -874,8 +1032,10 @@ window.addEventListener('DOMContentLoaded', () => {
   initSkipScheduleToggle();
   // Inicia painel de logs na aba Configurações
   initDebugConsolePanel();
+  initHomeModeSwitcher();
+  // Swipe mobile temporariamente desativado.
   // Inicia swipe para trocar de tab no mobile
-  initSwipeTabs();
+  // initSwipeTabs();
 });
 
 const AUTO_TOMORROW_KEY = 'sigaa-auto-tomorrow-after-classes';
@@ -2964,6 +3124,7 @@ function preencherTabelaNovidades(novidades) {
 }
 
 function atualizarHomePainelNovidadesAtividades() {
+  const layout = getAppModeLayout();
   const isDesktop = window.innerWidth >= 1040;
 
   const toggle = document.querySelector('.novidades-toggle');
@@ -2980,7 +3141,36 @@ function atualizarHomePainelNovidadesAtividades() {
   const temNovidades = novidadesGlobais.length > 0;
   const temAtividades = atividadesGlobais.length > 0;
 
-  if (toggle) toggle.style.display = isDesktop ? 'none' : 'inline-flex';
+  if (!layout.showHomeLists) {
+    if (toggle) toggle.style.display = 'none';
+    if (panelNov) panelNov.style.display = 'none';
+    if (panelAtiv) panelAtiv.style.display = 'none';
+    return;
+  }
+
+  if (toggle) toggle.style.display = layout.showToggle && !isDesktop ? 'inline-flex' : 'none';
+
+  if (!layout.showNovidades && !layout.showAtividades) {
+    panelNov.style.display = 'none';
+    panelAtiv.style.display = 'none';
+    return;
+  }
+
+  if (layout.showNovidades && !layout.showAtividades) {
+    panelNov.style.display = '';
+    panelAtiv.style.display = 'none';
+    tblNov.style.display = temNovidades ? '' : 'none';
+    if (vazioNov) vazioNov.style.display = temNovidades ? 'none' : '';
+    return;
+  }
+
+  if (!layout.showNovidades && layout.showAtividades) {
+    panelNov.style.display = 'none';
+    panelAtiv.style.display = '';
+    tblAtiv.style.display = temAtividades ? '' : 'none';
+    if (vazioAtiv) vazioAtiv.style.display = temAtividades ? 'none' : '';
+    return;
+  }
 
   if (isDesktop) {
     panelNov.style.display = '';
@@ -3071,7 +3261,7 @@ function removerEstiloSemDados() {
   if (msg) msg.remove();
   document.getElementById('dados-institucionais').style.display = 'block';
   // Deixa o CSS responsivo decidir (grid no desktop, oculto no mobile)
-  document.getElementById('home-listas-container').style.display = '';
+  applyHomeModeLayout();
   // Só mostra o aviso se o usuário não escolheu 'não mostrar mais'
   try {
     const STORAGE_KEY = 'sigaa_nao_mostrar_aviso';
@@ -3111,6 +3301,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const tabHome = document.getElementById('tab-home');
   initSelectPerfisSalvos();
   atualizarSelectPerfisSalvos();
+  applyAppMode(getAppMode());
   const dadosSalvos = obterConsultaInicialSalva();
 
   if (!dadosSalvos) {
@@ -3325,7 +3516,8 @@ function ajustarAlturaNovidades() {
     const dadosMarginBottom = parseFloat(dadosStyle.marginBottom || '0') || 0;
     const top = formRect.top - formMarginTop;
     const bottom = dadosRect.bottom + dadosMarginBottom;
-    const x = Math.max(120, Math.round(bottom - top));
+    // Acrescenta +182 conforme solicitado para dar folga extra ao cálculo
+    const x = Math.max(120, Math.round(bottom - top)) + 182;
 
     novidadesContainer.style.maxHeight = x + 'px';
     atividadesContainer.style.maxHeight = x + 'px';
@@ -3428,8 +3620,23 @@ window.addEventListener('DOMContentLoaded', () => {
   const STORAGE_KEY = 'sigaa_nao_mostrar_aviso';
   let timerId = null;
 
+  // Verifica preferência em localStorage/sessionStorage/cookie
+  function isAvisoSuppressed() {
+    try {
+      if (localStorage.getItem(STORAGE_KEY) === '1') return true;
+    } catch (e) { /* ignore */ }
+    try {
+      if (sessionStorage.getItem(STORAGE_KEY) === '1') return true;
+    } catch (e) { /* ignore */ }
+    try {
+      const re = new RegExp('(?:^|; )' + STORAGE_KEY + '=1(?:;|$)');
+      if (re.test(document.cookie)) return true;
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+
   // Não mostrar se usuário já escolheu não mostrar mais
-  if (localStorage.getItem(STORAGE_KEY) === '1') {
+  if (isAvisoSuppressed()) {
     aviso.style.display = 'none';
     return;
   }
@@ -3448,7 +3655,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Colapsar/expandir ao clicar (exceto nos botões)
   aviso.addEventListener('click', function (e) {
-    if (e.target === fecharBtn || e.target === naoMostrarBtn) return;
+    if (e.target && e.target.closest && e.target.closest('#fechar-aviso, #nao-mostrar-aviso')) return;
     try { aviso.classList.toggle('home-aviso-collapsed'); } catch (e) { /* ignore */ }
   });
 
@@ -3464,24 +3671,61 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Botão fechar: esconde só até recarregar
+  // Botão fechar: esconde imediatamente para a sessão atual
+  // Função de ação para fechar aviso (sessão)
+  const onFecharAviso = function (e) {
+    try { if (e) { e.preventDefault(); e.stopPropagation(); } } catch (err) { /* ignore */ }
+    try { sessionStorage.setItem(STORAGE_KEY, '1'); } catch (err) { /* ignore */ }
+    try { console.log('[Aviso] fechar clicado'); } catch (e) { }
+    try { aviso.remove(); } catch (e) { aviso.style.display = 'none'; }
+    clearTimeout(timerId);
+    // remove delegated listeners após ação
+    document.removeEventListener('click', __delegatedClickHandler);
+    document.removeEventListener('touchstart', __delegatedTouchHandler);
+  };
   if (fecharBtn) {
-    fecharBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      aviso.style.display = 'none';
-      clearTimeout(timerId);
-    });
+    fecharBtn.addEventListener('click', onFecharAviso);
+    fecharBtn.addEventListener('touchstart', onFecharAviso, { passive: false });
   }
 
-  // Botão não mostrar mais: nunca mais mostra
+  // Botão não mostrar mais: persiste preferência e remove o aviso
+  // Função de ação para 'não mostrar mais' (persistente)
+  const onNaoMostrarAviso = function (e) {
+    try { if (e) { e.preventDefault(); e.stopPropagation(); } } catch (err) { /* ignore */ }
+    try { localStorage.setItem(STORAGE_KEY, '1'); } catch (err) {
+      try { sessionStorage.setItem(STORAGE_KEY, '1'); } catch (e) { /* ignore */ }
+      try {
+        const expires = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toUTCString();
+        document.cookie = `${STORAGE_KEY}=1; expires=${expires}; path=/; samesite=lax`;
+      } catch (e) { /* ignore */ }
+    }
+    try { console.log('[Aviso] não mostrar mais clicado'); } catch (e) { }
+    try { aviso.remove(); } catch (e) { aviso.style.display = 'none'; }
+    clearTimeout(timerId);
+    // remove delegated listeners após ação
+    document.removeEventListener('click', __delegatedClickHandler);
+    document.removeEventListener('touchstart', __delegatedTouchHandler);
+  };
   if (naoMostrarBtn) {
-    naoMostrarBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      try { localStorage.setItem(STORAGE_KEY, '1'); } catch (err) { console.warn('Erro ao salvar preferência:', err); }
-      aviso.style.display = 'none';
-      clearTimeout(timerId);
-    });
+    naoMostrarBtn.addEventListener('click', onNaoMostrarAviso);
+    naoMostrarBtn.addEventListener('touchstart', onNaoMostrarAviso, { passive: false });
   }
+
+  // Delegation handlers (guarda referências para remoção)
+  function __delegatedClickHandler(e) {
+    const btn = e.target.closest && e.target.closest('#fechar-aviso, #nao-mostrar-aviso');
+    if (!btn) return;
+    if (btn.id === 'fechar-aviso') return onFecharAviso(e);
+    if (btn.id === 'nao-mostrar-aviso') return onNaoMostrarAviso(e);
+  }
+  function __delegatedTouchHandler(e) {
+    const btn = e.target.closest && e.target.closest('#fechar-aviso, #nao-mostrar-aviso');
+    if (!btn) return;
+    if (btn.id === 'fechar-aviso') return onFecharAviso(e);
+    if (btn.id === 'nao-mostrar-aviso') return onNaoMostrarAviso(e);
+  }
+  document.addEventListener('click', __delegatedClickHandler);
+  document.addEventListener('touchstart', __delegatedTouchHandler, { passive: false });
 });
 
 // --- Mobile FAB (floating action button) behavior ---
