@@ -29,7 +29,7 @@ const HOME_MODE_LAYOUTS = {
   },
   responsavel: {
     showHomeAviso: true,
-    showHomeLists: false,
+    showHomeLists: true,
     showNovidades: false,
     showAtividades: false,
     showToggle: false
@@ -201,6 +201,15 @@ function initDebugConsoleCapture() {
 
 initDebugConsoleCapture();
 
+// Verifica preferência global de "não mostrar aviso" (localStorage, sessionStorage, cookie)
+function isAvisoSuppressedGlobal() {
+  const KEY = 'sigaa_nao_mostrar_aviso';
+  try { if (localStorage.getItem(KEY) === '1') return true; } catch (e) { }
+  try { if (sessionStorage.getItem(KEY) === '1') return true; } catch (e) { }
+  try { const re = new RegExp('(?:^|; )' + KEY + '=1(?:;|$)'); if (re.test(document.cookie)) return true; } catch (e) { }
+  return false;
+}
+
 function isSkipScheduleEnabled() {
   return localStorage.getItem(STORAGE_SKIP_SCHEDULE) === '1';
 }
@@ -243,7 +252,11 @@ function applyHomeModeLayout(mode = getAppMode()) {
   const panelAtiv = document.getElementById('tabela-atividades-container');
 
   if (homeAviso) {
-    homeAviso.style.display = layout.showHomeAviso ? '' : 'none';
+    if (layout.showHomeAviso && !isAvisoSuppressedGlobal()) {
+      homeAviso.style.display = '';
+    } else {
+      homeAviso.style.display = 'none';
+    }
   }
 
   if (listasContainer) {
@@ -262,11 +275,157 @@ function applyHomeModeLayout(mode = getAppMode()) {
     panelAtiv.style.display = layout.showHomeLists && layout.showAtividades ? '' : 'none';
   }
 
+  if (normalizeAppMode(mode) === 'responsavel') {
+    renderResponsibleCalendar(mode);
+  } else {
+    clearResponsibleCalendar();
+  }
+
   if (!layout.showHomeLists) {
     return;
   }
 
   atualizarHomePainelNovidadesAtividades();
+}
+
+function clearResponsibleCalendar() {
+  const container = document.getElementById('responsavel-calendar-container');
+  const grid = document.getElementById('responsavel-calendar-grid');
+  if (container) container.style.display = 'none';
+  if (grid) grid.innerHTML = '';
+}
+
+function ajustarAlturaCalendarioResponsavel() {
+  try {
+    const form = document.getElementById('sigaa-form');
+    const dados = document.getElementById('dados-institucionais');
+    const calendar = document.getElementById('responsavel-calendar-container');
+    if (!form || !dados || !calendar) return;
+
+    if (window.innerWidth < 1040 || normalizeAppMode(getAppMode()) !== 'responsavel') {
+      calendar.style.maxHeight = '';
+      calendar.style.overflow = '';
+      return;
+    }
+
+    const formRect = form.getBoundingClientRect();
+    const dadosRect = dados.getBoundingClientRect();
+    const formStyle = window.getComputedStyle(form);
+    const dadosStyle = window.getComputedStyle(dados);
+
+    const formMarginTop = parseFloat(formStyle.marginTop || '0') || 0;
+    const dadosMarginBottom = parseFloat(dadosStyle.marginBottom || '0') || 0;
+    const top = formRect.top - formMarginTop;
+    const bottom = dadosRect.bottom + dadosMarginBottom;
+    const availableHeight = Math.max(120, Math.round(bottom - top)) + 182;
+
+    calendar.dataset.availableHeight = String(availableHeight);
+    calendar.style.maxHeight = `${availableHeight}px`;
+    calendar.style.overflow = 'hidden';
+    return availableHeight;
+  } catch (e) {
+    console.warn('Erro ao ajustar altura do calendário responsável:', e);
+    return 0;
+  }
+}
+
+function getResponsibleCalendarWeeksToRender(availableHeight) {
+  const usableHeight = Math.max(0, Number(availableHeight) || 0);
+  const headerReserve = 126;
+  const rowHeight = 92;
+  const rowGap = 10;
+  const baseWeeks = 6;
+  const spaceForGrid = Math.max(0, usableHeight - headerReserve);
+  const fitWeeks = Math.max(baseWeeks, Math.floor((spaceForGrid + rowGap) / (rowHeight + rowGap)));
+  return Math.min(10, fitWeeks);
+}
+
+function renderResponsibleCalendar(mode = getAppMode()) {
+  const container = document.getElementById('responsavel-calendar-container');
+  const grid = document.getElementById('responsavel-calendar-grid');
+  const title = document.getElementById('responsavel-calendar-title');
+  if (!container || !grid || !title) return;
+
+  const normalizedMode = normalizeAppMode(mode);
+  const isDesktop = window.innerWidth >= 1041;
+  if (normalizedMode !== 'responsavel' || !isDesktop) {
+    clearResponsibleCalendar();
+    return;
+  }
+
+  container.style.display = '';
+  container.style.height = '';
+
+  const now = new Date();
+  const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  title.textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
+  grid.innerHTML = '';
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const firstVisible = new Date(monthStart);
+  firstVisible.setDate(monthStart.getDate() - monthStart.getDay());
+
+  const availableHeight = ajustarAlturaCalendarioResponsavel() || Number(container.dataset.availableHeight) || 0;
+  const weeksToRender = getResponsibleCalendarWeeksToRender(availableHeight);
+
+  const weeks = [];
+  const current = new Date(firstVisible);
+  for (let row = 0; row < weeksToRender; row++) {
+    const week = [];
+    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+      week.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+
+  const nextMonthLabel = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  weeks.forEach((week) => {
+    week.forEach((date) => {
+      const cell = document.createElement('div');
+      cell.className = 'home-calendar-day';
+
+      const isSameMonth = date.getMonth() === now.getMonth();
+      const isNextMonth = date.getMonth() === now.getMonth() + 1 || (now.getMonth() === 11 && date.getMonth() === 0);
+
+      if (date.getDate() === now.getDate() && isSameMonth) {
+        cell.classList.add('is-today');
+      }
+
+      if (!isSameMonth) {
+        cell.classList.add('is-muted');
+      }
+
+      if (isNextMonth) {
+        cell.classList.add('is-next-month');
+      }
+
+      const number = document.createElement('span');
+      number.className = 'home-calendar-day-number';
+      number.textContent = String(date.getDate()).padStart(2, '0');
+
+      const label = document.createElement('span');
+      label.className = 'home-calendar-day-label';
+      if (date.toDateString() === now.toDateString()) {
+        label.textContent = 'Hoje';
+      } else if (isNextMonth) {
+        label.textContent = nextMonthLabel.charAt(0).toUpperCase() + nextMonthLabel.slice(1);
+      } else if (!isSameMonth) {
+        label.textContent = 'Mês anterior';
+      } else {
+        label.textContent = 'Dia';
+      }
+
+      cell.appendChild(number);
+      cell.appendChild(label);
+      grid.appendChild(cell);
+    });
+  });
+
 }
 
 function syncAppModeSelect(mode) {
@@ -292,7 +451,41 @@ function applyAppMode(mode) {
 
   syncAppModeSelect(normalizedMode);
   applyHomeModeLayout(normalizedMode);
+  renderResponsibleCalendar(normalizedMode);
   refreshHomeHeightSyncLoop();
+  refreshResponsibleCalendarSyncLoop();
+
+  // Reorder view toggle buttons according to mode (responsavel wants 5-day first)
+  try { reorderViewToggleButtons(normalizedMode); } catch (e) { /* ignore */ }
+}
+
+function reorderViewToggleButtons(mode) {
+  const group = document.querySelector('.view-toggle-group');
+  if (!group) return;
+
+  // Desired orders
+  const respOrder = ['semanal', '3dias', 'lista'];
+  const defaultOrder = ['lista', '3dias', 'semanal'];
+
+  const order = normalizeAppMode(mode) === 'responsavel' ? respOrder : defaultOrder;
+
+  const buttons = {};
+  group.querySelectorAll('.view-toggle-btn').forEach(btn => {
+    const key = btn.dataset.view;
+    buttons[key] = btn;
+  });
+
+  // Re-append in desired order if buttons exist
+  order.forEach(key => {
+    if (buttons[key]) group.appendChild(buttons[key]);
+  });
+
+  // Ensure one button remains active; if none active, activate first in group
+  const active = group.querySelector('.view-toggle-btn.active');
+  if (!active) {
+    const first = group.querySelector('.view-toggle-btn');
+    if (first) first.classList.add('active');
+  }
 }
 
 function initHomeModeSwitcher() {
@@ -1169,7 +1362,7 @@ function updateClassProgressBar(horarios) {
     const percentEl = document.getElementById('progress-percentage');
     
     if (nameEl) nameEl.textContent = currentClass.disciplina || '-';
-    if (timeEl) timeEl.textContent = `${startStr} - ${endStr}`;
+      clearResponsibleCalendar();
     if (countdownEl) {
       const countdownStr = `${String(remainingHours).padStart(2, '0')}:${String(remainingMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
       countdownEl.textContent = countdownStr;
@@ -1417,6 +1610,7 @@ let atividadesGlobais = [];
 let novidadesGlobais = [];
 let scheduleInterval = null;
 let __homeHeightSyncInterval = null;
+let __responsibleCalendarSyncInterval = null;
 
 function isHomeTabActive() {
   const homeTab = document.getElementById('tab-home');
@@ -1451,6 +1645,41 @@ function refreshHomeHeightSyncLoop() {
     runHomeHeightSyncTick();
   } else {
     stopHomeHeightSyncLoop();
+  }
+}
+
+function isResponsibleCalendarActive() {
+  return isHomeTabActive() && normalizeAppMode(getAppMode()) === 'responsavel';
+}
+
+function runResponsibleCalendarSyncTick() {
+  if (!isResponsibleCalendarActive()) return;
+  renderResponsibleCalendar(getAppMode());
+}
+
+function startResponsibleCalendarSyncLoop() {
+  if (__responsibleCalendarSyncInterval) return;
+  __responsibleCalendarSyncInterval = setInterval(() => {
+    if (!isResponsibleCalendarActive()) {
+      stopResponsibleCalendarSyncLoop();
+      return;
+    }
+    runResponsibleCalendarSyncTick();
+  }, 2500);
+}
+
+function stopResponsibleCalendarSyncLoop() {
+  if (!__responsibleCalendarSyncInterval) return;
+  clearInterval(__responsibleCalendarSyncInterval);
+  __responsibleCalendarSyncInterval = null;
+}
+
+function refreshResponsibleCalendarSyncLoop() {
+  if (isResponsibleCalendarActive()) {
+    startResponsibleCalendarSyncLoop();
+    runResponsibleCalendarSyncTick();
+  } else {
+    stopResponsibleCalendarSyncLoop();
   }
 }
 
@@ -2173,6 +2402,31 @@ function renderInteractiveGuide(horarios, horariosComparacao = [], comparisonCtx
 
   if (!guideContainer || !labelsContainer || !hoursContainer || !eventsContainer || !trackContainer || !needle) return;
 
+  // Guard: only render the interactive guide when the active horarios view is 'lista'.
+  // This prevents the guide appearing in the 3-dias/semanal (5/7 dias) views.
+  try {
+    const savedView = localStorage.getItem('sigaa-horarios-view') || (normalizeAppMode(getAppMode()) === 'responsavel' ? 'semanal' : 'lista');
+    if (savedView !== 'lista') {
+      guideContainer.style.display = 'none';
+      if (scheduleInterval) { clearInterval(scheduleInterval); scheduleInterval = null; }
+      return;
+    }
+    // Move guide to top of the list view container so it appears above the simplified table
+    try {
+      const listaContainer = document.getElementById('tabela-horarios-container');
+      if (listaContainer && guideContainer.parentNode !== listaContainer) {
+        listaContainer.insertBefore(guideContainer, listaContainer.firstChild);
+      }
+    } catch (err) {
+      // ignore DOM move errors
+    }
+  } catch (e) {
+    // If storage access fails, be conservative and hide the guide
+    guideContainer.style.display = 'none';
+    if (scheduleInterval) { clearInterval(scheduleInterval); scheduleInterval = null; }
+    return;
+  }
+
   // Limpa o conteúdo anterior
   labelsContainer.innerHTML = '';
   hoursContainer.innerHTML = '';
@@ -2703,6 +2957,10 @@ function initViewToggle() {
   const threeDayContainer = document.getElementById('three-day-view-container');
   const interactiveGuide = document.getElementById('interactive-schedule-guide');
 
+  function getDefaultHorariosView() {
+    return normalizeAppMode(getAppMode()) === 'responsavel' ? 'semanal' : 'lista';
+  }
+
   function ativarView(view, renderData) {
     btns.forEach(b => b.classList.remove('active'));
     const target = document.querySelector(`.view-toggle-btn[data-view="${view}"]`);
@@ -2713,6 +2971,10 @@ function initViewToggle() {
     threeDayContainer.style.display = 'none';
     interactiveGuide.style.display = 'none';
     if(scheduleInterval) clearInterval(scheduleInterval);
+
+    // Persist the chosen view BEFORE rendering so renderInteractiveGuide can
+    // read the correct current view state from storage.
+    try { localStorage.setItem('sigaa-horarios-view', view); } catch (e) { /* ignore */ }
 
     if (view === 'semanal') {
       weeklyContainer.style.display = '';
@@ -2728,7 +2990,6 @@ function initViewToggle() {
         renderInteractiveGuide(horariosGlobais, comparisonCtx.enabled ? comparisonCtx.compareHorarios : [], comparisonCtx);
       }
     }
-    localStorage.setItem('sigaa-horarios-view', view);
   }
 
   btns.forEach(btn => {
@@ -2736,13 +2997,18 @@ function initViewToggle() {
   });
 
   // Restaura a última visualização salva (sem renderizar — dados ainda não chegaram)
-  const saved = localStorage.getItem('sigaa-horarios-view') || 'lista';
+  const saved = normalizeAppMode(getAppMode()) === 'responsavel'
+    ? 'semanal'
+    : (localStorage.getItem('sigaa-horarios-view') || getDefaultHorariosView());
+  localStorage.setItem('sigaa-horarios-view', saved);
   ativarView(saved, false);
 }
 
 // Atualiza a visualização de calendário ativa (chamado após dados carregarem)
 function atualizarViewAtiva() {
-  const saved = localStorage.getItem('sigaa-horarios-view');
+  const saved = normalizeAppMode(getAppMode()) === 'responsavel'
+    ? 'semanal'
+    : localStorage.getItem('sigaa-horarios-view');
   if (saved === 'semanal') {
     preencherVisualizacaoSemanal(horariosGlobais);
   } else if (saved === '3dias') {
@@ -3223,6 +3489,28 @@ document.querySelectorAll('.tab-button').forEach(button => {
     const tabId = button.getAttribute('data-tab');
     document.getElementById(tabId).classList.add('active');
     refreshHomeHeightSyncLoop();
+    if (tabId === 'tab-home') {
+      renderResponsibleCalendar(getAppMode());
+      ajustarAlturaCalendarioResponsavel();
+      refreshResponsibleCalendarSyncLoop();
+    }
+    // If the Horários tab (data-tab="tab-simplificada") was activated by click,
+    // ensure the interactive guide sits at the top of the list container when view is 'lista'.
+    try {
+      if (tabId === 'tab-simplificada' || tabId === 'tab-horarios') {
+        const saved = localStorage.getItem('sigaa-horarios-view') || (normalizeAppMode(getAppMode()) === 'responsavel' ? 'semanal' : 'lista');
+        if (saved === 'lista') {
+          const guide = document.getElementById('interactive-schedule-guide');
+          const listaContainer = document.getElementById('tabela-horarios-container');
+          if (guide && listaContainer) {
+            if (guide.parentNode !== listaContainer) listaContainer.insertBefore(guide, listaContainer.firstChild);
+            guide.style.display = 'block';
+            const comparisonCtx = getComparisonProfilesContext();
+            renderInteractiveGuide(horariosGlobais || [], comparisonCtx.enabled ? comparisonCtx.compareHorarios : [], comparisonCtx);
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
   });
 });
 
@@ -3246,6 +3534,28 @@ function activateTab(tabId) {
       content.classList.add('active');
     }
     refreshHomeHeightSyncLoop();
+    if (tabId === 'tab-home') {
+      renderResponsibleCalendar(getAppMode());
+      ajustarAlturaCalendarioResponsavel();
+      refreshResponsibleCalendarSyncLoop();
+    }
+    // When user activates the Horários tab, ensure the interactive guide
+    // is positioned at the top of the list view if the saved view is 'lista'.
+    try {
+      if (tabId === 'tab-horarios') {
+        const saved = localStorage.getItem('sigaa-horarios-view') || (normalizeAppMode(getAppMode()) === 'responsavel' ? 'semanal' : 'lista');
+        if (saved === 'lista') {
+          const guide = document.getElementById('interactive-schedule-guide');
+          const listaContainer = document.getElementById('tabela-horarios-container');
+          if (guide && listaContainer) {
+            if (guide.parentNode !== listaContainer) listaContainer.insertBefore(guide, listaContainer.firstChild);
+            guide.style.display = 'block';
+            const comparisonCtx = getComparisonProfilesContext();
+            renderInteractiveGuide(horariosGlobais || [], comparisonCtx.enabled ? comparisonCtx.compareHorarios : [], comparisonCtx);
+          }
+        }
+      }
+    } catch (e) { /* ignore DOM/storage errors */ }
   } catch (e) {
     console.warn('Erro ao ativar aba', tabId, e);
   }
@@ -3254,8 +3564,10 @@ function activateTab(tabId) {
 function removerEstiloSemDados() {
   const homeContent = document.getElementById('home-content');
   const tabHome = document.getElementById('tab-home');
+  const body = document.body;
   homeContent.classList.remove('sem-dados');
   tabHome.classList.remove('sem-dados');
+  body.classList.remove('sem-dados');
   // Remove mensagem se existir
   const msg = homeContent.querySelector('.mensagem-sem-dados');
   if (msg) msg.remove();
@@ -3264,9 +3576,8 @@ function removerEstiloSemDados() {
   applyHomeModeLayout();
   // Só mostra o aviso se o usuário não escolheu 'não mostrar mais'
   try {
-    const STORAGE_KEY = 'sigaa_nao_mostrar_aviso';
     const aviso = document.getElementById('home-aviso');
-    if (aviso && localStorage.getItem(STORAGE_KEY) !== '1') {
+    if (aviso && !isAvisoSuppressedGlobal()) {
       aviso.style.display = 'block';
     }
   } catch (e) {
@@ -3299,6 +3610,7 @@ function removerEstiloSemDados() {
 window.addEventListener('DOMContentLoaded', () => {
   const homeContent = document.getElementById('home-content');
   const tabHome = document.getElementById('tab-home');
+  const body = document.body;
   initSelectPerfisSalvos();
   atualizarSelectPerfisSalvos();
   applyAppMode(getAppMode());
@@ -3308,6 +3620,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Adapta a interface para novo usuário
     homeContent.classList.add('sem-dados');
     tabHome.classList.add('sem-dados');
+    body.classList.add('sem-dados');
     if (!homeContent.querySelector('.mensagem-sem-dados')) {
       homeContent.insertAdjacentHTML('beforeend', `
         <div class="mensagem-sem-dados">
@@ -3533,12 +3846,26 @@ window.addEventListener('resize', () => {
   atualizarHomePainelNovidadesAtividades();
   ajustarAlturaNovidades();
   ajustarTabsMobileOcultar();
+  renderResponsibleCalendar(getAppMode());
+  ajustarAlturaCalendarioResponsavel();
   refreshHomeHeightSyncLoop();
+  refreshResponsibleCalendarSyncLoop();
 });
 
-document.addEventListener('visibilitychange', refreshHomeHeightSyncLoop);
+function refreshResponsibleCalendarOnScroll() {
+  if (normalizeAppMode(getAppMode()) !== 'responsavel' || window.innerWidth < 1041) return;
+  renderResponsibleCalendar(getAppMode());
+}
+
+document.addEventListener('visibilitychange', () => {
+  refreshHomeHeightSyncLoop();
+  refreshResponsibleCalendarSyncLoop();
+});
+window.addEventListener('scroll', refreshResponsibleCalendarOnScroll, { passive: true });
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(refreshHomeHeightSyncLoop, 120);
+  renderResponsibleCalendar(getAppMode());
+  refreshResponsibleCalendarSyncLoop();
 });
 
 // Em mobile, se as tabs ocuparem mais de 2 linhas, esconder o botão 'Horários'.
@@ -3620,33 +3947,27 @@ window.addEventListener('DOMContentLoaded', () => {
   const STORAGE_KEY = 'sigaa_nao_mostrar_aviso';
   let timerId = null;
 
-  // Verifica preferência em localStorage/sessionStorage/cookie
-  function isAvisoSuppressed() {
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === '1') return true;
-    } catch (e) { /* ignore */ }
-    try {
-      if (sessionStorage.getItem(STORAGE_KEY) === '1') return true;
-    } catch (e) { /* ignore */ }
-    try {
-      const re = new RegExp('(?:^|; )' + STORAGE_KEY + '=1(?:;|$)');
-      if (re.test(document.cookie)) return true;
-    } catch (e) { /* ignore */ }
-    return false;
-  }
-
   // Não mostrar se usuário já escolheu não mostrar mais
-  if (isAvisoSuppressed()) {
+  if (isAvisoSuppressedGlobal()) {
     aviso.style.display = 'none';
     return;
   }
 
   // Timer para mover aviso para o fim da tab após 30 segundos
   timerId = setTimeout(() => {
-    const tabHome = document.getElementById('tab-home');
-    if (tabHome && aviso) {
-      tabHome.appendChild(aviso); // move para o fim da tab
-      aviso.style.marginTop = '24px';
+    try {
+      // Se o usuário já escolheu 'não mostrar mais', não re-insere o aviso
+      if (isAvisoSuppressedGlobal()) {
+        console.log('[Aviso] suprimido: abortando re-inserção por timer');
+        return;
+      }
+      const tabHome = document.getElementById('tab-home');
+      if (tabHome && aviso) {
+        tabHome.appendChild(aviso); // move para o fim da tab
+        aviso.style.marginTop = '24px';
+      }
+    } catch (e) {
+      console.warn('[Aviso] erro ao tentar mover aviso por timer', e);
     }
   }, 30000);
 
@@ -3679,6 +4000,7 @@ window.addEventListener('DOMContentLoaded', () => {
     try { console.log('[Aviso] fechar clicado'); } catch (e) { }
     try { aviso.remove(); } catch (e) { aviso.style.display = 'none'; }
     clearTimeout(timerId);
+    aviso = null;
     // remove delegated listeners após ação
     document.removeEventListener('click', __delegatedClickHandler);
     document.removeEventListener('touchstart', __delegatedTouchHandler);
@@ -3702,6 +4024,7 @@ window.addEventListener('DOMContentLoaded', () => {
     try { console.log('[Aviso] não mostrar mais clicado'); } catch (e) { }
     try { aviso.remove(); } catch (e) { aviso.style.display = 'none'; }
     clearTimeout(timerId);
+    aviso = null;
     // remove delegated listeners após ação
     document.removeEventListener('click', __delegatedClickHandler);
     document.removeEventListener('touchstart', __delegatedTouchHandler);
