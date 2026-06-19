@@ -755,8 +755,21 @@ input {
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
   width: 90%;
   max-width: 90%;
+  margin: 0 auto 16px;
   border-color: rgb(26, 115, 232);
   box-sizing: border-box;
+}
+
+body.sem-dados .home-mode-switcher {
+  width: 90%;
+  max-width: 90%;
+  margin: 0 auto 16px;
+}
+
+body:not(.sem-dados) .home-mode-switcher {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 20px 0;
 }
 
 .home-mode-switcher label {
@@ -768,20 +781,14 @@ input {
 
 .home-mode-switcher select {
   display: block;
-  width: 90%;
-  max-width: 320px;
+  width: 100%;
+  box-sizing: border-box;
   margin-bottom: 0;
   padding: 10px 12px;
   border: 1px solid #cfdbea;
   border-radius: 10px;
   background: #fff;
   color: #173b66;
-}
-
-.home-mode-hint {
-  margin: 8px 0 0;
-  color: #5d7287;
-  font-size: 0.95rem;
 }
 
 .home-mode-panel {
@@ -1161,10 +1168,6 @@ body[data-app-mode] .home-tech-widget-development {
 
   .home-tech-widget {
     min-height: 0;
-  }
-
-  .home-mode-switcher select {
-    max-width: none;
   }
 }
 
@@ -2337,10 +2340,6 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
   #dados-institucionais::after {
     top: 12px;
     right: 12px;
-  }
-
-  .home-mode-switcher select {
-    max-width: none;
   }
 
   #sigaa-form {
