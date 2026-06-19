@@ -3757,26 +3757,32 @@ async function atualizarLinkCalendarioParaCurso(dados) {
   
   const urlPadrao = 'https://www.divinopolis.cefetmg.br/alunos/horario-2/cursos-tecnicos/';
   const urlCalendarioEng = 'https://www.eng-computacao.divinopolis.cefetmg.br/2019/03/18/calendario-letivo/';
+  const urlCalendarioMecat = 'https://www.eng-mecatronica.divinopolis.cefetmg.br/calendario-letivo/';
 
-  // Verifica se é Engenharia de Computação - verifica cada componente separadamente
-  const temEng = curso.includes('ENGENHARIA DE COMPUTAÇÃO');
-  const temDCDV = curso.includes('DCDV');
-  const temDivinopolis = curso.includes('DIVINÓPOLIS');
-  const temBacharelado = curso.includes('BACHARELADO');
-  const temMTN = curso.includes('MTN');
+  // Normaliza o nome do curso para evitar problemas com acentos e capitalização
+  const cursoNormalized = curso.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   
-  console.log('📋 Verificação:', { temEng, temDCDV, temDivinopolis, temBacharelado, temMTN });
+  const temDCDV = cursoNormalized.includes('DCDV');
+  const temDivinopolis = cursoNormalized.includes('DIVINOPOLIS');
+  const temBacharelado = cursoNormalized.includes('BACHARELADO');
+  const temMTN = cursoNormalized.includes('MTN');
+  
+  const isComputacao = cursoNormalized.includes('ENGENHARIA DE COMPUTACAO') && temDCDV && temDivinopolis && temBacharelado && temMTN;
+  const isMecatronica = cursoNormalized.includes('MECATRONICA') && cursoNormalized.includes('ENGENHARIA') && temDCDV && temDivinopolis && temBacharelado && temMTN;
 
-  const isEngenharia = temEng && temDCDV && temDivinopolis && temBacharelado && temMTN;
-  console.log('✅ É Engenharia de Computação?', isEngenharia);
+  console.log('📋 Verificação Computação:', isComputacao);
+  console.log('📋 Verificação Mecatrônica:', isMecatronica);
 
   let linkParaAlterar = urlPadrao;
 
-  if (isEngenharia) {
+  if (isComputacao || isMecatronica) {
+    const cursoQuery = isComputacao ? 'computacao' : 'mecatronica';
+    const fallbackUrl = isComputacao ? urlCalendarioEng : urlCalendarioMecat;
+    
     // Busca dinamicamente o link do calendário usando o endpoint no backend
     try {
-      console.log('📡 Buscando link do calendário através do backend...');
-      const response = await fetch(`${API_BASE}/api/calendario`).catch(err => {
+      console.log(`📡 Buscando link do calendário para ${cursoQuery} através do backend...`);
+      const response = await fetch(`${API_BASE}/api/calendario?curso=${cursoQuery}`).catch(err => {
         console.error('❌ Erro na requisição ao backend:', err);
         return null;
       });
@@ -3789,11 +3795,11 @@ async function atualizarLinkCalendarioParaCurso(dados) {
         }
       } else {
         console.warn('⚠️ Falha ao buscar calendário pelo backend (status não ok), usando fallback');
-        linkParaAlterar = urlCalendarioEng;
+        linkParaAlterar = fallbackUrl;
       }
     } catch (e) {
       console.warn('❌ Erro ao obter calendário do backend:', e);
-      linkParaAlterar = urlCalendarioEng;
+      linkParaAlterar = fallbackUrl;
     }
   }
 
@@ -3807,7 +3813,14 @@ async function atualizarLinkCalendarioParaCurso(dados) {
     if (h3 && h3.textContent.toLowerCase().includes('calendário')) {
       const urlAnterior = link.href;
       link.href = linkParaAlterar;
-      link.setAttribute('title', isEngenharia ? 'Calendário Letivo - Engenharia da Computação' : 'Calendário acadêmico');
+      
+      let titleAttr = 'Calendário acadêmico';
+      if (isComputacao) {
+        titleAttr = 'Calendário Letivo - Engenharia da Computação';
+      } else if (isMecatronica) {
+        titleAttr = 'Calendário Letivo - Engenharia Mecatrônica';
+      }
+      link.setAttribute('title', titleAttr);
       console.log(`📝 Link ${idx + 1} atualizado:`, urlAnterior, '→', linkParaAlterar);
     }
   });
