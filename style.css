@@ -744,7 +744,9 @@ input {
   background: linear-gradient(135deg, #ffffff 0%, #f4f8fd 100%);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
   width: 90%;
+  max-width: 90%;
   border-color: rgb(26, 115, 232);
+  box-sizing: border-box;
 }
 
 .home-mode-switcher label {
