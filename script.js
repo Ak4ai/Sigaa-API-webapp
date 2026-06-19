@@ -250,6 +250,10 @@ function applyHomeModeLayout(mode = getAppMode()) {
   const novidadesToggle = document.querySelector('.novidades-toggle');
   const panelNov = document.getElementById('tabela-novidades-container');
   const panelAtiv = document.getElementById('tabela-atividades-container');
+  const toggleWrapper = document.getElementById('home-calendar-toggle-wrapper');
+  const calendarCheckbox = document.getElementById('calendar-view-checkbox');
+
+  const normalizedMode = normalizeAppMode(mode);
 
   if (homeAviso) {
     if (layout.showHomeAviso && !isAvisoSuppressedGlobal()) {
@@ -263,21 +267,44 @@ function applyHomeModeLayout(mode = getAppMode()) {
     listasContainer.style.display = layout.showHomeLists ? '' : 'none';
   }
 
-  if (novidadesToggle) {
-    novidadesToggle.style.display = layout.showToggle && layout.showHomeLists ? '' : 'none';
-  }
+  // Controle do Toggle e Visão do Calendário para Graduação vs Responsável vs Técnico
+  let showCalendarInsteadOfLists = false;
 
-  if (panelNov) {
-    panelNov.style.display = layout.showHomeLists && layout.showNovidades ? '' : 'none';
-  }
-
-  if (panelAtiv) {
-    panelAtiv.style.display = layout.showHomeLists && layout.showAtividades ? '' : 'none';
-  }
-
-  if (normalizeAppMode(mode) === 'responsavel') {
-    renderResponsibleCalendar(mode);
+  if (normalizedMode === 'responsavel') {
+    if (toggleWrapper) toggleWrapper.style.display = 'none';
+    showCalendarInsteadOfLists = true;
+  } else if (normalizedMode === 'graduacao') {
+    if (toggleWrapper) toggleWrapper.style.display = 'flex';
+    if (calendarCheckbox && calendarCheckbox.checked) {
+      showCalendarInsteadOfLists = true;
+    } else {
+      showCalendarInsteadOfLists = false;
+    }
   } else {
+    if (toggleWrapper) toggleWrapper.style.display = 'none';
+    showCalendarInsteadOfLists = false;
+  }
+
+  if (showCalendarInsteadOfLists) {
+    // Esconde as tabelas e o alternador de novidades
+    if (novidadesToggle) novidadesToggle.style.display = 'none';
+    if (panelNov) panelNov.style.display = 'none';
+    if (panelAtiv) panelAtiv.style.display = 'none';
+
+    // Mostra o calendário e renderiza
+    renderResponsibleCalendar(normalizedMode);
+  } else {
+    // Comportamento normal da interface
+    if (novidadesToggle) {
+      novidadesToggle.style.display = layout.showToggle && layout.showHomeLists ? '' : 'none';
+    }
+    if (panelNov) {
+      panelNov.style.display = layout.showHomeLists && layout.showNovidades ? '' : 'none';
+    }
+    if (panelAtiv) {
+      panelAtiv.style.display = layout.showHomeLists && layout.showAtividades ? '' : 'none';
+    }
+
     clearResponsibleCalendar();
   }
 
@@ -403,7 +430,10 @@ function renderResponsibleCalendar(mode = getAppMode()) {
 
   const normalizedMode = normalizeAppMode(mode);
   const isDesktop = window.innerWidth >= 1041;
-  if (normalizedMode !== 'responsavel' || !isDesktop) {
+  const isCalendarActive = normalizedMode === 'responsavel' || 
+    (normalizedMode === 'graduacao' && document.getElementById('calendar-view-checkbox')?.checked);
+
+  if (!isCalendarActive || !isDesktop) {
     clearResponsibleCalendar();
     return;
   }
@@ -669,6 +699,21 @@ function atualizarPainelSemDadosParaModo(modo) {
   }
 }
 
+function initCalendarToggle() {
+  const checkbox = document.getElementById('calendar-view-checkbox');
+  if (!checkbox || checkbox.dataset.bound === '1') return;
+  checkbox.dataset.bound = '1';
+  
+  // Recupera o estado anterior do toggle de calendário no modo graduação se existir
+  const savedState = localStorage.getItem('sigaa_calendar_view_graduacao') === '1';
+  checkbox.checked = savedState;
+  
+  checkbox.addEventListener('change', () => {
+    localStorage.setItem('sigaa_calendar_view_graduacao', checkbox.checked ? '1' : '0');
+    applyHomeModeLayout(getAppMode());
+  });
+}
+
 function initHomeModeSwitcher() {
   const select = document.getElementById('home-mode-select');
   if (!select || select.dataset.bound === '1') return;
@@ -681,6 +726,8 @@ function initHomeModeSwitcher() {
       atualizarPainelSemDadosParaModo(modo);
     }
   });
+
+  initCalendarToggle();
 
   const currentMode = getAppMode();
   applyAppMode(currentMode);

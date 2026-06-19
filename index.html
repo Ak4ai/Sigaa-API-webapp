@@ -204,6 +204,18 @@
           </form>
           <div id="dados-institucionais"></div>
         </div>
+
+        <!-- Toggle para alternar entre tabelas e calendário (apenas em Graduação) -->
+        <div class="calendar-toggle-wrapper" id="home-calendar-toggle-wrapper" style="display: none;">
+          <label class="calendar-switch" for="calendar-view-checkbox">
+            <input type="checkbox" id="calendar-view-checkbox" />
+            <span class="calendar-switch-pill">
+              <span class="calendar-switch-handle"></span>
+            </span>
+            <span id="calendar-view-label">Exibir Calendário Acadêmico</span>
+          </label>
+        </div>
+
         <div id="home-listas-container">
           <div class="novidades-toggle">
             <button class="novidades-toggle-btn active" data-view="novidades">Novidades</button>
