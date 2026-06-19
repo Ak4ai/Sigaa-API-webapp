@@ -455,7 +455,7 @@ function renderResponsibleCalendar(mode = getAppMode()) {
       cell.className = 'home-calendar-day';
 
       const isSameMonth = date.getMonth() === now.getMonth();
-      const isNextMonth = date.getMonth() === now.getMonth() + 1 || (now.getMonth() === 11 && date.getMonth() === 0);
+      const isNextMonth = (date.getFullYear() > now.getFullYear()) || (date.getFullYear() === now.getFullYear() && date.getMonth() > now.getMonth());
 
       if (date.getDate() === now.getDate() && isSameMonth) {
         cell.classList.add('is-today');
@@ -477,12 +477,13 @@ function renderResponsibleCalendar(mode = getAppMode()) {
       label.className = 'home-calendar-day-label';
       if (date.toDateString() === now.toDateString()) {
         label.textContent = 'Hoje';
-      } else if (isNextMonth) {
-        label.textContent = nextMonthLabel.charAt(0).toUpperCase() + nextMonthLabel.slice(1);
-      } else if (!isSameMonth) {
+      } else if (isSameMonth) {
+        label.textContent = 'Dia';
+      } else if (date.getTime() < monthStart.getTime()) {
         label.textContent = 'Mês anterior';
       } else {
-        label.textContent = 'Dia';
+        const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
+        label.textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
       }
 
       cell.appendChild(number);
@@ -498,13 +499,39 @@ function renderResponsibleCalendar(mode = getAppMode()) {
       if (dayEvents.length > 0) {
         cell.classList.add('has-events');
 
+        // Mapeia tipo de evento primário para aplicar segunda borda no dia
+        let primaryType = 'outros';
+        if (dayEvents.some(e => e.tipo === 'feriado')) primaryType = 'feriado';
+        else if (dayEvents.some(e => e.tipo === 'recesso')) primaryType = 'recesso';
+        else if (dayEvents.some(e => e.tipo === 'inicio-aulas')) primaryType = 'inicio-aulas';
+        else if (dayEvents.some(e => e.tipo === 'fim-aulas')) primaryType = 'fim-aulas';
+
+        cell.classList.add(`has-event-${primaryType}`);
+
         const dotsContainer = document.createElement('div');
         dotsContainer.className = 'home-calendar-day-events';
 
         dayEvents.forEach(evt => {
+          const eventTag = document.createElement('span');
+          eventTag.className = `home-calendar-event-tag home-calendar-event-tag-${evt.tipo}`;
+
           const dot = document.createElement('span');
           dot.className = `home-calendar-dot home-calendar-dot-${evt.tipo}`;
-          dotsContainer.appendChild(dot);
+
+          const text = document.createElement('span');
+          text.className = 'home-calendar-event-tag-text';
+
+          let shortType = 'Outros';
+          if (evt.tipo === 'feriado') shortType = 'Feriado';
+          else if (evt.tipo === 'recesso') shortType = 'Recesso';
+          else if (evt.tipo === 'inicio-aulas') shortType = 'Início';
+          else if (evt.tipo === 'fim-aulas') shortType = 'Fim';
+
+          text.textContent = shortType;
+
+          eventTag.appendChild(dot);
+          eventTag.appendChild(text);
+          dotsContainer.appendChild(eventTag);
         });
 
         cell.appendChild(dotsContainer);

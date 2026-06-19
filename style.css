@@ -2325,16 +2325,76 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
   }
 
   body[data-home-mode="responsavel"] .home-calendar-day.is-next-month .home-calendar-day-label::after {
-    content: ' + próximo mês';
-    font-size: 0.72rem;
-    color: var(--app-accent-strong);
+    content: '';
+  }
+
+  /* Estilização para as novas tags de eventos do calendário */
+  .home-calendar-event-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1.5px 5px;
+    border-radius: 6px;
+    font-size: 0.62rem;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  }
+  .home-calendar-event-tag-feriado {
+    background-color: #ffe8cc;
+    color: #d9480f;
+  }
+  .home-calendar-event-tag-recesso {
+    background-color: #ffe3e8;
+    color: #e63946;
+  }
+  .home-calendar-event-tag-inicio-aulas {
+    background-color: #f3e8ff;
+    color: #6d28d9;
+  }
+  .home-calendar-event-tag-fim-aulas {
+    background-color: #d1fae5;
+    color: #047857;
+  }
+  .home-calendar-event-tag-outros {
+    background-color: #f1f5f9;
+    color: #475569;
+  }
+  .home-calendar-event-tag-text {
+    line-height: 1;
+  }
+
+  /* Estilização para segunda borda/borda interna colorida para dias com eventos */
+  body[data-home-mode="responsavel"] .home-calendar-day.has-event-feriado {
+    border-color: #f97316;
+    box-shadow: inset 0 0 0 1.5px #f97316, 0 4px 10px rgba(249, 115, 22, 0.08);
+  }
+  body[data-home-mode="responsavel"] .home-calendar-day.has-event-recesso {
+    border-color: #fb7185;
+    box-shadow: inset 0 0 0 1.5px #fb7185, 0 4px 10px rgba(251, 113, 133, 0.08);
+  }
+  body[data-home-mode="responsavel"] .home-calendar-day.has-event-inicio-aulas {
+    border-color: #8b5cf6;
+    box-shadow: inset 0 0 0 1.5px #8b5cf6, 0 4px 10px rgba(139, 92, 246, 0.08);
+  }
+  body[data-home-mode="responsavel"] .home-calendar-day.has-event-fim-aulas {
+    border-color: #10b981;
+    box-shadow: inset 0 0 0 1.5px #10b981, 0 4px 10px rgba(16, 185, 129, 0.08);
+  }
+  body[data-home-mode="responsavel"] .home-calendar-day.has-event-outros {
+    border-color: #64748b;
+    box-shadow: inset 0 0 0 1.5px #64748b, 0 4px 10px rgba(100, 116, 139, 0.08);
   }
 
   body[data-home-mode="responsavel"] .home-calendar-day.is-today {
     border-color: var(--app-accent);
     background: linear-gradient(180deg, var(--app-accent-soft) 0%, #ffffff 100%);
     box-shadow: 0 8px 16px rgba(25, 118, 210, 0.12);
+  }
+
+  body[data-home-mode="responsavel"] .home-calendar-day.is-today.has-events {
+    box-shadow: inset 0 0 0 1.5px var(--app-accent), 0 8px 16px rgba(25, 118, 210, 0.12);
   }
 
   body[data-home-mode="responsavel"] .home-calendar-day-number {
