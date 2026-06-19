@@ -3307,6 +3307,10 @@ span#fechar-aviso-span {
   margin: calc(32px - 1.34em);
 }
 
+#tab-home.sem-dados .home-mode-panel {
+  display: none !important;
+}
+
 #home-content.sem-dados {
   padding: 24px 6px !important;
 }
