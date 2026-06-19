@@ -15,7 +15,7 @@ body[data-app-mode="graduacao"] {
   --app-accent-strong: #0f3f7a;
   --app-accent-soft: #e8f1fb;
   --app-surface: #ffffff;
-  --app-background: #f0f2f5;
+  --app-background: linear-gradient(180deg, #e8f1fb 0%, #f0f2f5 100%);
 }
 
 body[data-app-mode="tecnico"] {
@@ -3314,7 +3314,9 @@ span#fechar-aviso-span {
   width: 90%;
   max-width: 90%;
   margin: 0 auto;
-  padding: 16px 18px;
+  padding: 24px 20px;
+  min-height: 290px;
+  box-sizing: border-box;
 }
 
 #tab-home.sem-dados #home-content-header,
