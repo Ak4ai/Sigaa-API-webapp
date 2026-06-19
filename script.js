@@ -340,6 +340,61 @@ function getResponsibleCalendarWeeksToRender(availableHeight) {
   return Math.min(10, fitWeeks);
 }
 
+let cachedCalendarEvents = null;
+let fetchingCalendarEvents = false;
+let lastFetchedCurso = null;
+
+function obterCursoDoPerfil() {
+  try {
+    const raw = localStorage.getItem(STORAGE_LAST_CONSULTA);
+    if (!raw) return 'mecatronica';
+    const data = JSON.parse(raw);
+    const dados = data.dadosInstitucionais || {};
+    const curso = dados.Curso || dados.curso || '';
+    const cursoNormalized = curso.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    const temDCDV = cursoNormalized.includes('DCDV');
+    const temDivinopolis = cursoNormalized.includes('DIVINOPOLIS');
+    const temBacharelado = cursoNormalized.includes('BACHARELADO');
+    const temMT = cursoNormalized.includes('MT');
+    
+    const isComputacao = cursoNormalized.includes('ENGENHARIA DE COMPUTACAO') && temDCDV && temDivinopolis && temBacharelado && temMT;
+    return isComputacao ? 'computacao' : 'mecatronica';
+  } catch (e) {
+    console.warn('Erro ao obter curso do perfil, usando padrão mecatronica:', e);
+    return 'mecatronica';
+  }
+}
+
+async function fetchCalendarEvents(curso) {
+  if (lastFetchedCurso === curso && cachedCalendarEvents !== null) {
+    return cachedCalendarEvents;
+  }
+  if (fetchingCalendarEvents) return null;
+
+  fetchingCalendarEvents = true;
+  try {
+    const url = `${API_BASE}/api/calendario/eventos?curso=${curso}`;
+    console.log(`📡 Buscando eventos de calendário para ${curso} via ${url}...`);
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      cachedCalendarEvents = data.eventos || [];
+      lastFetchedCurso = curso;
+      console.log(`✨ Eventos carregados: ${cachedCalendarEvents.length} itens.`);
+    } else {
+      console.warn(`⚠️ Erro ao buscar eventos (status ${response.status})`);
+      cachedCalendarEvents = [];
+    }
+  } catch (e) {
+    console.error('❌ Falha ao buscar eventos de calendário:', e);
+    cachedCalendarEvents = [];
+  } finally {
+    fetchingCalendarEvents = false;
+  }
+  return cachedCalendarEvents;
+}
+
 function renderResponsibleCalendar(mode = getAppMode()) {
   const container = document.getElementById('responsavel-calendar-container');
   const grid = document.getElementById('responsavel-calendar-grid');
@@ -384,6 +439,16 @@ function renderResponsibleCalendar(mode = getAppMode()) {
   const nextMonthLabel = new Date(now.getFullYear(), now.getMonth() + 1, 1)
     .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
+  // Busca assíncrona dos eventos
+  const curso = obterCursoDoPerfil();
+  if (cachedCalendarEvents === null || lastFetchedCurso !== curso) {
+    fetchCalendarEvents(curso).then(events => {
+      if (events) {
+        renderResponsibleCalendar(mode);
+      }
+    });
+  }
+
   weeks.forEach((week) => {
     week.forEach((date) => {
       const cell = document.createElement('div');
@@ -422,10 +487,54 @@ function renderResponsibleCalendar(mode = getAppMode()) {
 
       cell.appendChild(number);
       cell.appendChild(label);
+
+      // Renderiza eventos e tooltips se existirem no cache
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
+      const dayEvents = (cachedCalendarEvents || []).filter(e => e.data === dateStr);
+      if (dayEvents.length > 0) {
+        cell.classList.add('has-events');
+
+        const dotsContainer = document.createElement('div');
+        dotsContainer.className = 'home-calendar-day-events';
+
+        dayEvents.forEach(evt => {
+          const dot = document.createElement('span');
+          dot.className = `home-calendar-dot home-calendar-dot-${evt.tipo}`;
+          dotsContainer.appendChild(dot);
+        });
+
+        cell.appendChild(dotsContainer);
+
+        // Tooltip customizado
+        const tooltip = document.createElement('div');
+        tooltip.className = 'home-calendar-tooltip';
+
+        dayEvents.forEach(evt => {
+          const item = document.createElement('div');
+          item.className = 'home-calendar-tooltip-item';
+
+          const indicator = document.createElement('span');
+          indicator.className = `home-calendar-tooltip-dot home-calendar-tooltip-dot-${evt.tipo}`;
+
+          const text = document.createElement('span');
+          text.className = 'home-calendar-tooltip-text';
+          text.textContent = evt.titulo;
+
+          item.appendChild(indicator);
+          item.appendChild(text);
+          tooltip.appendChild(item);
+        });
+
+        cell.appendChild(tooltip);
+      }
+
       grid.appendChild(cell);
     });
   });
-
 }
 
 function syncAppModeSelect(mode) {
