@@ -101,6 +101,21 @@ body[data-app-mode="responsavel"] .home-mode-hero-panel-contrast {
   background: linear-gradient(135deg, #4d2c91 0%, #8a54ff 100%);
 }
 
+body[data-app-mode="responsavel"] #top-progress-bar {
+  background: linear-gradient(90deg, #a66cff 0%, #7b3fe4 50%, #a66cff 100%);
+  box-shadow: 0 0 0 1px rgba(190, 155, 255, 0.45), 0 0 14px rgba(123, 63, 228, 0.78), 0 0 24px rgba(77, 44, 145, 0.58);
+  animation-name: topProgressPurpleShift, topProgressGlowPulse;
+}
+
+body[data-app-mode="responsavel"] #top-progress-bar::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.45) 38%, rgba(255, 255, 255, 0) 72%);
+}
+
+@keyframes topProgressPurpleShift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 220% 50%; }
+}
+
 body[data-app-mode] .home-mode-note {
   border-color: color-mix(in srgb, var(--app-accent) 18%, #c8d7e7);
 }
@@ -123,6 +138,360 @@ body[data-app-mode] .home-consultation-shell > #home-content {
 
 body[data-app-mode] .home-consultation-shell #home-content-header {
   padding: 0;
+}
+
+body[data-app-mode="responsavel"] .novidades-toggle-btn.active {
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: #fff;
+}
+
+body[data-app-mode="responsavel"] .compare-mode-toggle input:checked {
+  background: linear-gradient(135deg, #4d2c91, #8a54ff);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(123, 63, 228, 0.26);
+}
+
+body[data-app-mode="responsavel"] .compare-mode-toggle input:checked::before {
+  box-shadow: 0 2px 4px rgba(123, 63, 228, 0.36);
+}
+
+body[data-app-mode="responsavel"] .compare-mode-toggle input:focus-visible {
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12), 0 0 0 3px rgba(123, 63, 228, 0.3);
+}
+
+body[data-app-mode="responsavel"] .compare-mode-toggle:hover {
+  border-color: #d7c6f5;
+  background: #f4ecff;
+}
+
+body[data-app-mode="responsavel"] .modal-header {
+  border-bottom-color: #d9c9f7;
+  background: linear-gradient(135deg, #4d2c91, #7b3fe4);
+}
+
+body[data-app-mode="responsavel"] .btn-primary {
+  background: linear-gradient(135deg, #4d2c91, #7b3fe4);
+  box-shadow: 0 2px 8px rgba(123, 63, 228, 0.24);
+}
+
+body[data-app-mode="responsavel"] .btn-primary:hover {
+  background: linear-gradient(135deg, #3e2574, #6f36d6);
+  box-shadow: 0 4px 12px rgba(123, 63, 228, 0.3);
+}
+
+body[data-app-mode="responsavel"] .btn-secondary {
+  background: #f0eaff;
+  color: var(--app-accent-strong);
+}
+
+body[data-app-mode="responsavel"] .btn-secondary:hover {
+  background: #e2d5fb;
+  color: #4d2c91;
+}
+
+body[data-app-mode="responsavel"] #sigaa-form label {
+  color: #4d2c91;
+}
+
+body[data-app-mode="responsavel"] #sigaa-form input[type="text"],
+body[data-app-mode="responsavel"] #sigaa-form input[type="password"] {
+  border-color: #d7c6f5;
+  background: #fbf9ff;
+}
+
+body[data-app-mode="responsavel"] #sigaa-form input[type="text"]:focus,
+body[data-app-mode="responsavel"] #sigaa-form input[type="password"]:focus {
+  border-color: #7b3fe4;
+  box-shadow: 0 0 0 2px rgba(123, 63, 228, 0.18);
+}
+
+body[data-app-mode="responsavel"] #sigaa-form button {
+  background: linear-gradient(135deg, #4d2c91, #7b3fe4);
+  border-color: #4d2c91;
+}
+
+body[data-app-mode="responsavel"] #sigaa-form button:hover {
+  background: linear-gradient(135deg, #3e2574, #6f36d6);
+  border-color: #3e2574;
+}
+
+body[data-app-mode="responsavel"] #sigaa-form {
+  background: linear-gradient(180deg, #ffffff 0%, #f7f1ff 100%);
+  border: 1px solid #7b3fe4;
+  box-shadow: 0 8px 20px rgba(77, 44, 145, 0.12);
+}
+
+body[data-app-mode="responsavel"] #sigaa-form::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(123, 63, 228, 0.08);
+}
+
+body[data-app-mode="responsavel"] .home-mode-switcher {
+  border-color: #7b3fe4;
+  background: linear-gradient(135deg, #ffffff 0%, #f7f1ff 100%);
+}
+
+body[data-app-mode="responsavel"] .home-mode-switcher label {
+  color: #4d2c91;
+}
+
+body[data-app-mode="responsavel"] .home-mode-switcher select {
+  border-color: #d8caf8;
+  background: #fbf9ff;
+  color: #4d2c91;
+}
+
+body[data-app-mode="responsavel"] .home-mode-switcher select:focus {
+  border-color: #7b3fe4;
+  box-shadow: 0 0 0 2px rgba(123, 63, 228, 0.14);
+}
+
+body[data-app-mode="responsavel"] #dados-institucionais {
+  background: linear-gradient(180deg, #ffffff 0%, #f7f1ff 100%);
+  border-color: #7b3fe4;
+  box-shadow: 0 8px 20px rgba(77, 44, 145, 0.1);
+}
+
+body[data-app-mode="responsavel"] #dados-institucionais h2 {
+  background: linear-gradient(135deg, #4d2c91, #7b3fe4);
+  border-bottom-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] #dados-institucionais li {
+  border-bottom-color: #e6dbfb;
+}
+
+body[data-app-mode="responsavel"] #dados-institucionais strong {
+  color: #4d2c91;
+}
+
+body[data-app-mode="responsavel"] #dados-institucionais::after {
+  color: #d9c9f7;
+}
+
+body[data-app-mode="responsavel"] .home-painel-titulo {
+  border-bottom-color: #7b3fe4;
+  background: linear-gradient(135deg, #4d2c91, #7b3fe4);
+}
+
+body[data-app-mode="responsavel"] #tabela-novidades-container {
+  border-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] #tabela-novidades-container .home-painel-titulo {
+  background: linear-gradient(135deg, #4d2c91, #7b3fe4);
+  border-bottom-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] #tabela-atividades-container {
+  border-color: #6f36d6;
+}
+
+body[data-app-mode="responsavel"] #tabela-atividades-container .home-painel-titulo {
+  background: linear-gradient(135deg, #3e2574, #6f36d6);
+  border-bottom-color: #6f36d6;
+}
+
+body[data-app-mode="responsavel"] #tabela-novidades-home thead th,
+body[data-app-mode="responsavel"] #tabela-atividades-home thead th {
+  background: linear-gradient(135deg, #4d2c91, #7b3fe4);
+  border-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] #tabela-novidades-home td {
+  border-color: #ddcff8;
+}
+
+body[data-app-mode="responsavel"] #tabela-atividades-home td {
+  border-color: #dfd3fa;
+}
+
+body[data-app-mode="responsavel"] #tabela-novidades-home tbody tr:nth-child(even) td {
+  background: #f4edff;
+}
+
+body[data-app-mode="responsavel"] #tabela-atividades-home tbody tr:nth-child(even) td {
+  background: #f3ebff;
+}
+
+body[data-app-mode="responsavel"] #tabela-novidades-home tbody tr:hover td,
+body[data-app-mode="responsavel"] #tabela-atividades-home tbody tr:hover td {
+  background: #eadcff;
+}
+
+body[data-app-mode="responsavel"] #novidades-home-vazio {
+  border-color: #7b3fe4;
+  background: #f4edff;
+  color: #4d2c91 !important;
+}
+
+body[data-app-mode="responsavel"] #atividades-home-vazio {
+  border-color: #6f36d6;
+  background: #f3ebff;
+  color: #4d2c91 !important;
+}
+
+body[data-app-mode="responsavel"] .tabela-horarios,
+body[data-app-mode="responsavel"] .resumo-frequencia,
+body[data-app-mode="responsavel"] .freq-card,
+body[data-app-mode="responsavel"] .tabela-wrapper,
+body[data-app-mode="responsavel"] .tabela-notas-wrapper {
+  border-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] .tabela-horarios thead th,
+body[data-app-mode="responsavel"] .resumo-frequencia th,
+body[data-app-mode="responsavel"] .freq-card-header {
+  background: #7b3fe4;
+  border-color: #7b3fe4;
+}
+
+/* Estilização de tabela-horarios-hoje alinhada à tabela-frequencias
+   mas SEM a regra específica da 2ª coluna (esta tabela não a possui) */
+body[data-app-mode="responsavel"] #tabela-horarios-hoje,
+body[data-app-mode="responsavel"] #tabela-horarios-hoje th {
+  border-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] #tabela-horarios-hoje thead th {
+  background: #7b3fe4;
+  border-color: #7b3fe4;
+  color: #fff;
+  border-bottom-width: 2px;
+  border-bottom-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] #tabela-wrapper-hoje td {
+  border-color: #7b3fe4 !important;
+}
+
+body[data-app-mode="responsavel"] #tabela-horarios-hoje td {
+  border-color: #e8defb;
+}
+
+body[data-app-mode="responsavel"] #tabela-horarios-hoje tbody tr:nth-child(even) td {
+  background: #f4edff;
+}
+
+body[data-app-mode="responsavel"] #tabela-horarios-hoje tbody tr:hover td {
+  background: #eadcff;
+}
+
+body[data-app-mode="responsavel"] .tabela-horarios thead th {
+  background: #c8abff;
+  border-color: #8e80a9;
+  color: #402077;
+}
+
+body[data-app-mode="responsavel"]  .tab-button {
+  color: #402077;
+}
+
+body[data-app-mode="responsavel"] .fab-toggle {
+  background: #4d2c91;
+  color: #f0eaff;
+}
+
+body[data-app-mode="responsavel"] .tabela-horarios tbody tr:hover td,
+body[data-app-mode="responsavel"] .resumo-frequencia tbody tr:hover td {
+  background: #f3ebff;
+}
+
+body[data-app-mode="responsavel"] .tabela-horarios.comparison-mode thead tr:nth-child(2) th:not(.compare-col) {
+  background: #7b3fe4;
+  border-color: #4d2c91;
+}
+
+body[data-app-mode="responsavel"] .tabela-horarios.comparison-mode tbody tr:hover td:nth-child(1),
+body[data-app-mode="responsavel"] .tabela-horarios.comparison-mode tbody tr:hover td:nth-child(3) {
+  background: #efe3ff;
+}
+
+body[data-app-mode="responsavel"] .tabela-horarios.comparison-mode tbody tr:hover td.compare-col {
+  background: #f4e6ff;
+}
+
+body[data-app-mode="responsavel"] #select-disciplina-frequencia:focus {
+  border-color: #7b3fe4;
+  box-shadow: 0 0 0 2px rgba(123, 63, 228, 0.14);
+}
+
+body[data-app-mode="responsavel"] .freq-card,
+body[data-app-mode="responsavel"] .resumo-frequencia {
+  box-shadow: 0 4px 12px rgba(77, 44, 145, 0.05);
+}
+
+body[data-app-mode="responsavel"] .freq-filter-bar label {
+  color: #4d2c91;
+}
+
+body[data-app-mode="responsavel"] #select-disciplina-frequencia {
+  border-color: #d8caf8;
+  background: #fbf9ff;
+  color: #4d2c91;
+}
+
+body[data-app-mode="responsavel"] .freq-filter-bar select,
+body[data-app-mode="responsavel"] #select-disciplina-frequencia:focus {
+  border-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] #barra-progresso-faltas {
+  background: #f7f1ff;
+  border-color: #dcccf8;
+}
+
+body[data-app-mode="responsavel"] #tabela-frequencias,
+body[data-app-mode="responsavel"] .resumo-frequencia,
+body[data-app-mode="responsavel"] .freq-card {
+  border-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] #tabela-frequencias th,
+body[data-app-mode="responsavel"] .resumo-frequencia th {
+  background: #7b3fe4;
+  border-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] #tabela-frequencias thead th,
+body[data-app-mode="responsavel"] .resumo-frequencia thead th {
+  background: #c8abff;
+  border-color: #8e80a9;
+  color: #402077;
+  border-bottom-width: 2px;
+  border-bottom-color: #7b3fe4;
+}
+
+body[data-app-mode="responsavel"] .resumo-frequencia th:nth-child(2),
+body[data-app-mode="responsavel"] .resumo-frequencia td:nth-child(2),
+body[data-app-mode="responsavel"] #tabela-frequencias th:nth-child(2),
+body[data-app-mode="responsavel"] #tabela-frequencias td:nth-child(2) {
+  background: #f1e9ff;
+}
+
+body[data-app-mode="responsavel"] .resumo-frequencia thead th:nth-child(2),
+body[data-app-mode="responsavel"] #tabela-frequencias thead th:nth-child(2) {
+  background: #5b35a7;
+  color: #ffffff;
+}
+
+body[data-app-mode="responsavel"] #tabela-frequencias td,
+body[data-app-mode="responsavel"] .resumo-frequencia td {
+  border-color: #e8defb;
+}
+
+body[data-app-mode="responsavel"] #tabela-frequencias tbody tr:nth-child(even) td,
+body[data-app-mode="responsavel"] .resumo-frequencia tbody tr:nth-child(even) td {
+  background: #f4edff;
+}
+
+body[data-app-mode="responsavel"] #tabela-frequencias tbody tr:hover td,
+body[data-app-mode="responsavel"] .resumo-frequencia tbody tr:hover td {
+  background: #eadcff;
 }
 
 body[data-app-mode] .home-consultation-shell form {
@@ -895,7 +1264,7 @@ button::selection, .tab-button::selection, .fab-toggle::selection, .fab-item::se
 
 /* ===== Tabela "Hoje" — tema azul ===== */
 .tabela-wrapper-hoje {
-  border: 1px solid #1a73e8 !important;
+  border: 1px solid #1a73e8;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -3108,6 +3477,57 @@ span#fechar-aviso-span {
   border-color: #c2d6ec;
 }
 
+/* ===== Overrides roxos para modo responsavel: botões de visualização ===== */
+body[data-app-mode="responsavel"] .view-toggle-btn {
+  background: #fff;
+  border: 1px solid #d8caf8;
+  color: #4d2c91;
+}
+
+body[data-app-mode="responsavel"] .view-toggle-btn.active {
+  background: linear-gradient(135deg, #4d2c91, #7b3fe4);
+  border-color: #4d2c91;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(123, 63, 228, 0.22);
+}
+
+body[data-app-mode="responsavel"] .view-toggle-btn:hover:not(.active) {
+  background: #fbf9ff;
+  border-color: #d8caf8;
+}
+
+/* ===== Overrides roxos para Interactive Schedule Guide ===== */
+body[data-app-mode="responsavel"] #interactive-schedule-guide {
+  color: #402077;
+}
+
+body[data-app-mode="responsavel"] .schedule-timeline-container {
+  background: #fffdfd;
+  border-radius: 12px;
+  border: 1px solid #d8caf8;
+  box-shadow: 0 8px 20px rgba(77, 44, 145, 0.06);
+}
+
+body[data-app-mode="responsavel"] .schedule-timeline-labels::before {
+  background: #7b3fe4;
+  border-bottom: 1px solid #4d2c91;
+}
+
+body[data-app-mode="responsavel"] .schedule-timeline {
+  padding: 14px 20px 16px;
+}
+
+
+
+body[data-app-mode="responsavel"] .schedule-timeline .wc-time-label,
+body[data-app-mode="responsavel"] .schedule-timeline .wc-event-time {
+  color: #5b35a7;
+}
+
+body[data-app-mode="responsavel"] .schedule-timeline .wc-event-title {
+  color: #402077;
+}
+
 .schedule-auto-next-toggle {
   display: inline-flex;
   align-items: center;
@@ -3305,17 +3725,36 @@ span#fechar-aviso-span {
   background: #fff;
 }
 
-.wc-header {
-  background: #f1f3f4;
-  padding: 10px 4px;
-  text-align: center;
-  font-weight: 600;
-  color: #3c4043;
-  border-bottom: 1px solid #dadce0;
-}
+.wc-header,
 .wc-header-time {
-  background: #f1f3f4;
-  border-bottom: 1px solid #dadce0;
+  /* Cabeçalho minimalista: altura maior, fundo sólido, sem gradiente */
+  padding: 14px 8px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 700;
+  color: var(--app-accent-strong, #1f2b4a);
+  background: color-mix(in srgb, var(--app-surface, #ffffff) 92%, var(--app-accent-soft, #f0f0ff));
+  border-bottom: 1px solid color-mix(in srgb, var(--app-accent) 12%, #e9e9f3);
+}
+
+/* vertical separators between day headers (clear line) */
+.weekly-calendar .wc-header,
+.three-day-calendar .wc-header {
+  position: relative;
+}
+.weekly-calendar .wc-header:not(:last-child)::after,
+.three-day-calendar .wc-header:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 1px;
+  background: color-mix(in srgb, var(--app-accent) 12%, #e6e6f2);
+  opacity: 1;
 }
 
 .wc-time-col {
@@ -3366,6 +3805,7 @@ span#fechar-aviso-span {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-height: 36px;
 }
 .wc-event-title {
   font-weight: 600;
@@ -3402,8 +3842,9 @@ span#fechar-aviso-span {
 }
 
 .wc-header-today {
-  background: #e3f2fd;
-  color: #1565c0;
+  /* Destaque para o dia atual: use um tom sólido leve do accent */
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface, #ffffff));
+  color: var(--app-accent-strong, #1f2b4a);
 }
 .wc-day-today {
   background: #f8fbff;

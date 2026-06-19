@@ -885,6 +885,8 @@ function aplicarDadosConsulta(data, tempoResposta) {
       inst['Semestre'] = data.horariosSimplificados[0].semestre;
     }
     renderizarDadosInstitucionais(inst, data.horariosSimplificados?.[0]?.semestre, tempoResposta);
+    // Aguarda um pouco para garantir que os elementos estejam no DOM
+    setTimeout(() => atualizarLinkCalendarioParaCurso(inst), 100);
   }
 
   horariosGlobais = data.horariosSimplificados || [];
@@ -2722,7 +2724,7 @@ function preencherVisualizacaoSemanal(horarios) {
   maxH = Math.min(23, maxH);
 
   const totalHours = maxH - minH;
-  const rowHeight = 48; // px per hour
+  const rowHeight = 64; // px per hour (increased to make cards taller)
   const totalHeight = totalHours * rowHeight;
 
   // Build structure: a simple CSS grid with time column + 5 day columns
@@ -2788,7 +2790,7 @@ function preencherVisualizacaoSemanal(horarios) {
       const ev = document.createElement('div');
       ev.className = 'wc-event';
       ev.style.top = topPx + 'px';
-      ev.style.height = Math.max(heightPx - 2, 18) + 'px';
+      ev.style.height = Math.max(heightPx - 2, 28) + 'px';
       ev.style.backgroundColor = getDisciplinaColor(disciplina);
 
       const titleDiv = document.createElement('div');
@@ -2857,7 +2859,7 @@ function preencherVisualizacao3Dias(horarios) {
   maxH = Math.min(23, maxH);
 
   const totalHours = maxH - minH;
-  const rowHeight = 48;
+  const rowHeight = 64; // increase height for 3-day view as well
   const totalHeight = totalHours * rowHeight;
 
   // gridTemplateColumns is set via CSS (56px desktop, 36px mobile)
@@ -2921,7 +2923,7 @@ function preencherVisualizacao3Dias(horarios) {
       const ev = document.createElement('div');
       ev.className = 'wc-event';
       ev.style.top = topPx + 'px';
-      ev.style.height = Math.max(heightPx - 2, 18) + 'px';
+      ev.style.height = Math.max(heightPx - 2, 28) + 'px';
       ev.style.backgroundColor = getDisciplinaColor(disciplina);
 
       const titleDiv = document.createElement('div');
@@ -3744,6 +3746,71 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
   } catch (e) {
     console.warn('Não foi possível configurar observers para dados-institucionais:', e);
   }
+}
+
+// Atualiza o link de calendário baseado no curso do aluno
+async function atualizarLinkCalendarioParaCurso(dados) {
+  if (!dados) return;
+
+  const curso = dados.Curso || dados.curso || '';
+  console.log('🔍 Curso detectado:', curso);
+  
+  const urlPadrao = 'https://www.divinopolis.cefetmg.br/alunos/horario-2/cursos-tecnicos/';
+  const urlCalendarioEng = 'https://www.eng-computacao.divinopolis.cefetmg.br/2019/03/18/calendario-letivo/';
+
+  // Verifica se é Engenharia de Computação - verifica cada componente separadamente
+  const temEng = curso.includes('ENGENHARIA DE COMPUTAÇÃO');
+  const temDCDV = curso.includes('DCDV');
+  const temDivinopolis = curso.includes('DIVINÓPOLIS');
+  const temBacharelado = curso.includes('BACHARELADO');
+  const temMTN = curso.includes('MTN');
+  
+  console.log('📋 Verificação:', { temEng, temDCDV, temDivinopolis, temBacharelado, temMTN });
+
+  const isEngenharia = temEng && temDCDV && temDivinopolis && temBacharelado && temMTN;
+  console.log('✅ É Engenharia de Computação?', isEngenharia);
+
+  let linkParaAlterar = urlPadrao;
+
+  if (isEngenharia) {
+    // Busca dinamicamente o link do calendário usando o endpoint no backend
+    try {
+      console.log('📡 Buscando link do calendário através do backend...');
+      const response = await fetch(`${API_BASE}/api/calendario`).catch(err => {
+        console.error('❌ Erro na requisição ao backend:', err);
+        return null;
+      });
+
+      if (response && response.ok) {
+        const data = await response.json();
+        if (data && data.link) {
+          linkParaAlterar = data.link;
+          console.log('✨ Calendário retornado pelo backend:', linkParaAlterar);
+        }
+      } else {
+        console.warn('⚠️ Falha ao buscar calendário pelo backend (status não ok), usando fallback');
+        linkParaAlterar = urlCalendarioEng;
+      }
+    } catch (e) {
+      console.warn('❌ Erro ao obter calendário do backend:', e);
+      linkParaAlterar = urlCalendarioEng;
+    }
+  }
+
+  // Encontra todos os links de calendário (aparecem em 3 seções: graduacao, tecnico, responsavel)
+  const linksCalendario = document.querySelectorAll('.home-tech-widget-link.home-tech-widget-accent');
+  console.log('🔗 Links encontrados:', linksCalendario.length);
+  
+  linksCalendario.forEach((link, idx) => {
+    // Verifica se é um link de calendário (contém "calendário" no h3)
+    const h3 = link.querySelector('h3');
+    if (h3 && h3.textContent.toLowerCase().includes('calendário')) {
+      const urlAnterior = link.href;
+      link.href = linkParaAlterar;
+      link.setAttribute('title', isEngenharia ? 'Calendário Letivo - Engenharia da Computação' : 'Calendário acadêmico');
+      console.log(`📝 Link ${idx + 1} atualizado:`, urlAnterior, '→', linkParaAlterar);
+    }
+  });
 }
 
 // Calcula quantas linhas extras cabem no espaço disponível na tela e mostra apenas essas
