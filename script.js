@@ -3765,10 +3765,10 @@ async function atualizarLinkCalendarioParaCurso(dados) {
   const temDCDV = cursoNormalized.includes('DCDV');
   const temDivinopolis = cursoNormalized.includes('DIVINOPOLIS');
   const temBacharelado = cursoNormalized.includes('BACHARELADO');
-  const temMTN = cursoNormalized.includes('MTN');
+  const temMT = cursoNormalized.includes('MT'); // Aceita MT ou MTN
   
-  const isComputacao = cursoNormalized.includes('ENGENHARIA DE COMPUTACAO') && temDCDV && temDivinopolis && temBacharelado && temMTN;
-  const isMecatronica = cursoNormalized.includes('MECATRONICA') && cursoNormalized.includes('ENGENHARIA') && temDCDV && temDivinopolis && temBacharelado && temMTN;
+  const isComputacao = cursoNormalized.includes('ENGENHARIA DE COMPUTACAO') && temDCDV && temDivinopolis && temBacharelado && temMT;
+  const isMecatronica = cursoNormalized.includes('MECATRONICA') && cursoNormalized.includes('ENGENHARIA') && temDCDV && temDivinopolis && temBacharelado && temMT;
 
   console.log('📋 Verificação Computação:', isComputacao);
   console.log('📋 Verificação Mecatrônica:', isMecatronica);
