@@ -3307,10 +3307,6 @@ span#fechar-aviso-span {
   margin: calc(32px - 1.34em);
 }
 
-#tab-home.sem-dados .home-mode-panel {
-  display: none !important;
-}
-
 #home-content.sem-dados {
   padding: 24px 6px !important;
 }
@@ -4517,4 +4513,25 @@ body[data-app-mode="responsavel"] .schedule-timeline .wc-event-title {
   .btn-secondary {
     width: 100%;
   }
+}
+
+/* Versão simplificada (capada) do painel home-mode para usuários não logados */
+#tab-home.sem-dados .home-mode-hero,
+#tab-home.sem-dados .home-tech-widget-development,
+#tab-home.sem-dados .home-mode-note {
+  display: none !important;
+}
+
+#tab-home.sem-dados .home-tech-widget-grid {
+  margin-top: 0 !important;
+}
+
+#tab-home.sem-dados .home-mode-shell {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  width: 90% !important;
+  max-width: 90% !important;
+  margin: 16px auto 0 auto !important;
 }
