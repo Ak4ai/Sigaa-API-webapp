@@ -450,6 +450,17 @@ function applyAppMode(mode) {
   });
 
   syncAppModeSelect(normalizedMode);
+
+  if (document.body.classList.contains('sem-dados')) {
+    const homeAviso = document.getElementById('home-aviso');
+    if (homeAviso) homeAviso.style.display = 'none';
+    const listasContainer = document.getElementById('home-listas-container');
+    if (listasContainer) listasContainer.style.display = 'none';
+    const dadosInst = document.getElementById('dados-institucionais');
+    if (dadosInst) dadosInst.style.display = 'none';
+    return;
+  }
+
   applyHomeModeLayout(normalizedMode);
   renderResponsibleCalendar(normalizedMode);
   refreshHomeHeightSyncLoop();
@@ -488,16 +499,58 @@ function reorderViewToggleButtons(mode) {
   }
 }
 
+function atualizarPainelSemDadosParaModo(modo) {
+  const normalized = normalizeAppMode(modo);
+
+  const eyebrow = document.getElementById('visitor-eyebrow');
+  const title = document.getElementById('visitor-title');
+  const description = document.getElementById('visitor-description');
+  const badgeTitle = document.getElementById('visitor-badge-title');
+  const badgeDesc = document.getElementById('visitor-badge-desc');
+  const note = document.getElementById('visitor-note');
+
+  if (normalized === 'graduacao') {
+    if (eyebrow) eyebrow.textContent = 'Acesso Público: Graduação';
+    if (title) title.textContent = 'Serviços da Graduação';
+    if (description) description.textContent = 'Acesse documentos e canais de comunicação com a coordenação dos cursos de graduação mesmo sem estar logado.';
+    if (badgeTitle) badgeTitle.textContent = 'Graduação';
+    if (badgeDesc) badgeDesc.textContent = 'Faça login para visualizar notas, horários, frequências e o calendário letivo da graduação.';
+    if (note) note.innerHTML = '<strong>Lembrete:</strong> Após realizar o login com seu CPF e senha de graduação, o painel completo com seus dados institucionais e calendário letivo será carregado.';
+  } else if (normalized === 'tecnico') {
+    if (eyebrow) eyebrow.textContent = 'Acesso Público: Técnico';
+    if (title) title.textContent = 'Serviços do Ensino Técnico';
+    if (description) description.textContent = 'Acesse informações, requerimentos e canais de comunicação da coordenação do ensino técnico integrado ou subsequente.';
+    if (badgeTitle) badgeTitle.textContent = 'Técnico';
+    if (badgeDesc) badgeDesc.textContent = 'Faça login para acompanhar boletins, horários de aula, frequências e o calendário letivo do técnico.';
+    if (note) note.innerHTML = '<strong>Lembrete:</strong> Após realizar o login com seu CPF e senha de estudante técnico, o painel com diários de classe e calendário do técnico será carregado.';
+  } else if (normalized === 'responsavel') {
+    if (eyebrow) eyebrow.textContent = 'Acesso Público: Responsável';
+    if (title) title.textContent = 'Acompanhamento Acadêmico';
+    if (description) description.textContent = 'Acesse documentos gerais e orientações para que pais e responsáveis possam acompanhar a rotina escolar dos alunos.';
+    if (badgeTitle) badgeTitle.textContent = 'Responsável';
+    if (badgeDesc) badgeDesc.textContent = 'Faça login com seu CPF de responsável cadastrado para visualizar o boletim, faltas e ocorrências do aluno.';
+    if (note) note.innerHTML = '<strong>Lembrete:</strong> Após realizar o login com seu CPF e senha cadastrados como responsável, a visão resumida de monitoramento do estudante será carregada.';
+  }
+}
+
 function initHomeModeSwitcher() {
   const select = document.getElementById('home-mode-select');
   if (!select || select.dataset.bound === '1') return;
 
   select.dataset.bound = '1';
   select.addEventListener('change', () => {
-    // A escolha só vira interface ativa quando a consulta for concluída com sucesso.
+    const modo = select.value;
+    if (document.body.classList.contains('sem-dados')) {
+      applyAppMode(modo);
+      atualizarPainelSemDadosParaModo(modo);
+    }
   });
 
-  applyAppMode(getAppMode());
+  const currentMode = getAppMode();
+  applyAppMode(currentMode);
+  if (document.body.classList.contains('sem-dados')) {
+    atualizarPainelSemDadosParaModo(currentMode);
+  }
 }
 
 function getComparisonProfilesContext() {
@@ -3623,6 +3676,7 @@ window.addEventListener('DOMContentLoaded', () => {
     homeContent.classList.add('sem-dados');
     tabHome.classList.add('sem-dados');
     body.classList.add('sem-dados');
+    atualizarPainelSemDadosParaModo(getAppMode());
     if (!homeContent.querySelector('.mensagem-sem-dados')) {
       homeContent.insertAdjacentHTML('beforeend', `
         <div class="mensagem-sem-dados">

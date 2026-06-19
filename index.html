@@ -268,15 +268,15 @@
     <!-- Painel reduzido para usuário visitante (sem dados de login) -->
     <section class="home-mode-panel-sem-dados">
       <div class="home-mode-shell">
-        <div class="home-mode-hero" style="background: linear-gradient(135deg, #e8f1fb 0%, #ffffff 100%); border: 1px solid #d9e5ef; border-radius: 14px; margin-bottom: 24px; padding: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
-          <div class="home-mode-hero-copy" style="flex: 1;">
-            <span class="home-mode-eyebrow" style="background: #e8f1fb; color: #0f3f7a; padding: 4px 10px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase;">Acesso Público</span>
-            <h2 style="color: #0f3f7a; margin: 8px 0;">Serviços Acadêmicos</h2>
-            <p style="color: #4d6277; margin: 0;">Acesse documentos e canais de comunicação com a coordenação mesmo sem estar logado.</p>
+        <div class="home-mode-hero">
+          <div class="home-mode-hero-copy">
+            <span class="home-mode-eyebrow" id="visitor-eyebrow">Acesso Público</span>
+            <h2 id="visitor-title">Serviços Acadêmicos</h2>
+            <p id="visitor-description">Acesse documentos e canais de comunicação com a coordenação mesmo sem estar logado.</p>
           </div>
-          <div class="home-mode-hero-panel" style="background: linear-gradient(135deg, #1565c0 0%, #1e88e5 100%); border-radius: 12px; padding: 16px; color: white; display: flex; flex-direction: column; justify-content: center; min-width: 200px;">
-            <strong style="font-size: 1.1em;">Visitante</strong>
-            <span style="font-size: 0.9em; opacity: 0.9; margin-top: 4px;">Faça login para visualizar notas, horários e frequências.</span>
+          <div class="home-mode-hero-panel">
+            <strong id="visitor-badge-title">Visitante</strong>
+            <span id="visitor-badge-desc">Faça login para visualizar notas, horários e frequências.</span>
           </div>
         </div>
 
@@ -295,7 +295,7 @@
             <span class="home-tech-widget-cta home-tech-widget-cta-disabled">Canal previsto</span>
           </article>
         </div>
-        <div class="home-mode-note">
+        <div class="home-mode-note" id="visitor-note">
           <strong>Lembrete:</strong> Após realizar o login com seu CPF e senha, o painel completo com seus dados institucionais e calendário letivo será carregado.
         </div>
       </div>
