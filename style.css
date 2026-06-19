@@ -782,6 +782,24 @@ input {
   display: block;
 }
 
+.home-mode-panel-sem-dados {
+  display: none;
+}
+
+/* Quando sem-dados está ativa na body, força exibição do painel reduzido e oculta os painéis de perfil */
+body.sem-dados .home-mode-panel {
+  display: none !important;
+}
+
+body.sem-dados .home-mode-panel-sem-dados {
+  display: block !important;
+  margin-top: 24px;
+}
+
+body:not(.sem-dados) .home-mode-panel-sem-dados {
+  display: none !important;
+}
+
 .home-mode-shell {
   padding: 18px;
   border-radius: 16px;
@@ -4513,25 +4531,4 @@ body[data-app-mode="responsavel"] .schedule-timeline .wc-event-title {
   .btn-secondary {
     width: 100%;
   }
-}
-
-/* Versão simplificada (capada) do painel home-mode para usuários não logados */
-#tab-home.sem-dados .home-mode-hero,
-#tab-home.sem-dados .home-tech-widget-development,
-#tab-home.sem-dados .home-mode-note {
-  display: none !important;
-}
-
-#tab-home.sem-dados .home-tech-widget-grid {
-  margin-top: 0 !important;
-}
-
-#tab-home.sem-dados .home-mode-shell {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  width: 90% !important;
-  max-width: 90% !important;
-  margin: 16px auto 0 auto !important;
 }
