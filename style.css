@@ -791,6 +791,12 @@ body:not(.sem-dados) .home-mode-switcher {
   color: #173b66;
 }
 
+.home-mode-hint {
+  margin: 8px 0 0;
+  color: #5d7287;
+  font-size: 0.95rem;
+}
+
 .home-mode-panel {
   display: none;
 }
