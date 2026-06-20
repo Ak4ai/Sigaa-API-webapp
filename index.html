@@ -77,6 +77,18 @@
         </select>
       </div>
 
+      <!-- Toggle do Calendário no Header (ao lado de Perfil) -->
+      <div id="home-calendar-toggle-wrapper" class="header-calendar-toggle-wrapper" style="display: none;">
+        <label class="icon-switch" for="calendar-view-checkbox" title="Alternar entre Tabelas e Calendário">
+          <input type="checkbox" id="calendar-view-checkbox" />
+          <div class="icon-switch-pill">
+            <div class="icon-switch-handle"></div>
+            <span class="material-icons icon-switch-left">view_list</span>
+            <span class="material-icons icon-switch-right">calendar_today</span>
+          </div>
+        </label>
+      </div>
+
       <div id="desktop-quick-actions" class="desktop-quick-actions" aria-hidden="false">
         <span class="desktop-actions-separator" aria-hidden="true"></span>
         <button id="desktop-actions-toggle" class="desktop-actions-toggle" aria-label="Abrir menu rápido" title="Menu rápido">
@@ -205,16 +217,7 @@
           <div id="dados-institucionais"></div>
         </div>
 
-        <!-- Toggle para alternar entre tabelas e calendário (apenas em Graduação) -->
-        <div class="calendar-toggle-wrapper" id="home-calendar-toggle-wrapper" style="display: none;">
-          <label class="calendar-switch" for="calendar-view-checkbox">
-            <input type="checkbox" id="calendar-view-checkbox" />
-            <span class="calendar-switch-pill">
-              <span class="calendar-switch-handle"></span>
-            </span>
-            <span id="calendar-view-label">Exibir Calendário Acadêmico</span>
-          </label>
-        </div>
+
 
         <div id="home-listas-container">
           <div class="novidades-toggle">
@@ -263,6 +266,7 @@
                 <span class="home-calendar-legend-item"><span class="home-calendar-dot home-calendar-dot-recesso"></span>Recesso</span>
                 <span class="home-calendar-legend-item"><span class="home-calendar-dot home-calendar-dot-inicio-aulas"></span>Início</span>
                 <span class="home-calendar-legend-item"><span class="home-calendar-dot home-calendar-dot-fim-aulas"></span>Fim</span>
+                <span class="home-calendar-legend-item"><span class="home-calendar-dot home-calendar-dot-entrega"></span>Tarefa</span>
               </div>
             </div>
             <div class="home-calendar-weekdays" aria-hidden="true">

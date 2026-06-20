@@ -274,7 +274,7 @@ function applyHomeModeLayout(mode = getAppMode()) {
     if (toggleWrapper) toggleWrapper.style.display = 'none';
     showCalendarInsteadOfLists = true;
   } else if (normalizedMode === 'graduacao') {
-    if (toggleWrapper) toggleWrapper.style.display = 'flex';
+    if (toggleWrapper) toggleWrapper.style.display = isHomeTabActive() ? 'flex' : 'none';
     if (calendarCheckbox && calendarCheckbox.checked) {
       showCalendarInsteadOfLists = true;
     } else {
@@ -329,7 +329,7 @@ function ajustarAlturaCalendarioResponsavel() {
     const calendar = document.getElementById('responsavel-calendar-container');
     if (!form || !dados || !calendar) return;
 
-    if (window.innerWidth < 1040 || normalizeAppMode(getAppMode()) !== 'responsavel') {
+    if (window.innerWidth < 1040 || !isResponsibleCalendarActive()) {
       calendar.style.maxHeight = '';
       calendar.style.overflow = '';
       return;
@@ -422,6 +422,25 @@ async function fetchCalendarEvents(curso) {
   return cachedCalendarEvents;
 }
 
+// Helper para encurtar e limpar o nome da disciplina para exibição compacta no calendário
+function getCleanDisciplineName(name) {
+  if (!name) return 'Tarefa';
+  let clean = name.split(' - ')[0].split('/')[0].trim();
+  clean = clean.replace(/ENGENHARIA DE/i, 'ENG.')
+               .replace(/PROGRAMAÇÃO EM/i, 'PROG.')
+               .replace(/INTELIGÊNCIA ARTIFICIAL/i, 'I.A.')
+               .replace(/MICROPROCESSADORES E MICROCONTROLADORES/i, 'MICROS')
+               .replace(/MICROPROCESSADORES/i, 'MICROS')
+               .replace(/PESQUISA OPERACIONAL/i, 'P. OPER.')
+               .replace(/COMPILADORES/i, 'COMP.')
+               .replace(/INTERNET DAS COISAS/i, 'IOT');
+  // Trunca a no máximo 9 caracteres
+  if (clean.length > 9) {
+    clean = clean.substring(0, 8) + '.';
+  }
+  return clean;
+}
+
 function renderResponsibleCalendar(mode = getAppMode()) {
   const container = document.getElementById('responsavel-calendar-container');
   const grid = document.getElementById('responsavel-calendar-grid');
@@ -429,7 +448,7 @@ function renderResponsibleCalendar(mode = getAppMode()) {
   if (!container || !grid || !title) return;
 
   const normalizedMode = normalizeAppMode(mode);
-  const isDesktop = window.innerWidth >= 1041;
+  const isDesktop = window.innerWidth >= 1040;
   const isCalendarActive = normalizedMode === 'responsavel' || 
     (normalizedMode === 'graduacao' && document.getElementById('calendar-view-checkbox')?.checked);
 
@@ -526,22 +545,44 @@ function renderResponsibleCalendar(mode = getAppMode()) {
       const dateStr = `${year}-${month}-${day}`;
 
       const dayEvents = (cachedCalendarEvents || []).filter(e => e.data === dateStr);
-      if (dayEvents.length > 0) {
+
+      // Obter tarefas pendentes com entrega marcada desse dia da lista atividadesGlobais
+      const pendingDeliveries = (atividadesGlobais || [])
+        .filter(a => a.entregaMarcada && !a.concluida)
+        .filter(a => {
+          const aDate = parseAtividadeDate(a.data);
+          if (!aDate) return false;
+          const aYear = aDate.getFullYear();
+          const aMonth = String(aDate.getMonth() + 1).padStart(2, '0');
+          const aDay = String(aDate.getDate()).padStart(2, '0');
+          return `${aYear}-${aMonth}-${aDay}` === dateStr;
+        })
+        .map(a => ({
+          data: dateStr,
+          tipo: 'entrega',
+          titulo: `${a.disciplina}: ${a.descricao}`,
+          disciplina: a.disciplina
+        }));
+
+      const allDayEvents = [...dayEvents, ...pendingDeliveries];
+
+      if (allDayEvents.length > 0) {
         cell.classList.add('has-events');
 
         // Mapeia tipo de evento primário para aplicar segunda borda no dia
         let primaryType = 'outros';
-        if (dayEvents.some(e => e.tipo === 'feriado')) primaryType = 'feriado';
-        else if (dayEvents.some(e => e.tipo === 'recesso')) primaryType = 'recesso';
-        else if (dayEvents.some(e => e.tipo === 'inicio-aulas')) primaryType = 'inicio-aulas';
-        else if (dayEvents.some(e => e.tipo === 'fim-aulas')) primaryType = 'fim-aulas';
+        if (allDayEvents.some(e => e.tipo === 'feriado')) primaryType = 'feriado';
+        else if (allDayEvents.some(e => e.tipo === 'recesso')) primaryType = 'recesso';
+        else if (allDayEvents.some(e => e.tipo === 'entrega')) primaryType = 'entrega';
+        else if (allDayEvents.some(e => e.tipo === 'inicio-aulas')) primaryType = 'inicio-aulas';
+        else if (allDayEvents.some(e => e.tipo === 'fim-aulas')) primaryType = 'fim-aulas';
 
         cell.classList.add(`has-event-${primaryType}`);
 
         const dotsContainer = document.createElement('div');
         dotsContainer.className = 'home-calendar-day-events';
 
-        dayEvents.forEach(evt => {
+        allDayEvents.forEach(evt => {
           const eventTag = document.createElement('span');
           eventTag.className = `home-calendar-event-tag home-calendar-event-tag-${evt.tipo}`;
 
@@ -554,6 +595,7 @@ function renderResponsibleCalendar(mode = getAppMode()) {
           let shortType = 'Outros';
           if (evt.tipo === 'feriado') shortType = 'Feriado';
           else if (evt.tipo === 'recesso') shortType = 'Recesso';
+          else if (evt.tipo === 'entrega') shortType = getCleanDisciplineName(evt.disciplina);
           else if (evt.tipo === 'inicio-aulas') shortType = 'Início';
           else if (evt.tipo === 'fim-aulas') shortType = 'Fim';
 
@@ -570,7 +612,7 @@ function renderResponsibleCalendar(mode = getAppMode()) {
         const tooltip = document.createElement('div');
         tooltip.className = 'home-calendar-tooltip';
 
-        dayEvents.forEach(evt => {
+        allDayEvents.forEach(evt => {
           const item = document.createElement('div');
           item.className = 'home-calendar-tooltip-item';
 
@@ -624,6 +666,8 @@ function applyAppMode(mode) {
     if (listasContainer) listasContainer.style.display = 'none';
     const dadosInst = document.getElementById('dados-institucionais');
     if (dadosInst) dadosInst.style.display = 'none';
+    const toggleWrapper = document.getElementById('home-calendar-toggle-wrapper');
+    if (toggleWrapper) toggleWrapper.style.display = 'none';
     return;
   }
 
@@ -1881,13 +1925,29 @@ function refreshHomeHeightSyncLoop() {
   if (isHomeTabActive()) {
     startHomeHeightSyncLoop();
     runHomeHeightSyncTick();
+    const toggleWrapper = document.getElementById('home-calendar-toggle-wrapper');
+    if (toggleWrapper) {
+      const mode = getAppMode();
+      const isGraduacao = normalizeAppMode(mode) === 'graduacao';
+      const semDados = document.body.classList.contains('sem-dados');
+      toggleWrapper.style.display = (isGraduacao && !semDados) ? 'flex' : 'none';
+    }
   } else {
     stopHomeHeightSyncLoop();
+    const toggleWrapper = document.getElementById('home-calendar-toggle-wrapper');
+    if (toggleWrapper) toggleWrapper.style.display = 'none';
   }
 }
 
 function isResponsibleCalendarActive() {
-  return isHomeTabActive() && normalizeAppMode(getAppMode()) === 'responsavel';
+  if (!isHomeTabActive()) return false;
+  const mode = normalizeAppMode(getAppMode());
+  if (mode === 'responsavel') return true;
+  if (mode === 'graduacao') {
+    const checkbox = document.getElementById('calendar-view-checkbox');
+    return !!(checkbox && checkbox.checked);
+  }
+  return false;
 }
 
 function runResponsibleCalendarSyncTick() {
@@ -1924,29 +1984,64 @@ function refreshResponsibleCalendarSyncLoop() {
 function extrairAtividades(data) {
   if (!data) return [];
 
-  // Preferir campo dedicado quando o backend disponibilizar.
-  if (Array.isArray(data.atividades) && data.atividades.length > 0) {
-    return data.atividades.flatMap(({ disciplina, atividades }) =>
-      (atividades || []).map(({ data: dataAtiv, descricao }) => ({
-        disciplina,
-        data: dataAtiv || '',
-        descricao: descricao || ''
-      }))
+  let list = [];
+
+  // Fallback: filtra avisos que parecem atividades acadêmicas.
+  if (Array.isArray(data.avisosPorDisciplina)) {
+    const regexAtividade = /(atividade|lista|trabalho|tarefa|exercicio|exercício|projeto|seminario|seminário|avaliacao|avaliação|prova|entrega)/i;
+    list = data.avisosPorDisciplina.flatMap(({ disciplina, avisos }) =>
+      (avisos || [])
+        .filter(aviso => regexAtividade.test(aviso?.descricao || ''))
+        .map(({ data: dataAviso, descricao }) => ({
+          disciplina,
+          data: dataAviso || '',
+          descricao: descricao || '',
+          entregaMarcada: false,
+          concluida: false
+        }))
     );
   }
 
-  // Fallback: filtra avisos que parecem atividades acadêmicas.
-  if (!Array.isArray(data.avisosPorDisciplina)) return [];
-  const regexAtividade = /(atividade|lista|trabalho|tarefa|exercicio|exercício|projeto|seminario|seminário|avaliacao|avaliação|prova|entrega)/i;
-  return data.avisosPorDisciplina.flatMap(({ disciplina, avisos }) =>
-    (avisos || [])
-      .filter(aviso => regexAtividade.test(aviso?.descricao || ''))
-      .map(({ data: dataAviso, descricao }) => ({
-        disciplina,
-        data: dataAviso || '',
-        descricao: descricao || ''
-      }))
-  );
+  // Adiciona atividades com entrega marcada vindas de atividadesPortal
+  if (Array.isArray(data.atividadesPortal)) {
+    data.atividadesPortal.forEach(ap => {
+      // Evita duplicatas se a mesma atividade com o mesmo nome e disciplina já foi extraída
+      const isDup = list.some(item => 
+        item.disciplina.toUpperCase() === ap.disciplina.toUpperCase() &&
+        (item.descricao.includes(ap.descricao) || ap.descricao.includes(item.descricao) ||
+         item.descricao.toLowerCase().replace(/[^a-z0-9]/g, '') === ap.descricao.toLowerCase().replace(/[^a-z0-9]/g, ''))
+      );
+      if (!isDup) {
+        list.push({
+          disciplina: ap.disciplina,
+          data: ap.data,
+          descricao: ap.descricao,
+          entregaMarcada: ap.entregaMarcada,
+          concluida: ap.concluida
+        });
+      } else {
+        // Se já existe, apenas atualiza para ter o flag e concluida da versão mais detalhada do portal
+        const existing = list.find(item => 
+          item.disciplina.toUpperCase() === ap.disciplina.toUpperCase() &&
+          (item.descricao.includes(ap.descricao) || ap.descricao.includes(item.descricao) ||
+           item.descricao.toLowerCase().replace(/[^a-z0-9]/g, '') === ap.descricao.toLowerCase().replace(/[^a-z0-9]/g, ''))
+        );
+        if (existing) {
+          existing.entregaMarcada = true;
+          existing.concluida = ap.concluida;
+          if (ap.data && (!existing.data || existing.data.length < ap.data.length)) {
+            existing.data = ap.data;
+          }
+          // Atualiza descrição para incluir o tipo se já não tiver
+          if (!existing.descricao.startsWith('[')) {
+            existing.descricao = ap.descricao;
+          }
+        }
+      }
+    });
+  }
+
+  return list;
 }
 
 function preencherSelectorFrequencias(avisosPorDisciplina) {
@@ -3569,6 +3664,39 @@ function preencherTabelaDetalhada(horarios) {
     tabela.style.display = horarios.length > 0 ? '' : 'none';
 }
 
+// Helper para analisar a string de data da atividade (DD/MM/YYYY, DD/MM ou YYYY-MM-DD)
+function parseAtividadeDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  
+  // DD/MM/YYYY
+  const match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    return new Date(year, month, day);
+  }
+
+  // DD/MM (Assumir o ano atual)
+  const matchShort = dateStr.match(/^(\d{2})\/(\d{2})$/) || dateStr.match(/^(\d{2})\/(\d{2})\s/);
+  if (matchShort) {
+    const day = parseInt(matchShort[1], 10);
+    const month = parseInt(matchShort[2], 10) - 1;
+    const year = new Date().getFullYear();
+    return new Date(year, month, day);
+  }
+
+  // YYYY-MM-DD
+  const matchIso = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (matchIso) {
+    const year = parseInt(matchIso[1], 10);
+    const month = parseInt(matchIso[2], 10) - 1;
+    const day = parseInt(matchIso[3], 10);
+    return new Date(year, month, day);
+  }
+  return null;
+}
+
 // Função para preencher as tabelas de atividades (home + aba)
 function preencherTabelaAtividades(atividades) {
   const tabelaHome = document.getElementById('tabela-atividades-home');
@@ -3576,17 +3704,120 @@ function preencherTabelaAtividades(atividades) {
   const vaziHome = document.getElementById('atividades-home-vazio');
   const vaziTab = document.getElementById('atividades-tab-vazio');
 
+  // 1. Obter a data de hoje à meia-noite local
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // 2. Separar as atividades nos 3 grupos mapeados
+  const hoje = [];
+  const futuras = [];
+  const passadas = [];
+
+  atividades.forEach(a => {
+    const parsedDate = parseAtividadeDate(a.data);
+    const item = { original: a, parsedDate };
+    if (!parsedDate) {
+      futuras.push(item);
+    } else {
+      const timeDiff = parsedDate.getTime() - today.getTime();
+      if (timeDiff === 0) {
+        hoje.push(item);
+      } else if (timeDiff > 0) {
+        futuras.push(item);
+      } else {
+        passadas.push(item);
+      }
+    }
+  });
+
+  // 3. Ordenar cada grupo por urgência (não concluídas primeiro)
+  // Hoje: não concluídas primeiro, depois por ordem alfabética
+  hoje.sort((a, b) => {
+    const concA = a.original.concluida ? 1 : 0;
+    const concB = b.original.concluida ? 1 : 0;
+    if (concA !== concB) return concA - concB;
+    return a.original.disciplina.localeCompare(b.original.disciplina);
+  });
+
+  // Futuras: não concluídas primeiro, depois prazo mais próximo (ascendente). Sem data vai por último.
+  futuras.sort((a, b) => {
+    const concA = a.original.concluida ? 1 : 0;
+    const concB = b.original.concluida ? 1 : 0;
+    if (concA !== concB) return concA - concB;
+    if (!a.parsedDate && !b.parsedDate) return a.original.disciplina.localeCompare(b.original.disciplina);
+    if (!a.parsedDate) return 1;
+    if (!b.parsedDate) return -1;
+    return a.parsedDate.getTime() - b.parsedDate.getTime();
+  });
+
+  // Passadas: mais recente primeiro (descendente)
+  passadas.sort((a, b) => {
+    if (!a.parsedDate && !b.parsedDate) return a.original.disciplina.localeCompare(b.original.disciplina);
+    if (!a.parsedDate) return 1;
+    if (!b.parsedDate) return -1;
+    return b.parsedDate.getTime() - a.parsedDate.getTime();
+  });
+
+  // 4. Preencher as tabelas
   [tabelaHome, tabelaAba].forEach(tabela => {
     if (!tabela) return;
     const tbody = tabela.querySelector('tbody');
     tbody.innerHTML = '';
-    if (atividades.length > 0) {
-      atividades.forEach(a => {
+
+    const renderGrupo = (titulo, grupoAtividades, classeIndicador) => {
+      if (grupoAtividades.length === 0) return;
+
+      // Inserir cabeçalho do grupo
+      const trHeader = document.createElement('tr');
+      trHeader.className = 'atividades-grupo-header';
+      trHeader.innerHTML = `
+        <td colspan="3">
+          <div class="atividades-grupo-container">
+            <span class="atividades-grupo-indicator ${classeIndicador}"></span>
+            <span class="atividades-grupo-name">${titulo}</span>
+            <span class="atividades-grupo-count">(${grupoAtividades.length})</span>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(trHeader);
+
+      // Inserir as linhas do grupo
+      grupoAtividades.forEach(item => {
+        const a = item.original;
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${a.disciplina}</td><td>${a.data || ''}</td><td>${a.descricao || ''}</td>`;
+        if (a.entregaMarcada) {
+          tr.classList.add('atividade-entrega');
+          if (a.concluida) {
+            tr.classList.add('atividade-concluida');
+          }
+        }
+
+        let statusBadge = '';
+        if (a.entregaMarcada) {
+          if (a.concluida) {
+            statusBadge = `<span class="badge-entrega badge-concluida"><span class="material-icons badge-icon">check_circle</span>Entregue</span>`;
+          } else {
+            statusBadge = `<span class="badge-entrega badge-pendente"><span class="material-icons badge-icon">pending_actions</span>Pendente</span>`;
+          }
+        }
+
+        tr.innerHTML = `
+          <td>${a.disciplina}</td>
+          <td>${a.data || ''}</td>
+          <td>
+            <div class="atividade-desc-cell">
+              ${statusBadge}
+              <span class="atividade-desc-text">${a.descricao || ''}</span>
+            </div>
+          </td>
+        `;
         tbody.appendChild(tr);
       });
-    }
+    };
+
+    renderGrupo('Hoje', hoje, 'indicador-hoje');
+    renderGrupo('Futuras', futuras, 'indicador-futuras');
+    renderGrupo('Passadas', passadas, 'indicador-passadas');
   });
 
   // Aba Atividades
@@ -3646,6 +3877,18 @@ function atualizarHomePainelNovidadesAtividades() {
   const temAtividades = atividadesGlobais.length > 0;
 
   if (!layout.showHomeLists) {
+    if (toggle) toggle.style.display = 'none';
+    if (panelNov) panelNov.style.display = 'none';
+    if (panelAtiv) panelAtiv.style.display = 'none';
+    return;
+  }
+
+  const mode = getAppMode();
+  const calendarCheckbox = document.getElementById('calendar-view-checkbox');
+  const showCalendarInsteadOfLists = (mode === 'responsavel') || 
+    (mode === 'graduacao' && calendarCheckbox && calendarCheckbox.checked);
+
+  if (showCalendarInsteadOfLists) {
     if (toggle) toggle.style.display = 'none';
     if (panelNov) panelNov.style.display = 'none';
     if (panelAtiv) panelAtiv.style.display = 'none';
@@ -4170,7 +4413,7 @@ window.addEventListener('resize', () => {
 });
 
 function refreshResponsibleCalendarOnScroll() {
-  if (normalizeAppMode(getAppMode()) !== 'responsavel' || window.innerWidth < 1041) return;
+  if (!isResponsibleCalendarActive() || window.innerWidth < 1040) return;
   renderResponsibleCalendar(getAppMode());
 }
 

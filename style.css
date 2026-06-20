@@ -1447,7 +1447,8 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     display: block;
   }
 
-  .desktop-saved-profiles {
+  .desktop-saved-profiles,
+  .header-calendar-toggle-wrapper {
     display: none !important;
   }
 
@@ -2101,7 +2102,8 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     display: none !important;
   }
 
-  body[data-home-mode="responsavel"] #responsavel-calendar-container {
+  body[data-home-mode="responsavel"] #responsavel-calendar-container,
+  body[data-home-mode="graduacao"] #responsavel-calendar-container {
     display: flex;
     flex-direction: column;
     grid-column: 1 / -1;
@@ -2109,13 +2111,20 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     padding: 18px;
     border: 1px solid color-mix(in srgb, var(--app-accent) 18%, #d9e5ef);
     border-radius: 16px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.92) 100%);
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
     min-height: 0;
     overflow: hidden;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-header {
+  body[data-home-mode="responsavel"] #responsavel-calendar-container {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.92) 100%);
+  }
+
+  body[data-home-mode="graduacao"] #responsavel-calendar-container {
+    background: linear-gradient(180deg, rgba(25, 118, 210, 0.02) 0%, rgba(255, 255, 255, 0.98) 100%);
+  }
+
+  .home-calendar-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -2123,7 +2132,7 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     flex-wrap: wrap;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-eyebrow {
+  .home-calendar-eyebrow {
     display: inline-flex;
     padding: 5px 10px;
     border-radius: 999px;
@@ -2135,13 +2144,13 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     text-transform: uppercase;
   }
 
-  body[data-home-mode="responsavel"] #responsavel-calendar-title {
+  #responsavel-calendar-title {
     margin: 6px 0 0;
     color: var(--app-accent-strong);
     font-size: 1.2rem;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-legend {
+  .home-calendar-legend {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -2150,61 +2159,71 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     font-size: 0.86rem;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-legend-item {
+  .home-calendar-legend-item {
     display: inline-flex;
     align-items: center;
     gap: 8px;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-dot {
+  .home-calendar-dot {
     width: 10px;
     height: 10px;
     border-radius: 999px;
     display: inline-block;
+    flex-shrink: 0;
+    align-self: center;
+    vertical-align: middle;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-dot-today {
+  .home-calendar-dot-today {
     background: var(--app-accent);
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-dot-available {
+  .home-calendar-dot-available {
     background: color-mix(in srgb, var(--app-accent-soft) 85%, #ffffff);
     border: 1px solid color-mix(in srgb, var(--app-accent) 22%, #b7cce0);
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day-events {
+  .home-calendar-day-events {
     display: flex;
-    gap: 4px;
-    justify-content: flex-start;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 2.5px;
     margin-top: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-dot-feriado {
+  .home-calendar-dot-feriado {
     background-color: #f97316 !important;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-dot-recesso {
+  .home-calendar-dot-recesso {
     background-color: #fb7185 !important;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-dot-inicio-aulas {
-    background-color: #8b5cf6 !important;
+  .home-calendar-dot-inicio-aulas {
+    background-color: var(--app-accent, #8b5cf6) !important;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-dot-fim-aulas {
+  .home-calendar-dot-fim-aulas {
     background-color: #10b981 !important;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-dot-outros {
+  .home-calendar-dot-outros {
     background-color: #64748b !important;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day {
-    position: relative; /* para posicionamento do tooltip */
+  .home-calendar-dot-entrega {
+    background-color: #0d9488 !important;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-tooltip {
+  .home-calendar-day {
+    position: relative;
+    /* para posicionamento do tooltip */
+  }
+
+  .home-calendar-tooltip {
     position: absolute;
     bottom: calc(100% + 8px);
     left: 50%;
@@ -2225,13 +2244,13 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     text-align: left;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day:hover .home-calendar-tooltip {
+  .home-calendar-day:hover .home-calendar-tooltip {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
     pointer-events: auto;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-tooltip::after {
+  .home-calendar-tooltip::after {
     content: '';
     position: absolute;
     top: 100%;
@@ -2263,11 +2282,29 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     display: inline-block;
   }
 
-  .home-calendar-tooltip-dot-feriado { background-color: #f97316; }
-  .home-calendar-tooltip-dot-recesso { background-color: #fb7185; }
-  .home-calendar-tooltip-dot-inicio-aulas { background-color: #8b5cf6; }
-  .home-calendar-tooltip-dot-fim-aulas { background-color: #10b981; }
-  .home-calendar-tooltip-dot-outros { background-color: #64748b; }
+  .home-calendar-tooltip-dot-feriado {
+    background-color: #f97316;
+  }
+
+  .home-calendar-tooltip-dot-recesso {
+    background-color: #fb7185;
+  }
+
+  .home-calendar-tooltip-dot-inicio-aulas {
+    background-color: var(--app-accent, #8b5cf6);
+  }
+
+  .home-calendar-tooltip-dot-fim-aulas {
+    background-color: #10b981;
+  }
+
+  .home-calendar-tooltip-dot-outros {
+    background-color: #64748b;
+  }
+
+  .home-calendar-tooltip-dot-entrega {
+    background-color: #0d9488;
+  }
 
   .home-calendar-tooltip-text {
     color: #f1f5f9;
@@ -2275,7 +2312,7 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     white-space: normal;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-weekdays {
+  .home-calendar-weekdays {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 10px;
@@ -2287,11 +2324,11 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     letter-spacing: 0.05em;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-weekdays span {
+  .home-calendar-weekdays span {
     text-align: center;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-grid {
+  .home-calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 10px;
@@ -2300,7 +2337,7 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     grid-auto-rows: 92px;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day {
+  .home-calendar-day {
     min-height: 0;
     padding: 12px 10px;
     border-radius: 14px;
@@ -2312,19 +2349,19 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     justify-content: space-between;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day.is-next-month {
+  .home-calendar-day.is-next-month {
     background: linear-gradient(180deg, rgba(247, 250, 255, 0.96) 0%, rgba(241, 246, 252, 0.96) 100%);
     border-style: dashed;
     border-color: color-mix(in srgb, var(--app-accent) 10%, #dce7f0);
     opacity: 0.9;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day.is-muted {
+  .home-calendar-day.is-muted {
     background: linear-gradient(180deg, rgba(249, 251, 253, 0.96) 0%, rgba(242, 246, 250, 0.96) 100%);
     color: #7b8a99;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day.is-next-month .home-calendar-day-label::after {
+  .home-calendar-day.is-next-month .home-calendar-day-label::after {
     content: '';
   }
 
@@ -2332,69 +2369,99 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
   .home-calendar-event-tag {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 1.5px 5px;
-    border-radius: 6px;
-    font-size: 0.62rem;
+    gap: 3px;
+    padding: 2px 4.5px;
+    border-radius: 4px;
+    font-size: 0.58rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.02em;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    white-space: nowrap;
+    line-height: 1;
   }
+
   .home-calendar-event-tag-feriado {
     background-color: #ffe8cc;
     color: #d9480f;
   }
+
   .home-calendar-event-tag-recesso {
     background-color: #ffe3e8;
     color: #e63946;
   }
+
   .home-calendar-event-tag-inicio-aulas {
-    background-color: #f3e8ff;
-    color: #6d28d9;
+    background-color: var(--app-accent-soft, #f3e8ff);
+    color: var(--app-accent-strong, #6d28d9);
   }
+
   .home-calendar-event-tag-fim-aulas {
     background-color: #d1fae5;
     color: #047857;
   }
+
   .home-calendar-event-tag-outros {
     background-color: #f1f5f9;
     color: #475569;
   }
+
+  .home-calendar-event-tag-entrega {
+    background-color: #e6fffa;
+    color: #0f766e;
+  }
+
   .home-calendar-event-tag-text {
     line-height: 1;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    align-self: center;
   }
 
   /* Estilização para segunda borda/borda interna colorida para dias com eventos */
-  body[data-home-mode="responsavel"] .home-calendar-day.has-event-feriado {
+  .home-calendar-day.has-event-feriado {
     border-color: #f97316;
     box-shadow: inset 0 0 0 1.5px #f97316, 0 4px 10px rgba(249, 115, 22, 0.08);
   }
-  body[data-home-mode="responsavel"] .home-calendar-day.has-event-recesso {
+
+  .home-calendar-day.has-event-recesso {
     border-color: #fb7185;
     box-shadow: inset 0 0 0 1.5px #fb7185, 0 4px 10px rgba(251, 113, 133, 0.08);
   }
-  body[data-home-mode="responsavel"] .home-calendar-day.has-event-inicio-aulas {
-    border-color: #8b5cf6;
-    box-shadow: inset 0 0 0 1.5px #8b5cf6, 0 4px 10px rgba(139, 92, 246, 0.08);
+
+  .home-calendar-day.has-event-inicio-aulas {
+    border-color: var(--app-accent, #8b5cf6);
+    box-shadow: inset 0 0 0 1.5px var(--app-accent, #8b5cf6), 0 4px 10px rgba(139, 92, 246, 0.08);
   }
-  body[data-home-mode="responsavel"] .home-calendar-day.has-event-fim-aulas {
+
+  .home-calendar-day.has-event-fim-aulas {
     border-color: #10b981;
     box-shadow: inset 0 0 0 1.5px #10b981, 0 4px 10px rgba(16, 185, 129, 0.08);
   }
-  body[data-home-mode="responsavel"] .home-calendar-day.has-event-outros {
+
+  .home-calendar-day.has-event-entrega {
+    border-color: #0d9488 !important;
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, #ffffff 100%) !important;
+    box-shadow: inset 0 0 0 1.5px #0d9488, 0 4px 10px rgba(13, 148, 136, 0.08) !important;
+  }
+
+  .home-calendar-day.has-event-outros {
     border-color: #64748b;
     box-shadow: inset 0 0 0 1.5px #64748b, 0 4px 10px rgba(100, 116, 139, 0.08);
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day.is-today {
+  .home-calendar-day.is-today {
     border-color: var(--app-accent) !important;
     background: linear-gradient(180deg, rgba(25, 118, 210, 0.12) 0%, #ffffff 100%) !important;
     box-shadow: inset 0 0 0 2.5px var(--app-accent), 0 12px 24px rgba(25, 118, 210, 0.18) !important;
     z-index: 10;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day.is-today .home-calendar-day-number {
+  .home-calendar-day.is-today .home-calendar-day-number {
     background-color: var(--app-accent);
     color: #ffffff !important;
     display: inline-flex;
@@ -2409,19 +2476,19 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     box-shadow: 0 3px 8px rgba(25, 118, 210, 0.35);
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day.is-today .home-calendar-day-label {
+  .home-calendar-day.is-today .home-calendar-day-label {
     color: var(--app-accent-strong) !important;
     font-weight: 800;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day-number {
+  .home-calendar-day-number {
     font-size: 1.05rem;
     font-weight: 800;
     color: var(--app-accent-strong);
     transition: all 0.2s ease;
   }
 
-  body[data-home-mode="responsavel"] .home-calendar-day-label {
+  .home-calendar-day-label {
     font-size: 0.78rem;
     color: #647487;
   }
@@ -2605,7 +2672,8 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
   }
 
   .home-mode-switcher {
-    width: 90%;
+    width: 90% !important;
+    max-width: 90% !important;
     margin-bottom: 0;
     box-sizing: border-box;
     align-self: center;
@@ -4974,6 +5042,7 @@ body[data-app-mode="responsavel"] .schedule-timeline .wc-event-title {
   margin-bottom: 12px;
   align-self: flex-start;
 }
+
 .calendar-switch {
   display: inline-flex;
   align-items: center;
@@ -4984,9 +5053,11 @@ body[data-app-mode="responsavel"] .schedule-timeline .wc-event-title {
   color: #475569;
   user-select: none;
 }
+
 .calendar-switch input[type="checkbox"] {
   display: none;
 }
+
 .calendar-switch-pill {
   position: relative;
   display: inline-block;
@@ -4996,6 +5067,7 @@ body[data-app-mode="responsavel"] .schedule-timeline .wc-event-title {
   border-radius: 999px;
   transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .calendar-switch-handle {
   position: absolute;
   top: 3px;
@@ -5007,175 +5079,226 @@ body[data-app-mode="responsavel"] .schedule-timeline .wc-event-title {
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.15);
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.calendar-switch input[type="checkbox"]:checked + .calendar-switch-pill {
+
+.calendar-switch input[type="checkbox"]:checked+.calendar-switch-pill {
   background-color: var(--app-accent, #1a73e8);
 }
-.calendar-switch input[type="checkbox"]:checked + .calendar-switch-pill .calendar-switch-handle {
+
+.calendar-switch input[type="checkbox"]:checked+.calendar-switch-pill .calendar-switch-handle {
   transform: translateX(24px);
 }
 
-/* Override purple elements of the calendar to blue in Graduation mode */
-body[data-home-mode="graduacao"] .home-calendar-dot-inicio-aulas {
-  background-color: var(--app-accent, #1565c0) !important;
-}
-body[data-home-mode="graduacao"] .home-calendar-event-tag-inicio-aulas {
-  background-color: var(--app-accent-soft, #e3f2fd) !important;
-  color: var(--app-accent-strong, #0d47a1) !important;
-}
-body[data-home-mode="graduacao"] .home-calendar-day.has-event-inicio-aulas {
-  border-color: var(--app-accent, #1565c0) !important;
-  box-shadow: inset 0 0 0 1.5px var(--app-accent, #1565c0), 0 4px 10px rgba(21, 101, 192, 0.08) !important;
-}
-body[data-home-mode="graduacao"] .home-calendar-tooltip-dot-inicio-aulas {
-  background-color: var(--app-accent, #1565c0) !important;
-}
 
-/* Exibir o calendário no modo graduação quando ativado */
-body[data-home-mode="graduacao"] #responsavel-calendar-container {
-  display: flex;
-  flex-direction: column;
-  grid-column: 1 / -1;
-  gap: 14px;
-  padding: 18px;
-  border: 1px solid color-mix(in srgb, var(--app-accent) 18%, #d9e5ef);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(25, 118, 210, 0.02) 0%, rgba(255, 255, 255, 0.98) 100%);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-  min-height: 0;
-  overflow: hidden;
-}
 
-body[data-home-mode="graduacao"] .home-calendar-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 4px;
-  color: #6a7b8e;
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-body[data-home-mode="graduacao"] .home-calendar-weekdays span {
-  text-align: center;
-}
-
-body[data-home-mode="graduacao"] .home-calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 10px;
-  min-height: 0;
-  align-content: start;
-  grid-auto-rows: 92px;
-}
-
-body[data-home-mode="graduacao"] .home-calendar-day {
-  position: relative;
-  min-height: 0;
-  padding: 12px 10px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--app-accent) 16%, #dce7f0);
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-body[data-home-mode="graduacao"] .home-calendar-day.is-next-month {
-  background: linear-gradient(180deg, rgba(247, 250, 255, 0.96) 0%, rgba(241, 246, 252, 0.96) 100%);
-  border-style: dashed;
-  border-color: color-mix(in srgb, var(--app-accent) 10%, #dce7f0);
-  opacity: 0.9;
-}
-
-body[data-home-mode="graduacao"] .home-calendar-day.is-muted {
-  background: linear-gradient(180deg, rgba(249, 251, 253, 0.96) 0%, rgba(242, 246, 250, 0.96) 100%);
-  color: #7b8a99;
-}
-
-body[data-home-mode="graduacao"] .home-calendar-day.is-today {
-  border-color: var(--app-accent) !important;
-  background: linear-gradient(180deg, rgba(25, 118, 210, 0.12) 0%, #ffffff 100%) !important;
-  box-shadow: inset 0 0 0 2.5px var(--app-accent), 0 12px 24px rgba(25, 118, 210, 0.18) !important;
-  z-index: 10;
-}
-
-body[data-home-mode="graduacao"] .home-calendar-day.is-today .home-calendar-day-number {
-  background-color: var(--app-accent);
-  color: #ffffff !important;
+/* Styling for the header calendar/table switch */
+.header-calendar-toggle-wrapper {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-size: 0.95rem;
-  margin-top: -2px;
-  margin-left: -2px;
-  box-shadow: 0 3px 8px rgba(25, 118, 210, 0.35);
 }
 
-body[data-home-mode="graduacao"] .home-calendar-day.is-today .home-calendar-day-label {
-  color: var(--app-accent-strong) !important;
-  font-weight: 800;
+.icon-switch {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  margin: 0;
 }
 
-body[data-home-mode="graduacao"] .home-calendar-day-number {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--app-accent-strong);
-  transition: all 0.2s ease;
-}
-
-body[data-home-mode="graduacao"] .home-calendar-day-label {
-  font-size: 0.78rem;
-  color: #647487;
-}
-
-body[data-home-mode="graduacao"] .home-calendar-day-events {
+.icon-switch-pill {
+  position: relative;
+  width: 76px;
+  height: 38px;
+  background: var(--app-accent-soft, #e8f1fb);
+  border-radius: 19px;
   display: flex;
-  gap: 4px;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  margin-top: 4px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--app-accent, #1976d2) 18%, #cfdbea);
+  transition: background-color 0.3s, border-color 0.3s;
 }
 
-body[data-home-mode="graduacao"] .home-calendar-day:hover .home-calendar-tooltip {
+.icon-switch-handle {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 32px;
+  height: 32px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+
+.icon-switch input[type="checkbox"] {
+  display: none !important;
+}
+
+/* When unchecked: slider is on left. Left icon (table) is active, Right icon (calendar) is inactive */
+.icon-switch input[type="checkbox"]:not(:checked)~.icon-switch-pill .icon-switch-left {
+  color: var(--app-accent-strong, #0f3f7a);
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
-  pointer-events: auto;
 }
 
-body[data-home-mode="graduacao"] .home-calendar-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  background: #1e293b;
-  color: #ffffff;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  line-height: 1.4;
-  width: max-content;
-  max-width: 220px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-  opacity: 0;
+.icon-switch input[type="checkbox"]:not(:checked)~.icon-switch-pill .icon-switch-right {
+  color: #6a7b8e;
+  opacity: 0.5;
+}
+
+/* When checked: slider is on right. Right icon (calendar) is active, Left icon (table) is inactive */
+.icon-switch input[type="checkbox"]:checked~.icon-switch-pill .icon-switch-handle {
+  transform: translateX(40px);
+}
+
+.icon-switch input[type="checkbox"]:checked~.icon-switch-pill .icon-switch-left {
+  color: #6a7b8e;
+  opacity: 0.5;
+}
+
+.icon-switch input[type="checkbox"]:checked~.icon-switch-pill .icon-switch-right {
+  color: var(--app-accent-strong, #0f3f7a);
+  opacity: 1;
+}
+
+.icon-switch .material-icons {
+  font-size: 20px;
+  z-index: 2;
+  transition: color 0.3s, opacity 0.3s;
   pointer-events: none;
-  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 50;
-  text-align: left;
 }
 
-body[data-home-mode="graduacao"] .home-calendar-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 6px;
-  border-style: solid;
-  border-color: #1e293b transparent transparent transparent;
-}
+/* ───────────────────────────────────────────────────────────────────────────
+   Organização de Atividades (Hoje, Futuras, Passadas)
+   ─────────────────────────────────────────────────────────────────────────── */
+.atividades-grupo-header td {
+  background: var(--app-accent-soft) !important;
+  color: var(--app-accent-strong) !important;
+  font-weight: bold;
+  font-size: 0.82rem;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 10px 14px !important;
+  border-bottom: 2px solid var(--app-accent) !important;
+  text-align: left;
+  pointer-events: none; /* Disable hover/clicking */
+}
+
+/* Prevent zebra styling on header rows */
+#tabela-atividades-home tbody tr.atividades-grupo-header:nth-child(even) td,
+#tabela-atividades-atividades tbody tr.atividades-grupo-header:nth-child(even) td {
+  background: var(--app-accent-soft) !important;
+}
+
+/* Prevent hover styling on header rows */
+#tabela-atividades-home tbody tr.atividades-grupo-header:hover td,
+#tabela-atividades-atividades tbody tr.atividades-grupo-header:hover td {
+  background: var(--app-accent-soft) !important;
+}
+
+.atividades-grupo-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.atividades-grupo-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.atividades-grupo-indicator.indicador-hoje {
+  background-color: #ef5350; /* Light red/coral */
+  box-shadow: 0 0 6px rgba(239, 83, 80, 0.5);
+}
+
+.atividades-grupo-indicator.indicador-futuras {
+  background-color: #42a5f5; /* Premium blue */
+  box-shadow: 0 0 6px rgba(66, 165, 245, 0.5);
+}
+
+.atividades-grupo-indicator.indicador-passadas {
+  background-color: #9e9e9e; /* Muted gray */
+}
+
+.atividades-grupo-count {
+  font-size: 0.78rem;
+  opacity: 0.7;
+  font-weight: normal;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Atividades com Entrega Marcada e Status Badges
+   ─────────────────────────────────────────────────────────────────────────── */
+.atividade-desc-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-entrega {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.badge-entrega .badge-icon {
+  font-size: 13px !important;
+}
+
+.badge-concluida {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+
+.badge-pendente {
+  background-color: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffcc80;
+}
+
+/* Linha com entrega marcada - visual diferenciado (borda esquerda e tint de fundo do tema) */
+tr.atividade-entrega td:first-child {
+  border-left: 4px solid var(--app-accent) !important;
+}
+
+tr.atividade-entrega.atividade-concluida td:first-child {
+  border-left-color: #9e9e9e !important;
+}
+
+tr.atividade-entrega td {
+  background-color: color-mix(in srgb, var(--app-accent) 4%, #ffffff) !important;
+  font-weight: 500;
+}
+
+tr.atividade-entrega.atividade-concluida td {
+  background-color: #f8fafc !important;
+}
+
+/* Hover em linhas com entrega marcada */
+tr.atividade-entrega:hover td {
+  background-color: var(--app-accent-soft) !important;
+}
+
+/* Linha concluída (visual atenuado/riscado) */
+tr.atividade-concluida td {
+  color: #88929a !important;
+}
+
+tr.atividade-concluida .atividade-desc-text {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
