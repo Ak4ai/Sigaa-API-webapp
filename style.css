@@ -2169,10 +2169,8 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     width: 10px;
     height: 10px;
     border-radius: 999px;
-    display: inline-block;
+    display: block;
     flex-shrink: 0;
-    align-self: center;
-    vertical-align: middle;
   }
 
   .home-calendar-dot-today {
@@ -2381,7 +2379,15 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
     box-sizing: border-box;
     overflow: hidden;
     white-space: nowrap;
-    line-height: 1;
+    line-height: normal;
+  }
+
+  .home-calendar-event-tag .home-calendar-dot {
+    width: 6px;
+    height: 6px;
+    margin: 0;
+    display: block;
+    align-self: center;
   }
 
   .home-calendar-event-tag-feriado {
@@ -2415,11 +2421,11 @@ body[data-home-mode="responsavel"] #responsavel-calendar-container {
   }
 
   .home-calendar-event-tag-text {
-    line-height: 1;
+    line-height: normal;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
-    align-self: center;
+    display: inline-block;
   }
 
   /* Estilização para segunda borda/borda interna colorida para dias com eventos */
