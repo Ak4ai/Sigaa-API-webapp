@@ -67,7 +67,7 @@
         <button class="tab-button" data-tab="tab-simplificada" title="Horários"><span class="material-icons tab-icon">schedule</span><span class="tab-label">Horários</span></button>
         <button class="tab-button" data-tab="tab-frequencias" title="Frequência"><span class="material-icons tab-icon">check_circle</span><span class="tab-label">Frequência</span></button>
         <button class="tab-button" data-tab="tab-notas" title="Notas"><span class="material-icons tab-icon">grade</span><span class="tab-label">Notas</span></button>
-        <button class="tab-button" data-tab="tab-atividades" title="Atividades"><span class="material-icons tab-icon">assignment</span><span class="tab-label">Atividades</span></button>
+        <button class="tab-button" data-tab="tab-calendario" title="Calendário"><span class="material-icons tab-icon">calendar_today</span><span class="tab-label">Calendário</span></button>
       </div>
 
       <div id="desktop-saved-profiles-container" class="desktop-saved-profiles" style="display:none;">
@@ -98,6 +98,7 @@
           <button class="desktop-action-item" data-action="abrir-horarios-completos">Horários completos</button>
           <button class="desktop-action-item" data-action="abrir-novidades">Novidades</button>
           <button class="desktop-action-item" data-action="abrir-atividades">Atividades</button>
+          <button class="desktop-action-item" data-action="abrir-calendario">Calendário</button>
           <button class="desktop-action-item" data-action="abrir-configuracoes">Configurações</button>
         </div>
       </div>
@@ -267,6 +268,7 @@
                 <span class="home-calendar-legend-item"><span class="home-calendar-dot home-calendar-dot-inicio-aulas"></span>Início</span>
                 <span class="home-calendar-legend-item"><span class="home-calendar-dot home-calendar-dot-fim-aulas"></span>Fim</span>
                 <span class="home-calendar-legend-item"><span class="home-calendar-dot home-calendar-dot-entrega"></span>Tarefa</span>
+                <span class="home-calendar-legend-item"><span class="home-calendar-dot home-calendar-dot-prova"></span>Prova</span>
               </div>
             </div>
             <div class="home-calendar-weekdays" aria-hidden="true">
@@ -737,6 +739,86 @@
     </div>
   </div>
 
+  <!-- Aba Calendário -->
+  <div class="tab-content" id="tab-calendario">
+    <div class="tab-calendar-container">
+      <div class="tab-calendar-layout-grid">
+        <!-- Lado Esquerdo: Calendário Grid -->
+        <div class="tab-calendar-main-panel">
+          <div class="tab-calendar-header">
+            <div class="tab-calendar-title-group">
+              <h3 id="tab-calendar-title">Carregando...</h3>
+            </div>
+            <div class="tab-calendar-actions">
+              <button id="mobile-add-exam-btn" class="calendar-action-btn-today" style="display: none;">Adicionar Prova</button>
+              <button id="tab-calendar-today-btn" class="calendar-action-btn-today">Hoje</button>
+              <button id="tab-calendar-prev" class="calendar-nav-btn" title="Mês anterior"><span class="material-icons">chevron_left</span></button>
+              <button id="tab-calendar-next" class="calendar-nav-btn" title="Próximo mês"><span class="material-icons">chevron_right</span></button>
+            </div>
+          </div>
+          
+          <div class="tab-calendar-weekdays" aria-hidden="true">
+            <span>Dom</span>
+            <span>Seg</span>
+            <span>Ter</span>
+            <span>Qua</span>
+            <span>Qui</span>
+            <span>Sex</span>
+            <span>Sáb</span>
+          </div>
+          <div id="tab-calendar-grid" class="tab-calendar-grid"></div>
+          
+          <div class="tab-calendar-legend" aria-hidden="true">
+            <span class="tab-calendar-legend-item"><span class="tab-calendar-dot legend-today"></span>Hoje</span>
+            <span class="tab-calendar-legend-item"><span class="tab-calendar-dot legend-entrega"></span>Atividade</span>
+            <span class="tab-calendar-legend-item"><span class="tab-calendar-dot legend-prova"></span>Prova</span>
+            <span class="tab-calendar-legend-item"><span class="tab-calendar-dot legend-feriado"></span>Feriado</span>
+            <span class="tab-calendar-legend-item"><span class="tab-calendar-dot legend-recesso"></span>Recesso</span>
+          </div>
+
+          <!-- Nota de calendário não oficial -->
+          <div class="tab-calendar-warning">
+            <span class="material-icons warning-icon">info</span>
+            <span>Este calendário não é 100% oficial e serve apenas como guia de fácil acesso.</span>
+          </div>
+        </div>
+        
+        <!-- Lado Central: Agenda -->
+        <div class="tab-calendar-side-panel">
+          <div class="tab-calendar-agenda">
+            <h4 id="tab-agenda-date-title">Atividades</h4>
+            <div id="tab-agenda-events-list" class="tab-agenda-events-list">
+              <div class="tab-agenda-empty">Selecione um dia para ver as atividades.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lado Direito: Adicionar Prova (Apenas Desktop) -->
+        <div class="tab-calendar-form-panel">
+          <div class="tab-calendar-form-card">
+            <button type="button" id="close-exam-modal-btn" class="modal-close-btn" style="display: none;">✕</button>
+            <h4>Adicionar Data de Prova</h4>
+            <form id="add-exam-form">
+              <label for="exam-subject">Matéria:</label>
+              <select id="exam-subject" required>
+                <option value="">Selecione uma matéria</option>
+              </select>
+              
+              <label for="exam-title">Título da Prova:</label>
+              <input type="text" id="exam-title" placeholder="Ex: Prova 1" required />
+              
+              <label for="exam-date">Data da Prova:</label>
+              <input type="date" id="exam-date" required />
+              
+              <button type="submit" class="exam-submit-btn">Adicionar Prova</button>
+            </form>
+            <div id="add-exam-status" class="exam-status-msg"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Conteúdo da nova aba -->
   <div class="tab-content" id="tab-novidades">
     <div class="tab-novidades">
@@ -797,6 +879,7 @@
     <div id="mobile-fab-menu" class="fab-menu" role="menu" aria-hidden="true">
       <button class="fab-item" data-action="abrir-horarios-completos">Horários completos</button>
       <button class="fab-item" data-action="abrir-novidades">Novidades</button>
+      <button class="fab-item" data-action="abrir-atividades">Atividades</button>
       <button class="fab-item" data-action="abrir-configuracoes">Configurações</button>
       <button class="fab-item fab-item-expand" id="fab-expand-btn" title="Fixar expandido" style="display:none;">Fixar</button>
       <button class="fab-item fab-item-minimize" id="fab-minimize-btn" title="Minimizar">−</button>

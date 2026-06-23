@@ -2,7 +2,10 @@
 // <script src="boletim.js"></script> deve estar incluído no index.html antes de script.js para garantir que a função esteja disponível
 
 // URL base da API — em desenvolvimento local o server.js injeta window.API_BASE_URL via index.html
-const API_BASE = window.API_BASE_URL || 'https://ak4ai-sigaa.duckdns.org';
+const API_BASE = window.API_BASE_URL || 
+  ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:3000'
+    : 'https://ak4ai-sigaa.duckdns.org');
 const STORAGE_LAST_CONSULTA = 'sigaaUltimaConsulta';
 const STORAGE_SAVED_PROFILES = 'sigaaPerfisSalvos';
 const STORAGE_SELECTED_PROFILE = 'sigaaPerfilSelecionado';
@@ -573,6 +576,7 @@ function renderResponsibleCalendar(mode = getAppMode()) {
         let primaryType = 'outros';
         if (allDayEvents.some(e => e.tipo === 'feriado')) primaryType = 'feriado';
         else if (allDayEvents.some(e => e.tipo === 'recesso')) primaryType = 'recesso';
+        else if (allDayEvents.some(e => e.tipo === 'prova')) primaryType = 'prova';
         else if (allDayEvents.some(e => e.tipo === 'entrega')) primaryType = 'entrega';
         else if (allDayEvents.some(e => e.tipo === 'inicio-aulas')) primaryType = 'inicio-aulas';
         else if (allDayEvents.some(e => e.tipo === 'fim-aulas')) primaryType = 'fim-aulas';
@@ -595,6 +599,7 @@ function renderResponsibleCalendar(mode = getAppMode()) {
           let shortType = 'Outros';
           if (evt.tipo === 'feriado') shortType = 'Feriado';
           else if (evt.tipo === 'recesso') shortType = 'Recesso';
+          else if (evt.tipo === 'prova') shortType = getCleanDisciplineName(evt.disciplina);
           else if (evt.tipo === 'entrega') shortType = getCleanDisciplineName(evt.disciplina);
           else if (evt.tipo === 'inicio-aulas') shortType = 'Início';
           else if (evt.tipo === 'fim-aulas') shortType = 'Fim';
@@ -1815,6 +1820,12 @@ document.getElementById('logout-btn').addEventListener('click', () => {
     if (tbody) tbody.innerHTML = '';
     tblAtivTab.style.display = 'none';
   }
+  tabCalendarCurrentDate = new Date();
+  tabCalendarSelectedDate = new Date();
+  const tabGrid = document.getElementById('tab-calendar-grid');
+  if (tabGrid) tabGrid.innerHTML = '';
+  const tabAgenda = document.getElementById('tab-agenda-events-list');
+  if (tabAgenda) tabAgenda.innerHTML = '<div class="tab-agenda-empty">Selecione um dia para ver as atividades.</div>';
 
   // 10. Limpa timer/status de scrape
   const scrapeTimer = document.getElementById('scrape-timer');
@@ -1890,6 +1901,8 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 let frequenciasGlobais = [];
 let atividadesGlobais = [];
 let novidadesGlobais = [];
+let tabCalendarCurrentDate = new Date();
+let tabCalendarSelectedDate = new Date();
 let scheduleInterval = null;
 let __homeHeightSyncInterval = null;
 let __responsibleCalendarSyncInterval = null;
@@ -3824,7 +3837,10 @@ function preencherTabelaAtividades(atividades) {
   const temDados = atividades.length > 0;
   if (tabelaAba) tabelaAba.style.display = temDados ? '' : 'none';
   if (vaziTab) vaziTab.style.display = (!temDados) ? '' : 'none';
-
+  if (tabelaHome) tabelaHome.style.display = temDados ? '' : 'none';
+  if (vaziHome) vaziHome.style.display = (!temDados) ? '' : 'none';
+  // Renderiza o calendário na aba Calendário
+  renderTabCalendar();
   atualizarHomePainelNovidadesAtividades();
 }
 
@@ -3974,6 +3990,8 @@ document.querySelectorAll('.tab-button').forEach(button => {
       renderResponsibleCalendar(getAppMode());
       ajustarAlturaCalendarioResponsavel();
       refreshResponsibleCalendarSyncLoop();
+    } else if (tabId === 'tab-calendario') {
+      renderTabCalendar();
     }
     // If the Horários tab (data-tab="tab-simplificada") was activated by click,
     // ensure the interactive guide sits at the top of the list container when view is 'lista'.
@@ -4019,6 +4037,8 @@ function activateTab(tabId) {
       renderResponsibleCalendar(getAppMode());
       ajustarAlturaCalendarioResponsavel();
       refreshResponsibleCalendarSyncLoop();
+    } else if (tabId === 'tab-calendario') {
+      renderTabCalendar();
     }
     // When user activates the Horários tab, ensure the interactive guide
     // is positioned at the top of the list view if the saved view is 'lista'.
@@ -4643,6 +4663,8 @@ document.addEventListener('DOMContentLoaded', () => {
         activateTab('tab-novidades');
       } else if (action === 'abrir-atividades') {
         activateTab('tab-atividades');
+      } else if (action === 'abrir-calendario') {
+        activateTab('tab-calendario');
       } else if (action === 'abrir-configuracoes') {
         activateTab('tab-configuracoes');
       }
@@ -4760,6 +4782,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (action === 'abrir-atividades') {
       // ativa diretamente a aba de atividades
       activateTab('tab-atividades');
+      closeFab();
+    } else if (action === 'abrir-calendario') {
+      // ativa diretamente a aba de calendário
+      activateTab('tab-calendario');
       closeFab();
     } else if (action === 'abrir-configuracoes') {
       activateTab('tab-configuracoes');
@@ -5426,7 +5452,458 @@ function stopTokenTimer() {
 }
 
 // ---------------------- End token helpers ----------------------
-// ...existing code...
+// Função para mostrar modal de notificações acadêmicas pendentes
+function showAcademicNotificationsModal(data) {
+  const modal = document.getElementById('modal-academic-notifications');
+  if (modal) {
+    modal.style.display = 'flex';
+    
+    // Fechar modal ao clicar fora dele
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+    
+    console.log('[Modal] Notificações acadêmicas pendentes exibidas');
+    console.log('Instruções:', data.instructions);
+    console.log('SIGAA URL:', data.sigaaUrl);
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// NOVO CALENDÁRIO DA ABA CALENDÁRIO (RESPONSIVO E COM FORMATO GOOGLE AGENDA)
+// ───────────────────────────────────────────────────────────────────────────
+function initTabCalendar() {
+  const prevBtn = document.getElementById('tab-calendar-prev');
+  const nextBtn = document.getElementById('tab-calendar-next');
+  const todayBtn = document.getElementById('tab-calendar-today-btn');
+  if (prevBtn && prevBtn.dataset.bound !== '1') {
+    prevBtn.dataset.bound = '1';
+    prevBtn.addEventListener('click', () => {
+      tabCalendarCurrentDate.setMonth(tabCalendarCurrentDate.getMonth() - 1);
+      tabCalendarSelectedDate = new Date(tabCalendarCurrentDate.getFullYear(), tabCalendarCurrentDate.getMonth(), 1);
+      renderTabCalendar();
+    });
+  }
+  if (nextBtn && nextBtn.dataset.bound !== '1') {
+    nextBtn.dataset.bound = '1';
+    nextBtn.addEventListener('click', () => {
+      tabCalendarCurrentDate.setMonth(tabCalendarCurrentDate.getMonth() + 1);
+      tabCalendarSelectedDate = new Date(tabCalendarCurrentDate.getFullYear(), tabCalendarCurrentDate.getMonth(), 1);
+      renderTabCalendar();
+    });
+  }
+  if (todayBtn && todayBtn.dataset.bound !== '1') {
+    todayBtn.dataset.bound = '1';
+    todayBtn.addEventListener('click', () => {
+      tabCalendarCurrentDate = new Date();
+      tabCalendarSelectedDate = new Date();
+      renderTabCalendar();
+    });
+  }
+}
+
+function parseSchoolEventDate(dateStr) {
+  if (!dateStr) return null;
+  const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10));
+  }
+  return null;
+}
+
+function createAgendaCard(evt) {
+  const card = document.createElement('div');
+  card.className = `tab-agenda-card type-${evt.type}`;
+  if (evt.isTask && evt.concluida) {
+    card.classList.add('is-completed');
+  }
+  const border = document.createElement('div');
+  border.className = 'tab-agenda-card-border';
+  card.appendChild(border);
+  const content = document.createElement('div');
+  content.className = 'tab-agenda-card-content';
+  const title = document.createElement('div');
+  title.className = 'tab-agenda-card-title';
+  title.textContent = evt.title;
+  content.appendChild(title);
+  if (evt.subtitle) {
+    const subtitle = document.createElement('div');
+    subtitle.className = 'tab-agenda-card-subtitle';
+    subtitle.textContent = evt.subtitle;
+    content.appendChild(subtitle);
+  }
+  if (evt.isTask) {
+    const badgeContainer = document.createElement('div');
+    badgeContainer.className = 'tab-agenda-card-badge-row';
+    
+    let badgeHtml = '';
+    if (evt.concluida) {
+      badgeHtml = `<span class="badge-entrega badge-concluida"><span class="material-icons badge-icon">check_circle</span>Entregue</span>`;
+    } else {
+      badgeHtml = `<span class="badge-entrega badge-pendente"><span class="material-icons badge-icon">pending_actions</span>Pendente</span>`;
+    }
+    badgeContainer.innerHTML = badgeHtml;
+    content.appendChild(badgeContainer);
+  }
+  card.appendChild(content);
+  return card;
+}
+
+function renderTabCalendarGridSelection() {
+  const grid = document.getElementById('tab-calendar-grid');
+  if (!grid) return;
+  
+  const cells = grid.querySelectorAll('.tab-calendar-day');
+  cells.forEach(cell => {
+    const cellTime = parseInt(cell.dataset.time, 10);
+    const date = new Date(cellTime);
+    const isSelected = date.getDate() === tabCalendarSelectedDate.getDate() && date.getMonth() === tabCalendarSelectedDate.getMonth() && date.getFullYear() === tabCalendarSelectedDate.getFullYear();
+    
+    if (isSelected) {
+      cell.classList.add('is-selected');
+    } else {
+      cell.classList.remove('is-selected');
+    }
+  });
+}
+
+function renderTabCalendarAgenda() {
+  const agendaList = document.getElementById('tab-agenda-events-list');
+  const agendaTitle = document.getElementById('tab-agenda-date-title');
+  if (!agendaList || !agendaTitle) return;
+  const selectedDate = tabCalendarSelectedDate;
+  const options = { weekday: 'long', day: 'numeric', month: 'long' };
+  const formattedDate = selectedDate.toLocaleDateString('pt-BR', options);
+  agendaTitle.textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+  agendaList.innerHTML = '';
+  const year = selectedDate.getFullYear();
+  const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+  const day = String(selectedDate.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
+  // Get events for the selected date
+  const daySchoolEvents = (cachedCalendarEvents || []).filter(e => e.data === dateStr);
+  const dayTasks = (atividadesGlobais || []).filter(a => {
+    const aDate = parseAtividadeDate(a.data);
+    if (!aDate) return false;
+    return aDate.getDate() === selectedDate.getDate() && aDate.getMonth() === selectedDate.getMonth() && aDate.getFullYear() === selectedDate.getFullYear();
+  });
+  const selectedDayEvents = [
+    ...daySchoolEvents.map(e => ({ type: e.tipo || 'outros', title: e.titulo, subtitle: e.disciplina || 'Calendário Letivo', isTask: false })),
+    ...dayTasks.map(t => ({ 
+      type: 'entrega', 
+      title: t.descricao, 
+      subtitle: t.disciplina,
+      isTask: !!t.entregaMarcada, 
+      concluida: t.concluida 
+    }))
+  ];
+  if (selectedDayEvents.length > 0) {
+    selectedDayEvents.forEach(evt => {
+      const card = createAgendaCard(evt);
+      agendaList.appendChild(card);
+    });
+  } else {
+    const emptyMsg = document.createElement('div');
+    emptyMsg.className = 'tab-agenda-empty';
+    emptyMsg.textContent = 'Nenhuma atividade ou evento para este dia.';
+    agendaList.appendChild(emptyMsg);
+  }
+  // Section title for upcoming events
+  const upcomingHeader = document.createElement('h5');
+  upcomingHeader.className = 'tab-agenda-section-title';
+  upcomingHeader.textContent = 'Próximas Atividades';
+  agendaList.appendChild(upcomingHeader);
+  // Get all tasks and school events that occur after the selected date, sorted chronologically
+  const upcomingTasks = (atividadesGlobais || []).filter(a => {
+    const aDate = parseAtividadeDate(a.data);
+    if (!aDate) return false;
+    const compareDate = new Date(selectedDate);
+    compareDate.setHours(0,0,0,0);
+    const taskCompareDate = new Date(aDate);
+    taskCompareDate.setHours(0,0,0,0);
+    return taskCompareDate.getTime() > compareDate.getTime();
+  }).map(t => {
+    const aDate = parseAtividadeDate(t.data);
+    return {
+      date: aDate,
+      type: 'entrega',
+      title: t.descricao,
+      subtitle: t.disciplina,
+      isTask: !!t.entregaMarcada,
+      concluida: t.concluida
+    };
+  });
+  const upcomingSchoolEvents = (cachedCalendarEvents || []).filter(e => {
+    const eDate = parseSchoolEventDate(e.data);
+    if (!eDate) return false;
+    const compareDate = new Date(selectedDate);
+    compareDate.setHours(0,0,0,0);
+    const eventCompareDate = new Date(eDate);
+    eventCompareDate.setHours(0,0,0,0);
+    return eventCompareDate.getTime() > compareDate.getTime();
+  }).map(e => {
+    const eDate = parseSchoolEventDate(e.data);
+    return {
+      date: eDate,
+      type: e.tipo || 'outros',
+      title: e.titulo,
+      subtitle: e.disciplina || 'Calendário Letivo',
+      isTask: false
+    };
+  });
+  const allUpcoming = [...upcomingTasks, ...upcomingSchoolEvents];
+  allUpcoming.sort((a, b) => a.date.getTime() - b.date.getTime());
+  // Show up to 10 upcoming events
+  const slicedUpcoming = allUpcoming.slice(0, 10);
+  if (slicedUpcoming.length > 0) {
+    let lastDateHeader = '';
+    slicedUpcoming.forEach(evt => {
+      const dayName = evt.date.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+      const currentHeader = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+      
+      if (currentHeader !== lastDateHeader) {
+        const dateHeader = document.createElement('div');
+        dateHeader.className = 'tab-agenda-upcoming-date';
+        dateHeader.textContent = currentHeader;
+        agendaList.appendChild(dateHeader);
+        lastDateHeader = currentHeader;
+      }
+      const card = createAgendaCard(evt);
+      agendaList.appendChild(card);
+    });
+  } else {
+    const emptyMsg = document.createElement('div');
+    emptyMsg.className = 'tab-agenda-empty';
+    emptyMsg.style.fontSize = '12px';
+    emptyMsg.textContent = 'Nenhuma atividade futura encontrada.';
+    agendaList.appendChild(emptyMsg);
+  }
+}
+
+function renderTabCalendar() {
+  const container = document.querySelector('.tab-calendar-container');
+  const grid = document.getElementById('tab-calendar-grid');
+  const title = document.getElementById('tab-calendar-title');
+  if (!container || !grid || !title) return;
+  
+  initTabCalendar();
+  populateExamSubjects();
+  initExamForm();
+  
+  const now = tabCalendarCurrentDate;
+  const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  title.textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+  grid.innerHTML = '';
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+  const firstVisible = new Date(monthStart);
+  firstVisible.setDate(monthStart.getDate() - monthStart.getDay());
+  const totalDaysToRender = 42; 
+  const days = [];
+  const current = new Date(firstVisible);
+  for (let i = 0; i < totalDaysToRender; i++) {
+    days.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  const curso = obterCursoDoPerfil();
+  if (cachedCalendarEvents === null || lastFetchedCurso !== curso) {
+    fetchCalendarEvents(curso).then(events => {
+      if (events) {
+        renderTabCalendar();
+      }
+    });
+  }
+  const today = new Date();
+  days.forEach((date) => {
+    const cell = document.createElement('div');
+    cell.className = 'tab-calendar-day';
+    cell.dataset.time = String(date.getTime());
+    const isSameMonth = date.getMonth() === now.getMonth();
+    const isToday = date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+    const isSelected = date.getDate() === tabCalendarSelectedDate.getDate() && date.getMonth() === tabCalendarSelectedDate.getMonth() && date.getFullYear() === tabCalendarSelectedDate.getFullYear();
+    if (isToday) {
+      cell.classList.add('is-today');
+    }
+    if (isSelected) {
+      cell.classList.add('is-selected');
+    }
+    if (!isSameMonth) {
+      cell.classList.add('is-muted');
+    }
+    const numberSpan = document.createElement('span');
+    numberSpan.className = 'tab-calendar-day-number';
+    numberSpan.textContent = String(date.getDate()).padStart(2, '0');
+    cell.appendChild(numberSpan);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    // School calendar events
+    const daySchoolEvents = (cachedCalendarEvents || []).filter(e => e.data === dateStr);
+    // Academic tasks
+    const dayTasks = (atividadesGlobais || []).filter(a => {
+      const aDate = parseAtividadeDate(a.data);
+      if (!aDate) return false;
+      return aDate.getDate() === date.getDate() && aDate.getMonth() === date.getMonth() && aDate.getFullYear() === date.getFullYear();
+    });
+    const allEvents = [
+      ...daySchoolEvents.map(e => ({ type: e.tipo || 'outros' })),
+      ...dayTasks.map(t => ({ type: 'entrega' }))
+    ];
+    if (allEvents.length > 0) {
+      cell.classList.add('has-events');
+      
+      const dotsContainer = document.createElement('div');
+      dotsContainer.className = 'tab-calendar-dots';
+      
+      allEvents.slice(0, 3).forEach(evt => {
+        const dot = document.createElement('span');
+        dot.className = `tab-calendar-dot dot-${evt.type}`;
+        dotsContainer.appendChild(dot);
+      });
+      
+      cell.appendChild(dotsContainer);
+    }
+    cell.addEventListener('click', () => {
+      tabCalendarSelectedDate = new Date(date);
+      renderTabCalendarGridSelection();
+      renderTabCalendarAgenda();
+    });
+    grid.appendChild(cell);
+  });
+  renderTabCalendarAgenda();
+}
+
+function obterDisciplinasUnicas() {
+  const disciplinas = new Set();
+  if (Array.isArray(notasGlobais)) {
+    notasGlobais.forEach(item => {
+      if (item.disciplina) disciplinas.add(item.disciplina.split(' - ')[0].trim());
+    });
+  }
+  if (Array.isArray(frequenciasGlobais)) {
+    frequenciasGlobais.forEach(item => {
+      if (item.disciplina) disciplinas.add(item.disciplina.split(' - ')[0].trim());
+    });
+  }
+  if (Array.isArray(atividadesGlobais)) {
+    atividadesGlobais.forEach(item => {
+      if (item.disciplina) disciplinas.add(item.disciplina.split(' - ')[0].trim());
+    });
+  }
+  return Array.from(disciplinas).sort();
+}
+
+function populateExamSubjects() {
+  const select = document.getElementById('exam-subject');
+  if (!select) return;
+  select.innerHTML = '<option value="">Selecione uma matéria</option>';
+  const subjects = obterDisciplinasUnicas();
+  subjects.forEach(subject => {
+    const opt = document.createElement('option');
+    opt.value = subject;
+    opt.textContent = subject;
+    select.appendChild(opt);
+  });
+}
+
+function initExamForm() {
+  const form = document.getElementById('add-exam-form');
+  if (!form || form.dataset.bound === '1') return;
+  form.dataset.bound = '1';
+  
+  // Triggers do modal de adicionar provas no mobile
+  const openBtn = document.getElementById('mobile-add-exam-btn');
+  const closeBtn = document.getElementById('close-exam-modal-btn');
+  const panel = document.querySelector('.tab-calendar-form-panel');
+
+  if (openBtn) {
+    openBtn.addEventListener('click', () => {
+      if (panel) panel.classList.add('open');
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      if (panel) panel.classList.remove('open');
+    });
+  }
+
+  if (panel) {
+    panel.addEventListener('click', (e) => {
+      if (e.target === panel) {
+        panel.classList.remove('open');
+      }
+    });
+  }
+  
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const subject = document.getElementById('exam-subject').value;
+    const title = document.getElementById('exam-title').value;
+    const date = document.getElementById('exam-date').value;
+    const statusDiv = document.getElementById('add-exam-status');
+    
+    if (!subject || !title || !date) {
+      if (statusDiv) {
+        statusDiv.className = 'exam-status-msg status-error';
+        statusDiv.textContent = 'Preencha todos os campos!';
+      }
+      return;
+    }
+    
+    try {
+      const curso = obterCursoDoPerfil();
+      const response = await fetch(`${API_BASE}/api/calendario/eventos?curso=${curso}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          disciplina: subject,
+          titulo: title,
+          data: date
+        })
+      });
+      
+      const result = await response.json();
+      if (response.ok && result.success) {
+        if (statusDiv) {
+          statusDiv.className = 'exam-status-msg status-success';
+          statusDiv.textContent = 'Prova adicionada com sucesso!';
+        }
+        form.reset();
+        cachedCalendarEvents = null;
+        renderTabCalendar();
+        
+        // Fecha o modal no mobile após sucesso
+        if (panel) panel.classList.remove('open');
+        
+        setTimeout(() => {
+          if (statusDiv.textContent === 'Prova adicionada com sucesso!') {
+            statusDiv.textContent = '';
+          }
+        }, 3000);
+      } else {
+        console.warn('Erro ao salvar prova no servidor:', result);
+        if (statusDiv) {
+          statusDiv.className = 'exam-status-msg status-error';
+          statusDiv.textContent = result.error || 'Erro ao salvar a prova.';
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao adicionar prova:', err);
+      if (statusDiv) {
+        statusDiv.className = 'exam-status-msg status-error';
+        statusDiv.textContent = 'Falha na conexão com o servidor.';
+      }
+    }
+  });
+}
+
 function ajustarMaxHeightNovidades() {
   // Mantido por compatibilidade com gatilhos existentes.
   ajustarAlturaNovidades();
