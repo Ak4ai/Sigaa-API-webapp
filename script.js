@@ -3,7 +3,7 @@
 
 // URL base da API — em desenvolvimento local o server.js injeta window.API_BASE_URL via index.html
 const API_BASE = window.API_BASE_URL ||
-  ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  (((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port === '3000')
     ? 'http://localhost:3000'
     : 'https://ak4ai-sigaa.duckdns.org');
 const STORAGE_LAST_CONSULTA = 'sigaaUltimaConsulta';
