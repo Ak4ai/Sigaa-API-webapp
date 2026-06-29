@@ -2,7 +2,7 @@
 // <script src="boletim.js"></script> deve estar incluído no index.html antes de script.js para garantir que a função esteja disponível
 
 // URL base da API — em desenvolvimento local o server.js injeta window.API_BASE_URL via index.html
-const API_BASE = window.API_BASE_URL || 
+const API_BASE = window.API_BASE_URL ||
   ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:3000'
     : 'https://ak4ai-sigaa.duckdns.org');
@@ -338,16 +338,22 @@ function ajustarAlturaCalendarioResponsavel() {
       return;
     }
 
-    const formRect = form.getBoundingClientRect();
-    const dadosRect = dados.getBoundingClientRect();
-    const formStyle = window.getComputedStyle(form);
-    const dadosStyle = window.getComputedStyle(dados);
+    let availableHeight;
+    if (isHideHomeInputsEnabled()) {
+      const dadosRect = dados.getBoundingClientRect();
+      availableHeight = Math.max(120, Math.round(dadosRect.height) - 38);
+    } else {
+      const formRect = form.getBoundingClientRect();
+      const dadosRect = dados.getBoundingClientRect();
+      const formStyle = window.getComputedStyle(form);
+      const dadosStyle = window.getComputedStyle(dados);
 
-    const formMarginTop = parseFloat(formStyle.marginTop || '0') || 0;
-    const dadosMarginBottom = parseFloat(dadosStyle.marginBottom || '0') || 0;
-    const top = formRect.top - formMarginTop;
-    const bottom = dadosRect.bottom + dadosMarginBottom;
-    const availableHeight = Math.max(120, Math.round(bottom - top)) + 182;
+      const formMarginTop = parseFloat(formStyle.marginTop || '0') || 0;
+      const dadosMarginBottom = parseFloat(dadosStyle.marginBottom || '0') || 0;
+      const top = formRect.top - formMarginTop;
+      const bottom = dadosRect.bottom + dadosMarginBottom;
+      availableHeight = Math.max(120, Math.round(bottom - top)) + 182;
+    }
 
     calendar.dataset.availableHeight = String(availableHeight);
     calendar.style.maxHeight = `${availableHeight}px`;
@@ -360,6 +366,9 @@ function ajustarAlturaCalendarioResponsavel() {
 }
 
 function getResponsibleCalendarWeeksToRender(availableHeight) {
+  if (isHideHomeInputsEnabled()) {
+    return 24;
+  }
   const usableHeight = Math.max(0, Number(availableHeight) || 0);
   const headerReserve = 126;
   const rowHeight = 92;
@@ -382,12 +391,12 @@ function obterCursoDoPerfil() {
     const dados = data.dadosInstitucionais || {};
     const curso = dados.Curso || dados.curso || '';
     const cursoNormalized = curso.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    
+
     const temDCDV = cursoNormalized.includes('DCDV');
     const temDivinopolis = cursoNormalized.includes('DIVINOPOLIS');
     const temBacharelado = cursoNormalized.includes('BACHARELADO');
     const temMT = cursoNormalized.includes('MT');
-    
+
     const isComputacao = cursoNormalized.includes('ENGENHARIA DE COMPUTACAO') && temDCDV && temDivinopolis && temBacharelado && temMT;
     return isComputacao ? 'computacao' : 'mecatronica';
   } catch (e) {
@@ -430,13 +439,13 @@ function getCleanDisciplineName(name) {
   if (!name) return 'Tarefa';
   let clean = name.split(' - ')[0].split('/')[0].trim();
   clean = clean.replace(/ENGENHARIA DE/i, 'ENG.')
-               .replace(/PROGRAMAÇÃO EM/i, 'PROG.')
-               .replace(/INTELIGÊNCIA ARTIFICIAL/i, 'I.A.')
-               .replace(/MICROPROCESSADORES E MICROCONTROLADORES/i, 'MICROS')
-               .replace(/MICROPROCESSADORES/i, 'MICROS')
-               .replace(/PESQUISA OPERACIONAL/i, 'P. OPER.')
-               .replace(/COMPILADORES/i, 'COMP.')
-               .replace(/INTERNET DAS COISAS/i, 'IOT');
+    .replace(/PROGRAMAÇÃO EM/i, 'PROG.')
+    .replace(/INTELIGÊNCIA ARTIFICIAL/i, 'I.A.')
+    .replace(/MICROPROCESSADORES E MICROCONTROLADORES/i, 'MICROS')
+    .replace(/MICROPROCESSADORES/i, 'MICROS')
+    .replace(/PESQUISA OPERACIONAL/i, 'P. OPER.')
+    .replace(/COMPILADORES/i, 'COMP.')
+    .replace(/INTERNET DAS COISAS/i, 'IOT');
   // Trunca a no máximo 9 caracteres
   if (clean.length > 9) {
     clean = clean.substring(0, 8) + '.';
@@ -452,7 +461,7 @@ function renderResponsibleCalendar(mode = getAppMode()) {
 
   const normalizedMode = normalizeAppMode(mode);
   const isDesktop = window.innerWidth >= 1040;
-  const isCalendarActive = normalizedMode === 'responsavel' || 
+  const isCalendarActive = normalizedMode === 'responsavel' ||
     (normalizedMode === 'graduacao' && document.getElementById('calendar-view-checkbox')?.checked);
 
   if (!isCalendarActive || !isDesktop) {
@@ -752,11 +761,11 @@ function initCalendarToggle() {
   const checkbox = document.getElementById('calendar-view-checkbox');
   if (!checkbox || checkbox.dataset.bound === '1') return;
   checkbox.dataset.bound = '1';
-  
+
   // Recupera o estado anterior do toggle de calendário no modo graduação se existir
   const savedState = localStorage.getItem('sigaa_calendar_view_graduacao') === '1';
   checkbox.checked = savedState;
-  
+
   checkbox.addEventListener('change', () => {
     localStorage.setItem('sigaa_calendar_view_graduacao', checkbox.checked ? '1' : '0');
     applyHomeModeLayout(getAppMode());
@@ -1256,21 +1265,21 @@ document.addEventListener('DOMContentLoaded', function () {
   const pageHeader = document.querySelector('.page-header');
   const animationScrollDistance = 100; // Pixels to scroll for full animation (header reaches top)
   const headerHeight = pageHeader?.offsetHeight || 70;
-  
+
   // Easing function for smooth animation (easeInOutCubic)
   const easeInOutCubic = (t) => {
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   };
-  
+
   window.addEventListener('scroll', () => {
     const scrollY = window.scrollY;
-    
+
     // Calculate progress based on scroll distance (0 to 28px = 0% to 100%)
     let linearProgress = Math.max(0, Math.min(1, scrollY / animationScrollDistance));
-    
+
     // Apply easing function for smooth acceleration/deceleration
     const easedProgress = easeInOutCubic(linearProgress);
-    
+
     // Update CSS custom properties with eased progress
     pageHeader?.style.setProperty('--scroll-progress', easedProgress);
     pageHeader?.style.setProperty('--scroll-pad-y', (easedProgress * 2) + 'px');
@@ -1280,7 +1289,7 @@ document.addEventListener('DOMContentLoaded', function () {
     pageHeader?.style.setProperty('--scroll-blur', (easedProgress * 2) + 'px');
     pageHeader?.style.setProperty('--scroll-shadow', (easedProgress * 0.12) + '');
     pageHeader?.style.setProperty('--scroll-bg', (easedProgress * 0.03) + '');
-    
+
     // Smoothly transition padding-top throughout the animation
     const basePadding = 20;
     const targetPadding = headerHeight + 4;
@@ -1290,53 +1299,53 @@ document.addEventListener('DOMContentLoaded', function () {
   }, { passive: true });
 });
 document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const user = document.getElementById('user').value.trim();
-    const pass = document.getElementById('pass').value.trim();
-    const manterLogado = document.getElementById('manter-logado').checked;
+  const user = document.getElementById('user').value.trim();
+  const pass = document.getElementById('pass').value.trim();
+  const manterLogado = document.getElementById('manter-logado').checked;
   const selectedMode = normalizeAppMode(document.getElementById('home-mode-select')?.value || getAppMode());
 
-    const errorDiv = document.getElementById('error');
-    const dadosDiv = document.getElementById('dados-institucionais');
-    const overlayDiv = document.getElementById('loading-overlay');
-    errorDiv.textContent = '';
-    if (overlayDiv) overlayDiv.style.display = 'flex';
+  const errorDiv = document.getElementById('error');
+  const dadosDiv = document.getElementById('dados-institucionais');
+  const overlayDiv = document.getElementById('loading-overlay');
+  errorDiv.textContent = '';
+  if (overlayDiv) overlayDiv.style.display = 'flex';
 
-    try {
-        // 1. Login e salva token
-        const resp = await fetch(`${API_BASE}/api/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user, pass })
-        });
-        if (!resp.ok) throw new Error('Usuário ou senha inválidos');
-        const { token } = await resp.json();
+  try {
+    // 1. Login e salva token
+    const resp = await fetch(`${API_BASE}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user, pass })
+    });
+    if (!resp.ok) throw new Error('Usuário ou senha inválidos');
+    const { token } = await resp.json();
 
     // Salva token junto com informação de expiry (se disponível)
     const storageType = manterLogado ? 'local' : 'session';
     saveTokenWithExpiry(token, storageType);
 
-        // 2. Usa token para buscar dados
-        await consultarComToken(token, user, selectedMode);
-    } catch (error) {
-        console.error('Erro no login:', error);
-        const isNetworkError = error.name === 'AbortError' || error.name === 'TypeError' || error.message === 'Failed to fetch';
-        errorDiv.textContent = isNetworkError
-          ? 'Servidor inacessível. Verifique sua conexão ou tente novamente mais tarde.'
-          : error.message;
-      // Em falha de login (antes de consultar), garante fechamento do overlay
-        if (overlayDiv) overlayDiv.style.display = 'none';
-    }
+    // 2. Usa token para buscar dados
+    await consultarComToken(token, user, selectedMode);
+  } catch (error) {
+    console.error('Erro no login:', error);
+    const isNetworkError = error.name === 'AbortError' || error.name === 'TypeError' || error.message === 'Failed to fetch';
+    errorDiv.textContent = isNetworkError
+      ? 'Servidor inacessível. Verifique sua conexão ou tente novamente mais tarde.'
+      : error.message;
+    // Em falha de login (antes de consultar), garante fechamento do overlay
+    if (overlayDiv) overlayDiv.style.display = 'none';
+  }
 });
 
 async function consultarComToken(token, userFromLogin = '', requestedMode = null) {
-    const errorDiv = document.getElementById('error');
-    const dadosDiv = document.getElementById('dados-institucionais');
-    const overlayDiv = document.getElementById('loading-overlay');
-    errorDiv.textContent = '';
-    dadosDiv.innerHTML = '';
-    if (overlayDiv) overlayDiv.style.display = 'flex';
+  const errorDiv = document.getElementById('error');
+  const dadosDiv = document.getElementById('dados-institucionais');
+  const overlayDiv = document.getElementById('loading-overlay');
+  errorDiv.textContent = '';
+  dadosDiv.innerHTML = '';
+  if (overlayDiv) overlayDiv.style.display = 'flex';
 
   let queuePollInterval = null;
 
@@ -1344,110 +1353,110 @@ async function consultarComToken(token, userFromLogin = '', requestedMode = null
     // Gera clientId ANTES de iniciar o scraper
     const clientId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     __currentClientId = clientId;  // Armazena globalmente para polling de progresso
-    
+
     // inicia contador visível no formulário (agora possui __currentClientId válido)
     startScrapeCounter();
     const inicio = performance.now();
 
-        // Usa AbortController para timeout do fetch principal (180s)
-        const controller = new AbortController();
-        const FETCH_TIMEOUT_MS = 180_000;
-        const fetchTimeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    // Usa AbortController para timeout do fetch principal (180s)
+    const controller = new AbortController();
+    const FETCH_TIMEOUT_MS = 180_000;
+    const fetchTimeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-        // Inicia fetch (pode ficar na fila do backend)
-        // Tenta HTTPS primeiro (via proxy), fallback para HTTP se falhar
-        const fetchPromise = fetch(`${API_BASE}/api/scraper`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, clientId, skipSchedule: isSkipScheduleEnabled() }),
-            signal: controller.signal,
-            mode: 'cors',
-            credentials: 'omit'
-        }).catch(err => {
-            // Se HTTPS fails, tenta HTTP como fallback
-            console.warn(`[FETCH] Erro HTTPS, tentando HTTP fallback:`, err.message);
-            if (API_BASE.includes('https')) {
-                const httpFallback = API_BASE.replace('https://', 'http://').replace(':443', ':8080');
-                return fetch(`${httpFallback}/api/scraper`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token, clientId, skipSchedule: isSkipScheduleEnabled() }),
-                    signal: controller.signal,
-                    mode: 'cors'
-                });
-            }
-            throw err;
-        }).finally(() => clearTimeout(fetchTimeoutId));
+    // Inicia fetch (pode ficar na fila do backend)
+    // Tenta HTTPS primeiro (via proxy), fallback para HTTP se falhar
+    const fetchPromise = fetch(`${API_BASE}/api/scraper`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, clientId, skipSchedule: isSkipScheduleEnabled() }),
+      signal: controller.signal,
+      mode: 'cors',
+      credentials: 'omit'
+    }).catch(err => {
+      // Se HTTPS fails, tenta HTTP como fallback
+      console.warn(`[FETCH] Erro HTTPS, tentando HTTP fallback:`, err.message);
+      if (API_BASE.includes('https')) {
+        const httpFallback = API_BASE.replace('https://', 'http://').replace(':443', ':8080');
+        return fetch(`${httpFallback}/api/scraper`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, clientId, skipSchedule: isSkipScheduleEnabled() }),
+          signal: controller.signal,
+          mode: 'cors'
+        });
+      }
+      throw err;
+    }).finally(() => clearTimeout(fetchTimeoutId));
 
-        // Mostra display de fila imediatamente (o fetch pode demorar)
-        updateQueueDisplay(-1, 60000); // -1 = "entrando na fila..."
+    // Mostra display de fila imediatamente (o fetch pode demorar)
+    updateQueueDisplay(-1, 60000); // -1 = "entrando na fila..."
 
-        // Polling da fila a cada 2s usando clientId para posição exata
-        // Para automaticamente após 3 falhas de rede consecutivas
-        console.log(`[FILA] clientId deste request: ${clientId}`);
-        let pollNetworkErrors = 0;
-        const MAX_POLL_ERRORS = 3;
-        queuePollInterval = setInterval(async () => {
-            try {
-                const pollController = new AbortController();
-                const pollTimeout = setTimeout(() => pollController.abort(), 5000);
-                const statusResp = await fetch(`${API_BASE}/api/queue-status?clientId=${clientId}`, {
-                    method: 'GET',
-                    signal: pollController.signal
-                });
-                clearTimeout(pollTimeout);
-                pollNetworkErrors = 0; // reset em caso de sucesso
-                const statusData = await statusResp.json();
-                console.log(`[FILA] poll response:`, statusData);
-                if (statusData.position > 0) {
-                    updateQueueDisplay(statusData.position, statusData.avgTimeMs);
-                } else if (statusData.position === -1) {
-                    updateQueueDisplay(-1, statusData.avgTimeMs);
-                } else {
-                    updateQueueDisplay(1, statusData.avgTimeMs);
-                }
-            } catch (e) {
-                pollNetworkErrors++;
-                console.warn(`[FILA] erro de polling (${pollNetworkErrors}/${MAX_POLL_ERRORS}):`, e.message);
-                if (pollNetworkErrors >= MAX_POLL_ERRORS) {
-                    clearInterval(queuePollInterval);
-                    queuePollInterval = null;
-                    controller.abort(); // aborta o fetch principal também
-                    console.error('[FILA] Servidor inacessível. Polling encerrado.');
-                }
-            }
-        }, 2000);
-
-        const response = await fetchPromise;
-
-        // Para o polling ao receber resposta
-        if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
-
-        const fim = performance.now();
-        const duracaoSegundos = ((fim - inicio) / 1000).toFixed(2);
-
-        const data = await response.json();
-        console.log('Resposta da API:', data);
-        console.log(`⏱ Tempo de resposta da API: ${duracaoSegundos}s`);
-        
-        if (!response.ok) {
-          // Verifica se é erro de notificações acadêmicas pendentes
-          if (data.type === 'ACADEMIC_NOTIFICATIONS_PENDING') {
-            console.log('⚠️  Notificações acadêmicas pendentes detectadas');
-            showAcademicNotificationsModal(data);
-            stopScrapeCounter(false);
-            return;
-          }
-          throw new Error(data.error || 'Erro ao buscar dados');
+    // Polling da fila a cada 2s usando clientId para posição exata
+    // Para automaticamente após 3 falhas de rede consecutivas
+    console.log(`[FILA] clientId deste request: ${clientId}`);
+    let pollNetworkErrors = 0;
+    const MAX_POLL_ERRORS = 3;
+    queuePollInterval = setInterval(async () => {
+      try {
+        const pollController = new AbortController();
+        const pollTimeout = setTimeout(() => pollController.abort(), 5000);
+        const statusResp = await fetch(`${API_BASE}/api/queue-status?clientId=${clientId}`, {
+          method: 'GET',
+          signal: pollController.signal
+        });
+        clearTimeout(pollTimeout);
+        pollNetworkErrors = 0; // reset em caso de sucesso
+        const statusData = await statusResp.json();
+        console.log(`[FILA] poll response:`, statusData);
+        if (statusData.position > 0) {
+          updateQueueDisplay(statusData.position, statusData.avgTimeMs);
+        } else if (statusData.position === -1) {
+          updateQueueDisplay(-1, statusData.avgTimeMs);
+        } else {
+          updateQueueDisplay(1, statusData.avgTimeMs);
         }
+      } catch (e) {
+        pollNetworkErrors++;
+        console.warn(`[FILA] erro de polling (${pollNetworkErrors}/${MAX_POLL_ERRORS}):`, e.message);
+        if (pollNetworkErrors >= MAX_POLL_ERRORS) {
+          clearInterval(queuePollInterval);
+          queuePollInterval = null;
+          controller.abort(); // aborta o fetch principal também
+          console.error('[FILA] Servidor inacessível. Polling encerrado.');
+        }
+      }
+    }, 2000);
 
-        const modeToApply = normalizeAppMode(requestedMode || getAppMode());
-        setAppMode(modeToApply);
-        applyAppMode(modeToApply);
+    const response = await fetchPromise;
 
-        const selectedUser = (userFromLogin || document.getElementById('user')?.value || getSelectedProfileUser() || '').trim();
-        saveConsultaForUser(selectedUser, data);
-        aplicarDadosConsulta(data, duracaoSegundos);
+    // Para o polling ao receber resposta
+    if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
+
+    const fim = performance.now();
+    const duracaoSegundos = ((fim - inicio) / 1000).toFixed(2);
+
+    const data = await response.json();
+    console.log('Resposta da API:', data);
+    console.log(`⏱ Tempo de resposta da API: ${duracaoSegundos}s`);
+
+    if (!response.ok) {
+      // Verifica se é erro de notificações acadêmicas pendentes
+      if (data.type === 'ACADEMIC_NOTIFICATIONS_PENDING') {
+        console.log('⚠️  Notificações acadêmicas pendentes detectadas');
+        showAcademicNotificationsModal(data);
+        stopScrapeCounter(false);
+        return;
+      }
+      throw new Error(data.error || 'Erro ao buscar dados');
+    }
+
+    const modeToApply = normalizeAppMode(requestedMode || getAppMode());
+    setAppMode(modeToApply);
+    applyAppMode(modeToApply);
+
+    const selectedUser = (userFromLogin || document.getElementById('user')?.value || getSelectedProfileUser() || '').trim();
+    saveConsultaForUser(selectedUser, data);
+    aplicarDadosConsulta(data, duracaoSegundos);
 
   } catch (error) {
     console.error('Erro ao consultar com token:', error);
@@ -1510,6 +1519,10 @@ window.addEventListener('DOMContentLoaded', () => {
   initAutoTomorrowToggle();
   // Inicia toggle para pular scrap de horários
   initSkipScheduleToggle();
+  // Inicia toggle para esconder tipo de entrada e sigaa-form
+  initHideHomeInputsToggle();
+  // Inicia botão de logout no header
+  initHeaderLogoutButton();
   // Inicia painel de logs na aba Configurações
   initDebugConsolePanel();
   initHomeModeSwitcher();
@@ -1522,6 +1535,21 @@ const AUTO_TOMORROW_KEY = 'sigaa-auto-tomorrow-after-classes';
 
 function isAutoTomorrowEnabled() {
   return localStorage.getItem(AUTO_TOMORROW_KEY) === '1';
+}
+
+const HIDE_HOME_INPUTS_KEY = 'sigaa-hide-home-inputs';
+
+function isHideHomeInputsEnabled() {
+  return localStorage.getItem(HIDE_HOME_INPUTS_KEY) === '1';
+}
+
+function applyHideHomeInputsState() {
+  const enabled = isHideHomeInputsEnabled();
+  if (enabled) {
+    document.body.classList.add('hide-home-inputs');
+  } else {
+    document.body.classList.remove('hide-home-inputs');
+  }
 }
 
 function getTodayPanelTargetDay(horarios) {
@@ -1600,7 +1628,7 @@ function getCurrentClass(horarios) {
     const [startStr, endStr] = cls.horário.split('-');
     const startHour = parseHora(startStr);
     const endHour = parseHora(endStr);
-    
+
     // Aula em progresso se: (currentHour >= startHour + 5min) E (currentHour < endHour)
     if (currentHour >= startHour + DELAY_MINUTES && currentHour < endHour) {
       return cls;
@@ -1614,7 +1642,7 @@ function updateClassProgressBar(horarios) {
   const container = document.getElementById('class-progress-bar-container');
   const nextClassInfo = document.getElementById('next-class-info');
   const activeClassInfo = document.getElementById('active-class-info');
-  
+
   if (!container || !nextClassInfo || !activeClassInfo) return;
 
   const currentClass = getCurrentClass(horarios);
@@ -1624,55 +1652,55 @@ function updateClassProgressBar(horarios) {
     // Mostra aula em progresso
     nextClassInfo.style.display = 'none';
     activeClassInfo.style.display = 'block';
-    
+
     const [startStr, endStr] = currentClass.horário.split('-');
     const startHour = parseHora(startStr);
     const endHour = parseHora(endStr);
     const now = new Date();
     const currentHour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
-    
+
     const totalDuration = endHour - startHour;
     const progressHours = Math.max(0, currentHour - startHour);
     const progressPercent = Math.min(100, (progressHours / totalDuration) * 100);
-    
+
     // Calcula o tempo faltante em horas, minutos e segundos (com precisão de segundos)
     const totalRemainingSeconds = Math.max(0, Math.round((endHour - currentHour) * 3600));
     const remainingHours = Math.floor(totalRemainingSeconds / 3600);
     const remainingMinutes = Math.floor((totalRemainingSeconds % 3600) / 60);
     const remainingSeconds = totalRemainingSeconds % 60;
-    
+
     const nameEl = document.getElementById('active-class-name');
     const timeEl = document.getElementById('active-class-time');
     const countdownEl = document.getElementById('active-class-countdown');
     const roomTextEl = document.getElementById('active-class-room-text');
     const fillEl = document.getElementById('progress-bar-fill');
     const percentEl = document.getElementById('progress-percentage');
-    
+
     if (nameEl) nameEl.textContent = currentClass.disciplina || '-';
-      clearResponsibleCalendar();
+    clearResponsibleCalendar();
     if (countdownEl) {
       const countdownStr = `${String(remainingHours).padStart(2, '0')}:${String(remainingMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
       countdownEl.textContent = countdownStr;
     }
-    
+
     // Usa turma que já vem nos dados da aula
     const turma = currentClass.turma || '-';
     if (roomTextEl) {
       roomTextEl.textContent = turma;
     }
-    
+
     if (fillEl) fillEl.style.width = `${progressPercent}%`;
     if (percentEl) percentEl.textContent = `${Math.round(progressPercent)}%`;
-    
+
     container.style.display = 'block';
   } else if (nextClass) {
     // Mostra próxima aula
     activeClassInfo.style.display = 'none';
     nextClassInfo.style.display = 'block';
-    
+
     const nameEl = document.getElementById('next-class-name');
     const roomEl = document.getElementById('next-class-room');
-    
+
     if (nameEl) nameEl.textContent = nextClass.disciplina || '-';
     if (roomEl) {
       const strongEl = roomEl.querySelector('strong');
@@ -1680,7 +1708,7 @@ function updateClassProgressBar(horarios) {
         strongEl.textContent = nextClass.turma || '-';
       }
     }
-    
+
     container.style.display = 'block';
   } else {
     // Nenhuma próxima aula
@@ -1690,7 +1718,7 @@ function updateClassProgressBar(horarios) {
 
 function startClassProgressBarUpdates(horarios) {
   if (classProgressBarInterval) clearInterval(classProgressBarInterval);
-  
+
   updateClassProgressBar(horarios);
   classProgressBarInterval = setInterval(() => {
     updateClassProgressBar(horarios);
@@ -1728,6 +1756,31 @@ function initSkipScheduleToggle() {
   });
 }
 
+function initHideHomeInputsToggle() {
+  const toggle = document.getElementById('hide-home-inputs-toggle');
+  if (!toggle) return;
+
+  toggle.checked = isHideHomeInputsEnabled();
+  applyHideHomeInputsState();
+
+  toggle.addEventListener('change', () => {
+    localStorage.setItem(HIDE_HOME_INPUTS_KEY, toggle.checked ? '1' : '0');
+    applyHideHomeInputsState();
+  });
+}
+
+function initHeaderLogoutButton() {
+  const headerLogoutBtn = document.getElementById('header-logout-btn');
+  if (headerLogoutBtn) {
+    headerLogoutBtn.addEventListener('click', () => {
+      const mainLogoutBtn = document.getElementById('logout-btn');
+      if (mainLogoutBtn) {
+        mainLogoutBtn.click();
+      }
+    });
+  }
+}
+
 // Botão de logout/apagar informações
 document.getElementById('logout-btn').addEventListener('click', () => {
   if (!confirm('Tem certeza que deseja sair?\nSeus dados salvos serão apagados.')) return;
@@ -1759,7 +1812,7 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 
   // 5. Limpa tabelas de horários (simplificada)
   ['tabela-horarios-hoje', 'tabela-horarios-segunda', 'tabela-horarios-terca',
-   'tabela-horarios-quarta', 'tabela-horarios-quinta', 'tabela-horarios-sexta'
+    'tabela-horarios-quarta', 'tabela-horarios-quinta', 'tabela-horarios-sexta'
   ].forEach(id => {
     const tbl = document.getElementById(id);
     if (tbl) {
@@ -1986,7 +2039,7 @@ function stopResponsibleCalendarSyncLoop() {
 }
 
 function refreshResponsibleCalendarSyncLoop() {
-  if (isResponsibleCalendarActive()) {
+  if (isResponsibleCalendarActive() && !isHideHomeInputsEnabled()) {
     startResponsibleCalendarSyncLoop();
     runResponsibleCalendarSyncTick();
   } else {
@@ -2019,10 +2072,10 @@ function extrairAtividades(data) {
   if (Array.isArray(data.atividadesPortal)) {
     data.atividadesPortal.forEach(ap => {
       // Evita duplicatas se a mesma atividade com o mesmo nome e disciplina já foi extraída
-      const isDup = list.some(item => 
+      const isDup = list.some(item =>
         item.disciplina.toUpperCase() === ap.disciplina.toUpperCase() &&
         (item.descricao.includes(ap.descricao) || ap.descricao.includes(item.descricao) ||
-         item.descricao.toLowerCase().replace(/[^a-z0-9]/g, '') === ap.descricao.toLowerCase().replace(/[^a-z0-9]/g, ''))
+          item.descricao.toLowerCase().replace(/[^a-z0-9]/g, '') === ap.descricao.toLowerCase().replace(/[^a-z0-9]/g, ''))
       );
       if (!isDup) {
         list.push({
@@ -2034,10 +2087,10 @@ function extrairAtividades(data) {
         });
       } else {
         // Se já existe, apenas atualiza para ter o flag e concluida da versão mais detalhada do portal
-        const existing = list.find(item => 
+        const existing = list.find(item =>
           item.disciplina.toUpperCase() === ap.disciplina.toUpperCase() &&
           (item.descricao.includes(ap.descricao) || ap.descricao.includes(item.descricao) ||
-           item.descricao.toLowerCase().replace(/[^a-z0-9]/g, '') === ap.descricao.toLowerCase().replace(/[^a-z0-9]/g, ''))
+            item.descricao.toLowerCase().replace(/[^a-z0-9]/g, '') === ap.descricao.toLowerCase().replace(/[^a-z0-9]/g, ''))
         );
         if (existing) {
           existing.entregaMarcada = true;
@@ -2223,11 +2276,11 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
 }
 
 // Evento de filtro
-document.getElementById('select-disciplina-frequencia').addEventListener('change', function() {
+document.getElementById('select-disciplina-frequencia').addEventListener('change', function () {
   preencherTabelaFrequencias(frequenciasGlobais, this.value);
 });
 
-document.getElementById('select-disciplina-notas').addEventListener('change', function() {
+document.getElementById('select-disciplina-notas').addEventListener('change', function () {
   preencherTabelaNotas(notasGlobais, this.value);
 });
 
@@ -2235,66 +2288,66 @@ document.getElementById('select-disciplina-notas').addEventListener('change', fu
 // ─── Exportação Google Calendar (.ics) ────────────────────────────────────
 // ─── Abrir no Google Calendar (sem importar arquivo) ─────────────────────
 function abrirNoGoogleCalendar() {
-    if (!horariosGlobais || horariosGlobais.length === 0) {
-        alert('Nenhum horário disponível. Faça o scraping primeiro.');
-        return;
-    }
+  if (!horariosGlobais || horariosGlobais.length === 0) {
+    alert('Nenhum horário disponível. Faça o scraping primeiro.');
+    return;
+  }
 
-    const diasSemanaNum = {
-        'Domingo': 0, 'Segunda-feira': 1, 'Terça-feira': 2,
-        'Quarta-feira': 3, 'Quinta-feira': 4, 'Sexta-feira': 5, 'Sábado': 6
-    };
-    const diasIcal = {
-        'Segunda-feira': 'MO', 'Terça-feira': 'TU', 'Quarta-feira': 'WE',
-        'Quinta-feira': 'TH', 'Sexta-feira': 'FR', 'Sábado': 'SA'
-    };
+  const diasSemanaNum = {
+    'Domingo': 0, 'Segunda-feira': 1, 'Terça-feira': 2,
+    'Quarta-feira': 3, 'Quinta-feira': 4, 'Sexta-feira': 5, 'Sábado': 6
+  };
+  const diasIcal = {
+    'Segunda-feira': 'MO', 'Terça-feira': 'TU', 'Quarta-feira': 'WE',
+    'Quinta-feira': 'TH', 'Sexta-feira': 'FR', 'Sábado': 'SA'
+  };
 
-    const semestre = horariosGlobais[0]?.semestre || '';
-    const anoBase = semestre.split('.')[0] || new Date().getFullYear();
-    const dataFim = semestre.includes('.2') ? `${anoBase}1130T030000Z` : `${anoBase}0731T030000Z`;
+  const semestre = horariosGlobais[0]?.semestre || '';
+  const anoBase = semestre.split('.')[0] || new Date().getFullYear();
+  const dataFim = semestre.includes('.2') ? `${anoBase}1130T030000Z` : `${anoBase}0731T030000Z`;
 
-    function proximaOcorrencia(diaNome) {
-        const hoje = new Date();
-        const alvo = diasSemanaNum[diaNome];
-        let diff = alvo - hoje.getDay();
-        if (diff <= 0) diff += 7;
-        const d = new Date(hoje);
-        d.setDate(hoje.getDate() + diff);
-        return d;
-    }
+  function proximaOcorrencia(diaNome) {
+    const hoje = new Date();
+    const alvo = diasSemanaNum[diaNome];
+    let diff = alvo - hoje.getDay();
+    if (diff <= 0) diff += 7;
+    const d = new Date(hoje);
+    d.setDate(hoje.getDate() + diff);
+    return d;
+  }
 
-    // Formato UTC para URL do Google Calendar (BRT = UTC-3)
-    // Usa Date.UTC() diretamente para evitar interferência do fuso local do computador
-    function toGCalUTC(data, horaStr) {
-        const [h, m] = horaStr.split(':').map(Number);
-        const p = n => String(n).padStart(2, '0');
-        // Converte BRT → UTC somando 3h usando Date.UTC (independente do fuso local)
-        const dt = new Date(Date.UTC(data.getFullYear(), data.getMonth(), data.getDate(), h + 3, m, 0));
-        return `${dt.getUTCFullYear()}${p(dt.getUTCMonth()+1)}${p(dt.getUTCDate())}T${p(dt.getUTCHours())}${p(dt.getUTCMinutes())}00Z`;
-    }
+  // Formato UTC para URL do Google Calendar (BRT = UTC-3)
+  // Usa Date.UTC() diretamente para evitar interferência do fuso local do computador
+  function toGCalUTC(data, horaStr) {
+    const [h, m] = horaStr.split(':').map(Number);
+    const p = n => String(n).padStart(2, '0');
+    // Converte BRT → UTC somando 3h usando Date.UTC (independente do fuso local)
+    const dt = new Date(Date.UTC(data.getFullYear(), data.getMonth(), data.getDate(), h + 3, m, 0));
+    return `${dt.getUTCFullYear()}${p(dt.getUTCMonth() + 1)}${p(dt.getUTCDate())}T${p(dt.getUTCHours())}${p(dt.getUTCMinutes())}00Z`;
+  }
 
-    // Monta links e exibe modal
-    const links = horariosGlobais.map(({ disciplina, turma, dia, horário }) => {
-        const [inicio, fim] = horário.split('-');
-        const dataBase = proximaOcorrencia(dia);
-        const dtStart = toGCalUTC(dataBase, inicio);
-        const dtEnd   = toGCalUTC(dataBase, fim);
-        const titulo  = encodeURIComponent(disciplina);
-        const detalhe = encodeURIComponent(`Turma/Sala: ${turma}\nHorario: ${horário}`);
-        const local   = encodeURIComponent(`CEFET-MG - ${turma}`);
-        const rrule   = encodeURIComponent(`RRULE:FREQ=WEEKLY;BYDAY=${diasIcal[dia]};UNTIL=${dataFim}`);
-        // crm=AVAILABLE = sem ocupar agenda; sem parâmetro de notificação (Google não suporta via URL)
-        const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titulo}&dates=${dtStart}/${dtEnd}&details=${detalhe}&location=${local}&recur=${rrule}&crm=AVAILABLE&sf=true&output=xml`;
-        return { disciplina, turma, dia, horário, url };
-    });
+  // Monta links e exibe modal
+  const links = horariosGlobais.map(({ disciplina, turma, dia, horário }) => {
+    const [inicio, fim] = horário.split('-');
+    const dataBase = proximaOcorrencia(dia);
+    const dtStart = toGCalUTC(dataBase, inicio);
+    const dtEnd = toGCalUTC(dataBase, fim);
+    const titulo = encodeURIComponent(disciplina);
+    const detalhe = encodeURIComponent(`Turma/Sala: ${turma}\nHorario: ${horário}`);
+    const local = encodeURIComponent(`CEFET-MG - ${turma}`);
+    const rrule = encodeURIComponent(`RRULE:FREQ=WEEKLY;BYDAY=${diasIcal[dia]};UNTIL=${dataFim}`);
+    // crm=AVAILABLE = sem ocupar agenda; sem parâmetro de notificação (Google não suporta via URL)
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titulo}&dates=${dtStart}/${dtEnd}&details=${detalhe}&location=${local}&recur=${rrule}&crm=AVAILABLE&sf=true&output=xml`;
+    return { disciplina, turma, dia, horário, url };
+  });
 
-    // Remove modal anterior se existir
-    document.getElementById('gcal-modal')?.remove();
+  // Remove modal anterior se existir
+  document.getElementById('gcal-modal')?.remove();
 
-    const modal = document.createElement('div');
-    modal.id = 'gcal-modal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-    modal.innerHTML = `
+  const modal = document.createElement('div');
+  modal.id = 'gcal-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = `
         <div style="background:#fff;border-radius:12px;max-width:640px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
             <div style="padding:20px 24px 12px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center">
                 <strong style="font-size:16px">Adicionar ao Google Agenda</strong>
@@ -2313,156 +2366,156 @@ function abrirNoGoogleCalendar() {
                 `).join('')}
             </div>
         </div>`;
-    document.body.appendChild(modal);
-    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 }
 // ───────────────────────────────────────────────────────────────────────────
 
 function exportarParaGoogleCalendar() {
-    if (!horariosGlobais || horariosGlobais.length === 0) {
-        alert('Nenhum horário disponível. Faça o scraping primeiro.');
-        return;
+  if (!horariosGlobais || horariosGlobais.length === 0) {
+    alert('Nenhum horário disponível. Faça o scraping primeiro.');
+    return;
+  }
+
+  const diasSemanaNum = {
+    'Domingo': 0, 'Segunda-feira': 1, 'Terça-feira': 2,
+    'Quarta-feira': 3, 'Quinta-feira': 4, 'Sexta-feira': 5, 'Sábado': 6
+  };
+  const diasIcal = {
+    'Segunda-feira': 'MO', 'Terça-feira': 'TU', 'Quarta-feira': 'WE',
+    'Quinta-feira': 'TH', 'Sexta-feira': 'FR', 'Sábado': 'SA'
+  };
+
+  const semestre = horariosGlobais[0]?.semestre || '';
+  // Fim do semestre: 1º=julho, 2º=novembro
+  const anoBase = semestre.split('.')[0] || new Date().getFullYear();
+  const dataFim = semestre.includes('.2') ? `${anoBase}1130` : `${anoBase}0731`;
+
+  function proximaOcorrencia(diaNome) {
+    const hoje = new Date();
+    const alvo = diasSemanaNum[diaNome];
+    let diff = alvo - hoje.getDay();
+    if (diff <= 0) diff += 7;
+    const d = new Date(hoje);
+    d.setDate(hoje.getDate() + diff);
+    return d;
+  }
+
+  // Formata datetime em UTC (Brasil = UTC-3)
+  function toIcalUTC(data, horaStr) {
+    const [h, m] = horaStr.split(':').map(Number);
+    const dt = new Date(data);
+    dt.setHours(h + 3, m, 0, 0);
+    const p = n => String(n).padStart(2, '0');
+    return `${dt.getUTCFullYear()}${p(dt.getUTCMonth() + 1)}${p(dt.getUTCDate())}T${p(dt.getUTCHours())}${p(dt.getUTCMinutes())}00Z`;
+  }
+
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2) + '@sigaa';
+
+  // Formata como local time (sem Z) para usar com TZID=America/Sao_Paulo
+  function toIcalLocal(data, horaStr) {
+    const [h, m] = horaStr.split(':').map(Number);
+    const dt = new Date(data);
+    const p = n => String(n).padStart(2, '0');
+    return `${dt.getFullYear()}${p(dt.getMonth() + 1)}${p(dt.getDate())}T${p(h)}${p(m)}00`;
+  }
+
+  // Remove acentos e caracteres especiais — garante compatibilidade total
+  function normalizar(str) {
+    return (str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')  // remove diacríticos (acentos, cedilha, til, etc)
+      .replace(/[^\x00-\x7F]/g, '?');   // qualquer outro char não-ASCII vira '?'
+  }
+
+  // Escapa chars especiais conforme RFC 5545
+  function escIcal(str) {
+    return (str || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  }
+
+  // Folding: quebra linhas > 75 chars com CRLF + espaço (RFC 5545 sec 3.1)
+  function fold(line) {
+    const bytes = new TextEncoder().encode(line);
+    if (bytes.length <= 75) return line;
+    let result = '';
+    let cur = '';
+    let curBytes = 0;
+    for (const char of line) {
+      const charBytes = new TextEncoder().encode(char).length;
+      if (curBytes + charBytes > 75) {
+        result += cur + '\r\n ';
+        cur = char;
+        curBytes = 1 + charBytes; // 1 = espaço de continuação
+      } else {
+        cur += char;
+        curBytes += charBytes;
+      }
     }
+    return result + cur;
+  }
 
-    const diasSemanaNum = {
-        'Domingo': 0, 'Segunda-feira': 1, 'Terça-feira': 2,
-        'Quarta-feira': 3, 'Quinta-feira': 4, 'Sexta-feira': 5, 'Sábado': 6
-    };
-    const diasIcal = {
-        'Segunda-feira': 'MO', 'Terça-feira': 'TU', 'Quarta-feira': 'WE',
-        'Quinta-feira': 'TH', 'Sexta-feira': 'FR', 'Sábado': 'SA'
-    };
+  const blocos = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//SIGAA APP//Horarios SIGAA//PT',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    fold(`X-WR-CALNAME:Horarios SIGAA ${semestre}`),
+    'X-WR-TIMEZONE:America/Sao_Paulo',
+    'BEGIN:VTIMEZONE',
+    'TZID:America/Sao_Paulo',
+    'BEGIN:STANDARD',
+    'DTSTART:19700101T000000',
+    'TZOFFSETFROM:-0200',
+    'TZOFFSETTO:-0300',
+    'TZNAME:BRT',
+    'END:STANDARD',
+    'END:VTIMEZONE',
+  ];
 
-    const semestre = horariosGlobais[0]?.semestre || '';
-    // Fim do semestre: 1º=julho, 2º=novembro
-    const anoBase = semestre.split('.')[0] || new Date().getFullYear();
-    const dataFim = semestre.includes('.2') ? `${anoBase}1130` : `${anoBase}0731`;
+  horariosGlobais.forEach(({ disciplina, turma, dia, horário }) => {
+    const [inicio, fim] = horário.split('-');
+    const dataBase = proximaOcorrencia(dia);
+    blocos.push(
+      'BEGIN:VEVENT',
+      fold(`UID:${uid()}`),
+      fold(`DTSTART;TZID=America/Sao_Paulo:${toIcalLocal(dataBase, inicio)}`),
+      fold(`DTEND;TZID=America/Sao_Paulo:${toIcalLocal(dataBase, fim)}`),
+      fold(`RRULE:FREQ=WEEKLY;BYDAY=${diasIcal[dia]};UNTIL=${dataFim}T030000Z`),
+      fold(`SUMMARY:${escIcal(normalizar(disciplina))}`),
+      fold(`DESCRIPTION:Turma/Sala: ${escIcal(normalizar(turma))}\\nHorario: ${escIcal(horário)}`),
+      fold(`LOCATION:CEFET-MG - ${escIcal(normalizar(turma))}`),
+      'STATUS:CONFIRMED',
+      'END:VEVENT'
+    );
+  });
 
-    function proximaOcorrencia(diaNome) {
-        const hoje = new Date();
-        const alvo = diasSemanaNum[diaNome];
-        let diff = alvo - hoje.getDay();
-        if (diff <= 0) diff += 7;
-        const d = new Date(hoje);
-        d.setDate(hoje.getDate() + diff);
-        return d;
+  blocos.push('END:VCALENDAR');
+
+  // SEM BOM — causa falha de parse no Google Calendar
+  const conteudo = blocos.join('\r\n');
+  // Todo conteúdo é ASCII puro após normalizar() — Blob direto sem risco de encoding
+  const blob = new Blob([conteudo], { type: 'text/calendar' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `horarios-sigaa-${semestre}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Abre Google Agenda na página de importação após o download
+  setTimeout(() => {
+    const abrir = confirm(
+      'Arquivo .ics baixado!\n\n' +
+      'Clique em OK para abrir o Google Agenda e importar todos os eventos de uma vez.\n\n' +
+      'Na página que abrir: clique em "Importar" → selecione o arquivo baixado → clique em "Importar".'
+    );
+    if (abrir) {
+      window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
     }
-
-    // Formata datetime em UTC (Brasil = UTC-3)
-    function toIcalUTC(data, horaStr) {
-        const [h, m] = horaStr.split(':').map(Number);
-        const dt = new Date(data);
-        dt.setHours(h + 3, m, 0, 0);
-        const p = n => String(n).padStart(2, '0');
-        return `${dt.getUTCFullYear()}${p(dt.getUTCMonth()+1)}${p(dt.getUTCDate())}T${p(dt.getUTCHours())}${p(dt.getUTCMinutes())}00Z`;
-    }
-
-    const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2) + '@sigaa';
-
-    // Formata como local time (sem Z) para usar com TZID=America/Sao_Paulo
-    function toIcalLocal(data, horaStr) {
-        const [h, m] = horaStr.split(':').map(Number);
-        const dt = new Date(data);
-        const p = n => String(n).padStart(2, '0');
-        return `${dt.getFullYear()}${p(dt.getMonth()+1)}${p(dt.getDate())}T${p(h)}${p(m)}00`;
-    }
-
-    // Remove acentos e caracteres especiais — garante compatibilidade total
-    function normalizar(str) {
-        return (str || '')
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')  // remove diacríticos (acentos, cedilha, til, etc)
-            .replace(/[^\x00-\x7F]/g, '?');   // qualquer outro char não-ASCII vira '?'
-    }
-
-    // Escapa chars especiais conforme RFC 5545
-    function escIcal(str) {
-        return (str || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
-    }
-
-    // Folding: quebra linhas > 75 chars com CRLF + espaço (RFC 5545 sec 3.1)
-    function fold(line) {
-        const bytes = new TextEncoder().encode(line);
-        if (bytes.length <= 75) return line;
-        let result = '';
-        let cur = '';
-        let curBytes = 0;
-        for (const char of line) {
-            const charBytes = new TextEncoder().encode(char).length;
-            if (curBytes + charBytes > 75) {
-                result += cur + '\r\n ';
-                cur = char;
-                curBytes = 1 + charBytes; // 1 = espaço de continuação
-            } else {
-                cur += char;
-                curBytes += charBytes;
-            }
-        }
-        return result + cur;
-    }
-
-    const blocos = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//SIGAA APP//Horarios SIGAA//PT',
-        'CALSCALE:GREGORIAN',
-        'METHOD:PUBLISH',
-        fold(`X-WR-CALNAME:Horarios SIGAA ${semestre}`),
-        'X-WR-TIMEZONE:America/Sao_Paulo',
-        'BEGIN:VTIMEZONE',
-        'TZID:America/Sao_Paulo',
-        'BEGIN:STANDARD',
-        'DTSTART:19700101T000000',
-        'TZOFFSETFROM:-0200',
-        'TZOFFSETTO:-0300',
-        'TZNAME:BRT',
-        'END:STANDARD',
-        'END:VTIMEZONE',
-    ];
-
-    horariosGlobais.forEach(({ disciplina, turma, dia, horário }) => {
-        const [inicio, fim] = horário.split('-');
-        const dataBase = proximaOcorrencia(dia);
-        blocos.push(
-            'BEGIN:VEVENT',
-            fold(`UID:${uid()}`),
-            fold(`DTSTART;TZID=America/Sao_Paulo:${toIcalLocal(dataBase, inicio)}`),
-            fold(`DTEND;TZID=America/Sao_Paulo:${toIcalLocal(dataBase, fim)}`),
-            fold(`RRULE:FREQ=WEEKLY;BYDAY=${diasIcal[dia]};UNTIL=${dataFim}T030000Z`),
-            fold(`SUMMARY:${escIcal(normalizar(disciplina))}`),
-            fold(`DESCRIPTION:Turma/Sala: ${escIcal(normalizar(turma))}\\nHorario: ${escIcal(horário)}`),
-            fold(`LOCATION:CEFET-MG - ${escIcal(normalizar(turma))}`),
-            'STATUS:CONFIRMED',
-            'END:VEVENT'
-        );
-    });
-
-    blocos.push('END:VCALENDAR');
-
-    // SEM BOM — causa falha de parse no Google Calendar
-    const conteudo = blocos.join('\r\n');
-    // Todo conteúdo é ASCII puro após normalizar() — Blob direto sem risco de encoding
-    const blob = new Blob([conteudo], { type: 'text/calendar' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `horarios-sigaa-${semestre}.ics`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    // Abre Google Agenda na página de importação após o download
-    setTimeout(() => {
-        const abrir = confirm(
-            'Arquivo .ics baixado!\n\n' +
-            'Clique em OK para abrir o Google Agenda e importar todos os eventos de uma vez.\n\n' +
-            'Na página que abrir: clique em "Importar" → selecione o arquivo baixado → clique em "Importar".'
-        );
-        if (abrir) {
-            window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
-        }
-    }, 500);
+  }, 500);
 }
 // ───────────────────────────────────────────────────────────────────────────
 
@@ -2639,102 +2692,102 @@ function preencherTabelaDia(table, mainList, compareList, comparisonCtx) {
 }
 
 function preencherTabelaSimplificada(horarios) {
-    const diasMap = {
-        'Segunda-feira': 'tabela-horarios-segunda',
-        'Terça-feira': 'tabela-horarios-terca',
-        'Quarta-feira': 'tabela-horarios-quarta',
-        'Quinta-feira': 'tabela-horarios-quinta',
-        'Sexta-feira': 'tabela-horarios-sexta'
-    };
+  const diasMap = {
+    'Segunda-feira': 'tabela-horarios-segunda',
+    'Terça-feira': 'tabela-horarios-terca',
+    'Quarta-feira': 'tabela-horarios-quarta',
+    'Quinta-feira': 'tabela-horarios-quinta',
+    'Sexta-feira': 'tabela-horarios-sexta'
+  };
 
-    const comparisonCtx = getComparisonProfilesContext();
-    const horariosComparacao = comparisonCtx.enabled ? comparisonCtx.compareHorarios : [];
+  const comparisonCtx = getComparisonProfilesContext();
+  const horariosComparacao = comparisonCtx.enabled ? comparisonCtx.compareHorarios : [];
 
-    Object.values(diasMap).forEach(id => {
-        const table = document.getElementById(id);
-        if (table) {
-            table.style.display = 'none';
-            const tbody = table.querySelector('tbody');
-            if (tbody) tbody.innerHTML = '';
-            table.classList.remove('comparison-mode');
-        }
-    });
-
-    const tabelaHoje = document.getElementById('tabela-horarios-hoje');
-    const tbodyHoje = tabelaHoje ? tabelaHoje.querySelector('tbody') : null;
-    if (tabelaHoje && tbodyHoje) {
-        tabelaHoje.style.display = 'none';
-        tabelaHoje.classList.remove('comparison-mode');
-        tbodyHoje.innerHTML = '';
+  Object.values(diasMap).forEach(id => {
+    const table = document.getElementById(id);
+    if (table) {
+      table.style.display = 'none';
+      const tbody = table.querySelector('tbody');
+      if (tbody) tbody.innerHTML = '';
+      table.classList.remove('comparison-mode');
     }
+  });
 
-    let avisoHoje = document.getElementById('aviso-hoje-fds');
-    if (avisoHoje) avisoHoje.remove();
+  const tabelaHoje = document.getElementById('tabela-horarios-hoje');
+  const tbodyHoje = tabelaHoje ? tabelaHoje.querySelector('tbody') : null;
+  if (tabelaHoje && tbodyHoje) {
+    tabelaHoje.style.display = 'none';
+    tabelaHoje.classList.remove('comparison-mode');
+    tbodyHoje.innerHTML = '';
+  }
 
-    const horariosPorDia = {};
-    (horarios || []).forEach(item => {
-        const dia = item.dia;
-        if (!horariosPorDia[dia]) horariosPorDia[dia] = [];
-        horariosPorDia[dia].push(item);
-    });
+  let avisoHoje = document.getElementById('aviso-hoje-fds');
+  if (avisoHoje) avisoHoje.remove();
 
-    const horariosComparacaoPorDia = {};
-    (horariosComparacao || []).forEach(item => {
-        const dia = item.dia;
-        if (!horariosComparacaoPorDia[dia]) horariosComparacaoPorDia[dia] = [];
-        horariosComparacaoPorDia[dia].push(item);
-    });
+  const horariosPorDia = {};
+  (horarios || []).forEach(item => {
+    const dia = item.dia;
+    if (!horariosPorDia[dia]) horariosPorDia[dia] = [];
+    horariosPorDia[dia].push(item);
+  });
 
-    const { targetDay, switchedToTomorrow, todayName, tomorrowName } = getTodayPanelTargetDay(horarios);
-    const hojeNome = todayName;
-    const tabelaHojeContainer = document.getElementById('tabela-hoje-container');
-    const tituloHoje = tabelaHojeContainer ? tabelaHojeContainer.querySelector('h3') : null;
-    if (tituloHoje) {
-      if (switchedToTomorrow) {
-        tituloHoje.textContent = 'Amanhã';
-      } else if (isAutoTomorrowEnabled()) {
-        tituloHoje.textContent = 'Hoje (Amanhã automático)';
-      } else {
-        tituloHoje.textContent = 'Hoje';
-      }
+  const horariosComparacaoPorDia = {};
+  (horariosComparacao || []).forEach(item => {
+    const dia = item.dia;
+    if (!horariosComparacaoPorDia[dia]) horariosComparacaoPorDia[dia] = [];
+    horariosComparacaoPorDia[dia].push(item);
+  });
+
+  const { targetDay, switchedToTomorrow, todayName, tomorrowName } = getTodayPanelTargetDay(horarios);
+  const hojeNome = todayName;
+  const tabelaHojeContainer = document.getElementById('tabela-hoje-container');
+  const tituloHoje = tabelaHojeContainer ? tabelaHojeContainer.querySelector('h3') : null;
+  if (tituloHoje) {
+    if (switchedToTomorrow) {
+      tituloHoje.textContent = 'Amanhã';
+    } else if (isAutoTomorrowEnabled()) {
+      tituloHoje.textContent = 'Hoje (Amanhã automático)';
+    } else {
+      tituloHoje.textContent = 'Hoje';
     }
+  }
 
-    if ((hojeNome === 'Sábado' || hojeNome === 'Domingo') && tabelaHojeContainer) {
-        const aviso = document.createElement('div');
-        aviso.id = 'aviso-hoje-fds';
-        aviso.style = 'background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 12px; border-radius: 6px; margin-bottom: 8px;';
-        aviso.innerHTML = `<strong>Hoje é ${hojeNome}.</strong> Não há horários cadastrados para finais de semana.`;
-        tabelaHojeContainer.insertBefore(aviso, tabelaHojeContainer.querySelector('h3').nextSibling);
-        if (tabelaHoje) tabelaHoje.style.display = 'none';
-      } else if (diasMap[targetDay] && tabelaHoje && tbodyHoje) {
-        const mainHoje = horariosPorDia[targetDay] || [];
-        const compareHoje = horariosComparacaoPorDia[targetDay] || [];
-        if (mainHoje.length > 0 || compareHoje.length > 0) {
-          preencherTabelaDia(tabelaHoje, mainHoje, compareHoje, comparisonCtx);
-          tabelaHoje.style.display = '';
-        }
-      } else if (switchedToTomorrow && tabelaHojeContainer) {
-          const aviso = document.createElement('div');
-          aviso.id = 'aviso-hoje-fds';
-          aviso.style = 'background: #e8f2ff; color: #24527a; border: 1px solid #bbdefb; padding: 12px; border-radius: 6px; margin-bottom: 8px;';
-          aviso.innerHTML = `<strong>Aulas de ${todayName} encerradas.</strong> Não há horários cadastrados para amanhã (${tomorrowName}).`;
-          tabelaHojeContainer.insertBefore(aviso, tabelaHojeContainer.querySelector('h3').nextSibling);
-          if (tabelaHoje) tabelaHoje.style.display = 'none';
+  if ((hojeNome === 'Sábado' || hojeNome === 'Domingo') && tabelaHojeContainer) {
+    const aviso = document.createElement('div');
+    aviso.id = 'aviso-hoje-fds';
+    aviso.style = 'background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 12px; border-radius: 6px; margin-bottom: 8px;';
+    aviso.innerHTML = `<strong>Hoje é ${hojeNome}.</strong> Não há horários cadastrados para finais de semana.`;
+    tabelaHojeContainer.insertBefore(aviso, tabelaHojeContainer.querySelector('h3').nextSibling);
+    if (tabelaHoje) tabelaHoje.style.display = 'none';
+  } else if (diasMap[targetDay] && tabelaHoje && tbodyHoje) {
+    const mainHoje = horariosPorDia[targetDay] || [];
+    const compareHoje = horariosComparacaoPorDia[targetDay] || [];
+    if (mainHoje.length > 0 || compareHoje.length > 0) {
+      preencherTabelaDia(tabelaHoje, mainHoje, compareHoje, comparisonCtx);
+      tabelaHoje.style.display = '';
     }
+  } else if (switchedToTomorrow && tabelaHojeContainer) {
+    const aviso = document.createElement('div');
+    aviso.id = 'aviso-hoje-fds';
+    aviso.style = 'background: #e8f2ff; color: #24527a; border: 1px solid #bbdefb; padding: 12px; border-radius: 6px; margin-bottom: 8px;';
+    aviso.innerHTML = `<strong>Aulas de ${todayName} encerradas.</strong> Não há horários cadastrados para amanhã (${tomorrowName}).`;
+    tabelaHojeContainer.insertBefore(aviso, tabelaHojeContainer.querySelector('h3').nextSibling);
+    if (tabelaHoje) tabelaHoje.style.display = 'none';
+  }
 
-    Object.entries(diasMap).forEach(([dia, id]) => {
-        const table = document.getElementById(id);
-        const listaMain = horariosPorDia[dia] || [];
-        const listaCompare = horariosComparacaoPorDia[dia] || [];
-        if (!table) return;
+  Object.entries(diasMap).forEach(([dia, id]) => {
+    const table = document.getElementById(id);
+    const listaMain = horariosPorDia[dia] || [];
+    const listaCompare = horariosComparacaoPorDia[dia] || [];
+    if (!table) return;
 
-        if (listaMain.length > 0 || listaCompare.length > 0) {
-          preencherTabelaDia(table, listaMain, listaCompare, comparisonCtx);
-          table.style.display = '';
-        }
-    });
+    if (listaMain.length > 0 || listaCompare.length > 0) {
+      preencherTabelaDia(table, listaMain, listaCompare, comparisonCtx);
+      table.style.display = '';
+    }
+  });
 
-    renderInteractiveGuide(horarios, horariosComparacao, comparisonCtx);
+  renderInteractiveGuide(horarios, horariosComparacao, comparisonCtx);
 }
 
 // ===== Interactive Schedule Guide =====
@@ -2813,7 +2866,7 @@ function renderInteractiveGuide(horarios, horariosComparacao = [], comparisonCtx
   // Adiciona uma margem de uma hora antes e depois, se possível
   minH = Math.max(6, minH - 1);
   maxH = Math.min(23, maxH + 1);
-  
+
   const totalHours = maxH - minH;
   let pinnedEventEl = null;
 
@@ -2983,7 +3036,7 @@ function renderInteractiveGuide(horarios, horariosComparacao = [], comparisonCtx
   if (hasCompare && compareRow) {
     compareClasses.forEach(c => appendTimelineEvent(c, compareRow, true));
   }
-  
+
   updateNeedlePosition(minH, totalHours);
   scheduleInterval = setInterval(() => updateNeedlePosition(minH, totalHours), 60000);
 }
@@ -3311,12 +3364,12 @@ function initViewToggle() {
     btns.forEach(b => b.classList.remove('active'));
     const target = document.querySelector(`.view-toggle-btn[data-view="${view}"]`);
     if (target) target.classList.add('active');
-    
+
     listaContainer.style.display = 'none';
     weeklyContainer.style.display = 'none';
     threeDayContainer.style.display = 'none';
     interactiveGuide.style.display = 'none';
-    if(scheduleInterval) clearInterval(scheduleInterval);
+    if (scheduleInterval) clearInterval(scheduleInterval);
 
     // Persist the chosen view BEFORE rendering so renderInteractiveGuide can
     // read the correct current view state from storage.
@@ -3658,11 +3711,11 @@ function initSwipeTabs() {
 
 // Função para preencher a aba de horários detalhados
 function preencherTabelaDetalhada(horarios) {
-    const tbody = document.querySelector('#tabela-horarios-detalhados tbody');
-    tbody.innerHTML = '';
-    horarios.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+  const tbody = document.querySelector('#tabela-horarios-detalhados tbody');
+  tbody.innerHTML = '';
+  horarios.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
             <td>${item.disciplina}</td>
             <td>${item.turma}</td>
             <td>${item.dia}</td>
@@ -3670,17 +3723,17 @@ function preencherTabelaDetalhada(horarios) {
             <td>${item.slot}</td>
             <td>${item.horário}</td>
         `;
-        tbody.appendChild(tr);
-    });
-    // Mostra a tabela se houver dados
-    const tabela = document.getElementById('tabela-horarios-detalhados');
-    tabela.style.display = horarios.length > 0 ? '' : 'none';
+    tbody.appendChild(tr);
+  });
+  // Mostra a tabela se houver dados
+  const tabela = document.getElementById('tabela-horarios-detalhados');
+  tabela.style.display = horarios.length > 0 ? '' : 'none';
 }
 
 // Helper para analisar a string de data da atividade (DD/MM/YYYY, DD/MM ou YYYY-MM-DD)
 function parseAtividadeDate(dateStr) {
   if (!dateStr || typeof dateStr !== 'string') return null;
-  
+
   // DD/MM/YYYY
   const match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})/);
   if (match) {
@@ -3901,7 +3954,7 @@ function atualizarHomePainelNovidadesAtividades() {
 
   const mode = getAppMode();
   const calendarCheckbox = document.getElementById('calendar-view-checkbox');
-  const showCalendarInsteadOfLists = (mode === 'responsavel') || 
+  const showCalendarInsteadOfLists = (mode === 'responsavel') ||
     (mode === 'graduacao' && calendarCheckbox && calendarCheckbox.checked);
 
   if (showCalendarInsteadOfLists) {
@@ -3964,7 +4017,7 @@ function atualizarHomePainelNovidadesAtividades() {
 }
 
 // Toggle Novidades / Atividades no container home
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
   const btn = e.target.closest('.novidades-toggle-btn');
   if (!btn) return;
 
@@ -4254,19 +4307,19 @@ async function atualizarLinkCalendarioParaCurso(dados) {
 
   const curso = dados.Curso || dados.curso || '';
   console.log('🔍 Curso detectado:', curso);
-  
+
   const urlPadrao = 'https://www.divinopolis.cefetmg.br/alunos/horario-2/cursos-tecnicos/';
   const urlCalendarioEng = 'https://www.eng-computacao.divinopolis.cefetmg.br/2019/03/18/calendario-letivo/';
   const urlCalendarioMecat = 'https://www.eng-mecatronica.divinopolis.cefetmg.br/calendario-letivo/';
 
   // Normaliza o nome do curso para evitar problemas com acentos e capitalização
   const cursoNormalized = curso.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  
+
   const temDCDV = cursoNormalized.includes('DCDV');
   const temDivinopolis = cursoNormalized.includes('DIVINOPOLIS');
   const temBacharelado = cursoNormalized.includes('BACHARELADO');
   const temMT = cursoNormalized.includes('MT'); // Aceita MT ou MTN
-  
+
   const isComputacao = cursoNormalized.includes('ENGENHARIA DE COMPUTACAO') && temDCDV && temDivinopolis && temBacharelado && temMT;
   const isMecatronica = cursoNormalized.includes('MECATRONICA') && cursoNormalized.includes('ENGENHARIA') && temDCDV && temDivinopolis && temBacharelado && temMT;
 
@@ -4278,7 +4331,7 @@ async function atualizarLinkCalendarioParaCurso(dados) {
   if (isComputacao || isMecatronica) {
     const cursoQuery = isComputacao ? 'computacao' : 'mecatronica';
     const fallbackUrl = isComputacao ? urlCalendarioEng : urlCalendarioMecat;
-    
+
     // Busca dinamicamente o link do calendário usando o endpoint no backend
     try {
       console.log(`📡 Buscando link do calendário para ${cursoQuery} através do backend...`);
@@ -4306,14 +4359,14 @@ async function atualizarLinkCalendarioParaCurso(dados) {
   // Encontra todos os links de calendário (aparecem em 3 seções: graduacao, tecnico, responsavel)
   const linksCalendario = document.querySelectorAll('.home-tech-widget-link.home-tech-widget-accent');
   console.log('🔗 Links encontrados:', linksCalendario.length);
-  
+
   linksCalendario.forEach((link, idx) => {
     // Verifica se é um link de calendário (contém "calendário" no h3)
     const h3 = link.querySelector('h3');
     if (h3 && h3.textContent.toLowerCase().includes('calendário')) {
       const urlAnterior = link.href;
       link.href = linkParaAlterar;
-      
+
       let titleAttr = 'Calendário acadêmico';
       if (isComputacao) {
         titleAttr = 'Calendário Letivo - Engenharia da Computação';
@@ -4399,18 +4452,24 @@ function ajustarAlturaNovidades() {
       return;
     }
 
-    // Soma real do bloco esquerdo: topo externo do formulário até base externa dos dados.
-    const formRect = form.getBoundingClientRect();
-    const dadosRect = dados.getBoundingClientRect();
-    const formStyle = window.getComputedStyle(form);
-    const dadosStyle = window.getComputedStyle(dados);
+    let x;
+    if (isHideHomeInputsEnabled()) {
+      const dadosRect = dados.getBoundingClientRect();
+      x = Math.max(120, Math.round(dadosRect.height) - 2);
+    } else {
+      // Soma real do bloco esquerdo: topo externo do formulário até base externa dos dados.
+      const formRect = form.getBoundingClientRect();
+      const dadosRect = dados.getBoundingClientRect();
+      const formStyle = window.getComputedStyle(form);
+      const dadosStyle = window.getComputedStyle(dados);
 
-    const formMarginTop = parseFloat(formStyle.marginTop || '0') || 0;
-    const dadosMarginBottom = parseFloat(dadosStyle.marginBottom || '0') || 0;
-    const top = formRect.top - formMarginTop;
-    const bottom = dadosRect.bottom + dadosMarginBottom;
-    // Acrescenta +182 conforme solicitado para dar folga extra ao cálculo
-    const x = Math.max(120, Math.round(bottom - top)) + 182;
+      const formMarginTop = parseFloat(formStyle.marginTop || '0') || 0;
+      const dadosMarginBottom = parseFloat(dadosStyle.marginBottom || '0') || 0;
+      const top = formRect.top - formMarginTop;
+      const bottom = dadosRect.bottom + dadosMarginBottom;
+      // Acrescenta +182 conforme solicitado para dar folga extra ao cálculo
+      x = Math.max(120, Math.round(bottom - top)) + 182;
+    }
 
     novidadesContainer.style.maxHeight = x + 'px';
     atividadesContainer.style.maxHeight = x + 'px';
@@ -4687,13 +4746,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Rastreia se o FAB foi minimizado ao carregar
   const fabMinimizedState = localStorage.getItem('sigaa-fab-minimized');
   let fabWasInitiallyMinimized = fabMinimizedState === 'true';
-  
+
   function updateExpandButtonVisibility() {
     if (fabExpandBtn) {
       fabExpandBtn.style.display = fabWasInitiallyMinimized ? 'block' : 'none';
     }
   }
-  
+
   if (fabWasInitiallyMinimized) {
     fab.classList.add('minimized');
     fab.style.display = 'none';
@@ -4703,14 +4762,14 @@ document.addEventListener('DOMContentLoaded', () => {
     fab.style.display = 'block';
     fabMinimized.classList.remove('visible');
   }
-  
+
   updateExpandButtonVisibility();
 
   function closeFab() {
     fabMenu.classList.remove('open');
     fab.setAttribute('aria-hidden', 'true');
     fabMenu.setAttribute('aria-hidden', 'true');
-    
+
     // Se foi originalmente minimizado, volta ao minimizado ao clicar fora
     if (fabWasInitiallyMinimized) {
       fab.classList.add('minimized');
@@ -4720,7 +4779,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fabMinimized.classList.add('visible');
     }
   }
-  
+
   function openFab() {
     fabMenu.classList.add('open');
     fab.setAttribute('aria-hidden', 'false');
@@ -4770,7 +4829,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('.fab-item');
     if (!btn) return;
     const action = btn.dataset.action;
-    
+
     if (action === 'abrir-horarios-completos') {
       // ativa diretamente a aba completa de horários
       activateTab('tab-horarios');
@@ -4800,7 +4859,7 @@ document.addEventListener('DOMContentLoaded', () => {
       minimizeFab();
     });
   }
-  
+
   // Botão de expandir (fixar)
   if (fabExpandBtn) {
     fabExpandBtn.addEventListener('click', (e) => {
@@ -4888,12 +4947,12 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
         let idxHeader = notas.headers.findIndex(h => h === av.abrev);
         if (idxHeader === -1) idxHeader = idx;
         let suaNota = (linhaAluno && linhaAluno[idxHeader + 2]) ? linhaAluno[idxHeader + 2] : '';
-        
+
         // Calcula totais para o rodapé
         const notaTotal = parseFloat(av.nota) || 0;
         let peso = parseFloat(av.peso) || 1;
         const notaAluno = parseFloat(suaNota.replace(',', '.')) || 0; // Converte vírgula para ponto
-        
+
         // Lógica inteligente para pesos
         let notaCalculada = 0;
         if (peso === 1) {
@@ -4906,15 +4965,15 @@ function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
           // Peso menor que 1: multiplica diretamente (fração)
           notaCalculada = notaAluno * peso;
         }
-        
+
         notaTotalSomada += notaTotal;
         somaPesos += peso;
-        
+
         // Só conta no cálculo se o aluno tem nota lançada
         if (suaNota && suaNota.trim() !== '' && !isNaN(notaAluno)) {
           somaNotasAluno += notaCalculada;
         }
-        
+
         html += `<tr>
           <td>${disciplina}</td>
           <td>${av.abrev}</td>
@@ -5109,20 +5168,20 @@ function startProgressBarAnimation(estimatedMs = 35000) {
   }
   __progressLastFrameTs = 0;
   applyProgressVisual(0);
-  
+
   // Para animação anterior se houver
   if (__progressBarInterval) clearInterval(__progressBarInterval);
-  
+
   // Animar a barra usando uma curva suave (easeInOutCubic modificada)
   __progressBarInterval = setInterval(() => {
     const elapsed = Date.now() - __progressStartTime;
     const ratio = Math.min(elapsed / __progressEstimatedTotal, 0.95); // Máx 95% até finish
-    
+
     // Curva suave que começa rápida e desacelera
-    const easeProgress = ratio < 0.5 
-      ? 2 * ratio * ratio 
+    const easeProgress = ratio < 0.5
+      ? 2 * ratio * ratio
       : 1 - Math.pow(-2 * ratio + 2, 2) / 2;
-    
+
     updateProgressBar(easeProgress * 100);
   }, 100);
 }
@@ -5142,7 +5201,7 @@ function finishProgressBar() {
   }
   __progressLastFrameTs = 0;
   applyProgressVisual(100);
-  
+
   // Esconde overlay e barra no topo após uma pausa para visualizar 100%
   setTimeout(() => {
     const overlay = document.getElementById('loading-overlay');
@@ -5161,10 +5220,10 @@ function startPollingProgress(clientId) {
   }
   __currentClientId = clientId;
   console.log(`[PROGRESS] Iniciando polling com clientId: ${clientId}`);
-  
+
   // Para polling anterior se houver
   if (__progressPollInterval) clearInterval(__progressPollInterval);
-  
+
   // Polling a cada 500ms para valores REAIS do backend
   __progressPollInterval = setInterval(async () => {
     try {
@@ -5177,12 +5236,12 @@ function startPollingProgress(clientId) {
         signal: pollController.signal
       });
       clearTimeout(pollTimeout);
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log(`[PROGRESS] ${data.progress}% - ${data.status}`);
         updateProgressBar(data.progress);
-        
+
         // Continua polling até hideQueueDisplay() parar (quando fetch completa)
       } else {
         console.warn(`[PROGRESS] HTTP ${response.status}`);
@@ -5204,50 +5263,50 @@ function stopPollingProgress() {
 // ── Fim animação de barra ────────────────────────────────────────────┘
 
 function updateQueueDisplay(position, avgTimeMs) {
-    let el = document.getElementById('queue-status-display');
-    const container = document.getElementById('queue-status-container');
-    if (!container) return; // Container não existe, não fazer nada
-    
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'queue-status-display';
-        el.style.cssText = 'padding:14px 16px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);border-radius:8px;font-size:0.95em;color:white;display:flex;align-items:center;gap:10px;position:relative;z-index:1001;font-weight:500;backdrop-filter:blur(4px); margin: 0px 15px';
-        container.appendChild(el);
-    }
-    el.style.display = 'flex';
+  let el = document.getElementById('queue-status-display');
+  const container = document.getElementById('queue-status-container');
+  if (!container) return; // Container não existe, não fazer nada
 
-    const avgSec = Math.round((avgTimeMs || 60000) / 1000);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'queue-status-display';
+    el.style.cssText = 'padding:14px 16px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);border-radius:8px;font-size:0.95em;color:white;display:flex;align-items:center;gap:10px;position:relative;z-index:1001;font-weight:500;backdrop-filter:blur(4px); margin: 0px 15px';
+    container.appendChild(el);
+  }
+  el.style.display = 'flex';
 
-    if (position === -1) {
-        el.innerHTML = `
+  const avgSec = Math.round((avgTimeMs || 60000) / 1000);
+
+  if (position === -1) {
+    el.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
             <span><b>Conectando à fila...</b></span>`;
-    } else if (position <= 1) {
-        el.innerHTML = `
+  } else if (position <= 1) {
+    el.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
             <span><b>Sua consulta está sendo processada agora...</b><br><span style="color:rgba(255,255,255,0.8);font-size:0.88em">~${avgSec}s por consulta</span></span>`;
-    } else {
-        const waitSec = avgSec * position;
-        const waitMin = Math.floor(waitSec / 60);
-        const waitRemSec = waitSec % 60;
-        const tempoStr = waitMin > 0 ? `~${waitMin}min ${waitRemSec}s` : `~${waitSec}s`;
+  } else {
+    const waitSec = avgSec * position;
+    const waitMin = Math.floor(waitSec / 60);
+    const waitRemSec = waitSec % 60;
+    const tempoStr = waitMin > 0 ? `~${waitMin}min ${waitRemSec}s` : `~${waitSec}s`;
 
-        el.innerHTML = `
+    el.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
             <span>
                 <b>Posição na fila: ${position}º</b><br>
                 <span style="font-size:0.88em;color:rgba(255,255,255,0.8)">Tempo estimado: ${tempoStr}</span>
             </span>`;
-    }
+  }
 }
 
 function hideQueueDisplay() {
-    const el = document.getElementById('queue-status-display');
-    if (el) el.style.display = 'none';
-    
-    // Para polling de progresso e finaliza a barra
-    stopPollingProgress();
-    finishProgressBar();
+  const el = document.getElementById('queue-status-display');
+  if (el) el.style.display = 'none';
+
+  // Para polling de progresso e finaliza a barra
+  stopPollingProgress();
+  finishProgressBar();
 }
 // ── Fim fila de espera ───────────────────────────────────────────────────
 
@@ -5259,12 +5318,12 @@ function startScrapeCounter() {
 
   // Novo ciclo: reinicia progresso instantaneamente (sem suavizar descida 100 -> 0)
   setProgressImmediately(0);
-  
+
   console.log(`[SCRAPE] startScrapeCounter - __currentClientId: ${__currentClientId}`);
-  
+
   // Inicia polling REAL de progresso (backend)
   startPollingProgress(__currentClientId);
-  
+
   const form = document.getElementById('sigaa-form');
   if (!form) return;
   let el = document.getElementById('scrape-timer');
@@ -5303,7 +5362,7 @@ function stopScrapeCounter(success = true, durationSec = null) {
     el.textContent = 'Erro ao atualizar informações';
     el.classList.add('scrape-error');
     // Remove mensagem de erro após alguns segundos
-    setTimeout(() => { try { if (el && el.parentNode) el.parentNode.removeChild(el); } catch (e) {} }, 4000);
+    setTimeout(() => { try { if (el && el.parentNode) el.parentNode.removeChild(el); } catch (e) { } }, 4000);
   }
 }
 
@@ -5457,14 +5516,14 @@ function showAcademicNotificationsModal(data) {
   const modal = document.getElementById('modal-academic-notifications');
   if (modal) {
     modal.style.display = 'flex';
-    
+
     // Fechar modal ao clicar fora dele
-    modal.addEventListener('click', function(e) {
+    modal.addEventListener('click', function (e) {
       if (e.target === modal) {
         modal.style.display = 'none';
       }
     });
-    
+
     console.log('[Modal] Notificações acadêmicas pendentes exibidas');
     console.log('Instruções:', data.instructions);
     console.log('SIGAA URL:', data.sigaaUrl);
@@ -5537,7 +5596,7 @@ function createAgendaCard(evt) {
   if (evt.isTask) {
     const badgeContainer = document.createElement('div');
     badgeContainer.className = 'tab-agenda-card-badge-row';
-    
+
     let badgeHtml = '';
     if (evt.concluida) {
       badgeHtml = `<span class="badge-entrega badge-concluida"><span class="material-icons badge-icon">check_circle</span>Entregue</span>`;
@@ -5554,13 +5613,13 @@ function createAgendaCard(evt) {
 function renderTabCalendarGridSelection() {
   const grid = document.getElementById('tab-calendar-grid');
   if (!grid) return;
-  
+
   const cells = grid.querySelectorAll('.tab-calendar-day');
   cells.forEach(cell => {
     const cellTime = parseInt(cell.dataset.time, 10);
     const date = new Date(cellTime);
     const isSelected = date.getDate() === tabCalendarSelectedDate.getDate() && date.getMonth() === tabCalendarSelectedDate.getMonth() && date.getFullYear() === tabCalendarSelectedDate.getFullYear();
-    
+
     if (isSelected) {
       cell.classList.add('is-selected');
     } else {
@@ -5591,12 +5650,12 @@ function renderTabCalendarAgenda() {
   });
   const selectedDayEvents = [
     ...daySchoolEvents.map(e => ({ type: e.tipo || 'outros', title: e.titulo, subtitle: e.disciplina || 'Calendário Letivo', isTask: false })),
-    ...dayTasks.map(t => ({ 
-      type: 'entrega', 
-      title: t.descricao, 
+    ...dayTasks.map(t => ({
+      type: 'entrega',
+      title: t.descricao,
       subtitle: t.disciplina,
-      isTask: !!t.entregaMarcada, 
-      concluida: t.concluida 
+      isTask: !!t.entregaMarcada,
+      concluida: t.concluida
     }))
   ];
   if (selectedDayEvents.length > 0) {
@@ -5620,9 +5679,9 @@ function renderTabCalendarAgenda() {
     const aDate = parseAtividadeDate(a.data);
     if (!aDate) return false;
     const compareDate = new Date(selectedDate);
-    compareDate.setHours(0,0,0,0);
+    compareDate.setHours(0, 0, 0, 0);
     const taskCompareDate = new Date(aDate);
-    taskCompareDate.setHours(0,0,0,0);
+    taskCompareDate.setHours(0, 0, 0, 0);
     return taskCompareDate.getTime() > compareDate.getTime();
   }).map(t => {
     const aDate = parseAtividadeDate(t.data);
@@ -5639,9 +5698,9 @@ function renderTabCalendarAgenda() {
     const eDate = parseSchoolEventDate(e.data);
     if (!eDate) return false;
     const compareDate = new Date(selectedDate);
-    compareDate.setHours(0,0,0,0);
+    compareDate.setHours(0, 0, 0, 0);
     const eventCompareDate = new Date(eDate);
-    eventCompareDate.setHours(0,0,0,0);
+    eventCompareDate.setHours(0, 0, 0, 0);
     return eventCompareDate.getTime() > compareDate.getTime();
   }).map(e => {
     const eDate = parseSchoolEventDate(e.data);
@@ -5662,7 +5721,7 @@ function renderTabCalendarAgenda() {
     slicedUpcoming.forEach(evt => {
       const dayName = evt.date.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
       const currentHeader = dayName.charAt(0).toUpperCase() + dayName.slice(1);
-      
+
       if (currentHeader !== lastDateHeader) {
         const dateHeader = document.createElement('div');
         dateHeader.className = 'tab-agenda-upcoming-date';
@@ -5687,21 +5746,21 @@ function renderTabCalendar() {
   const grid = document.getElementById('tab-calendar-grid');
   const title = document.getElementById('tab-calendar-title');
   if (!container || !grid || !title) return;
-  
+
   initTabCalendar();
   populateExamSubjects();
   initExamForm();
-  
+
   const now = tabCalendarCurrentDate;
   const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   title.textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
   grid.innerHTML = '';
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  
+
   const firstVisible = new Date(monthStart);
   firstVisible.setDate(monthStart.getDate() - monthStart.getDay());
-  const totalDaysToRender = 42; 
+  const totalDaysToRender = 42;
   const days = [];
   const current = new Date(firstVisible);
   for (let i = 0; i < totalDaysToRender; i++) {
@@ -5755,16 +5814,16 @@ function renderTabCalendar() {
     ];
     if (allEvents.length > 0) {
       cell.classList.add('has-events');
-      
+
       const dotsContainer = document.createElement('div');
       dotsContainer.className = 'tab-calendar-dots';
-      
+
       allEvents.slice(0, 3).forEach(evt => {
         const dot = document.createElement('span');
         dot.className = `tab-calendar-dot dot-${evt.type}`;
         dotsContainer.appendChild(dot);
       });
-      
+
       cell.appendChild(dotsContainer);
     }
     cell.addEventListener('click', () => {
@@ -5814,7 +5873,7 @@ function initExamForm() {
   const form = document.getElementById('add-exam-form');
   if (!form || form.dataset.bound === '1') return;
   form.dataset.bound = '1';
-  
+
   // Triggers do modal de adicionar provas no mobile
   const openBtn = document.getElementById('mobile-add-exam-btn');
   const closeBtn = document.getElementById('close-exam-modal-btn');
@@ -5839,14 +5898,14 @@ function initExamForm() {
       }
     });
   }
-  
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const subject = document.getElementById('exam-subject').value;
     const title = document.getElementById('exam-title').value;
     const date = document.getElementById('exam-date').value;
     const statusDiv = document.getElementById('add-exam-status');
-    
+
     if (!subject || !title || !date) {
       if (statusDiv) {
         statusDiv.className = 'exam-status-msg status-error';
@@ -5854,7 +5913,7 @@ function initExamForm() {
       }
       return;
     }
-    
+
     try {
       const curso = obterCursoDoPerfil();
       const response = await fetch(`${API_BASE}/api/calendario/eventos?curso=${curso}`, {
@@ -5868,7 +5927,7 @@ function initExamForm() {
           data: date
         })
       });
-      
+
       const result = await response.json();
       if (response.ok && result.success) {
         if (statusDiv) {
@@ -5878,10 +5937,10 @@ function initExamForm() {
         form.reset();
         cachedCalendarEvents = null;
         renderTabCalendar();
-        
+
         // Fecha o modal no mobile após sucesso
         if (panel) panel.classList.remove('open');
-        
+
         setTimeout(() => {
           if (statusDiv.textContent === 'Prova adicionada com sucesso!') {
             statusDiv.textContent = '';
@@ -5936,14 +5995,14 @@ function showAcademicNotificationsModal(data) {
   const modal = document.getElementById('modal-academic-notifications');
   if (modal) {
     modal.style.display = 'flex';
-    
+
     // Fechar modal ao clicar fora dele
-    modal.addEventListener('click', function(e) {
+    modal.addEventListener('click', function (e) {
       if (e.target === modal) {
         modal.style.display = 'none';
       }
     });
-    
+
     console.log('[Modal] Notifica��es acad�micas pendentes exibidas');
     console.log('Instru��es:', data.instructions);
     console.log('SIGAA URL:', data.sigaaUrl);

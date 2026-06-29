@@ -5931,3 +5931,99 @@ tr.atividade-concluida .atividade-desc-text {
 .exam-status-msg.status-error {
   color: #dc2626;
 }
+
+/* Custom rule to hide inputs on home tab */
+body.hide-home-inputs:not(.sem-dados) .home-mode-switcher,
+body.hide-home-inputs:not(.sem-dados) #sigaa-form {
+  display: none !important;
+}
+
+body.hide-home-inputs #home-content {
+  gap: 0px 32px !important;
+}
+
+/* Layout adjustments when home inputs are hidden */
+body.hide-home-inputs #dados-institucionais {
+  margin-top: 0 !important;
+  cursor: default !important;
+}
+
+body.hide-home-inputs #responsavel-calendar-container,
+body.hide-home-inputs .home-lista-container {
+  align-self: start !important;
+}
+
+body.hide-home-inputs #responsavel-calendar-grid {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 6px !important;
+}
+
+/* Minimal elegant scrollbar for calendar grid when home inputs are hidden */
+body.hide-home-inputs #responsavel-calendar-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+body.hide-home-inputs #responsavel-calendar-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body.hide-home-inputs #responsavel-calendar-grid::-webkit-scrollbar-thumb {
+  background-color: var(--app-accent, #1976d2);
+  opacity: 0.5;
+  border-radius: 10px;
+}
+
+body.hide-home-inputs #responsavel-calendar-grid::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-accent-strong, #0f3f7a);
+}
+
+/* Keep dados institucionais always open/expanded */
+body.hide-home-inputs #dados-institucionais .extra-info li {
+  display: flex !important;
+}
+
+body.hide-home-inputs #dados-institucionais::after {
+  display: none !important;
+}
+
+/* Top bar logout button style */
+.header-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: #c92a2a;
+  border: 1px solid #ffc9c9;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 34px;
+}
+
+.header-logout-btn:hover {
+  background-color: #ffe3e3;
+  border-color: #fa5252;
+  color: #e03131;
+}
+
+.header-logout-btn:active {
+  transform: scale(0.95);
+}
+
+.header-logout-btn .material-icons {
+  font-size: 16px;
+}
+
+/* Adjust layout on mobile devices if needed */
+@media (max-width: 768px) {
+  .header-logout-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}

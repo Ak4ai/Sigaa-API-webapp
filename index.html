@@ -75,6 +75,10 @@
         <select id="desktop-saved-profile-select" name="desktop-saved-profile-select" aria-label="Selecionar usuário salvo">
           <option value="">Usuários salvos</option>
         </select>
+        <button id="header-logout-btn" class="header-logout-btn" title="Sair do perfil ativo">
+          <span class="material-icons">logout</span>
+          <span>Sair</span>
+        </button>
       </div>
 
       <!-- Toggle do Calendário no Header (ao lado de Perfil) -->
@@ -851,6 +855,12 @@
             <span>Pular ajuste de horários (mais rápido)</span>
           </label>
           <p class="settings-help">Quando ativado, o app não faz o fetch/scrap dos horários, tornando a consulta mais rápida. Desative se tiver bugs nos horários.</p>
+
+          <label class="settings-option" for="hide-home-inputs-toggle" title="Oculta o Tipo de Entrada e o Formulário do SIGAA na página inicial">
+            <input type="checkbox" id="hide-home-inputs-toggle" />
+            <span>Esconder Entrada/Login na Home</span>
+          </label>
+          <p class="settings-help">Quando ativado, oculta a seleção do tipo de entrada e o formulário de login na aba principal (Home).</p>
         </div>
       </div>
       <div class="settings-info-card">
