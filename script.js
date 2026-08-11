@@ -333,13 +333,17 @@ function ajustarAlturaCalendarioResponsavel() {
     if (!form || !dados || !calendar) return;
 
     if (window.innerWidth < 1040 || !isResponsibleCalendarActive()) {
+      calendar.style.height = '';
       calendar.style.maxHeight = '';
       calendar.style.overflow = '';
       return;
     }
 
     let availableHeight;
-    if (isHideHomeInputsEnabled()) {
+    if (!document.body.classList.contains('sem-dados')) {
+      const dadosRect = dados.getBoundingClientRect();
+      availableHeight = Math.max(180, Math.round(dadosRect.height));
+    } else if (isHideHomeInputsEnabled()) {
       const dadosRect = dados.getBoundingClientRect();
       availableHeight = Math.max(120, Math.round(dadosRect.height) - 38);
     } else {
@@ -356,6 +360,7 @@ function ajustarAlturaCalendarioResponsavel() {
     }
 
     calendar.dataset.availableHeight = String(availableHeight);
+    calendar.style.height = `${availableHeight}px`;
     calendar.style.maxHeight = `${availableHeight}px`;
     calendar.style.overflow = 'hidden';
     return availableHeight;
@@ -1968,6 +1973,9 @@ function runHomeHeightSyncTick() {
   if (!isHomeTabActive()) return;
   atualizarHomePainelNovidadesAtividades();
   ajustarAlturaNovidades();
+  if (isResponsibleCalendarActive()) {
+    ajustarAlturaCalendarioResponsavel();
+  }
 }
 
 function startHomeHeightSyncLoop() {
@@ -2039,12 +2047,7 @@ function stopResponsibleCalendarSyncLoop() {
 }
 
 function refreshResponsibleCalendarSyncLoop() {
-  if (isResponsibleCalendarActive() && !isHideHomeInputsEnabled()) {
-    startResponsibleCalendarSyncLoop();
-    runResponsibleCalendarSyncTick();
-  } else {
-    stopResponsibleCalendarSyncLoop();
-  }
+  stopResponsibleCalendarSyncLoop();
 }
 
 function extrairAtividades(data) {
@@ -4453,7 +4456,7 @@ function ajustarAlturaNovidades() {
     }
 
     let x;
-    if (isHideHomeInputsEnabled()) {
+    if (isHideHomeInputsEnabled() || !document.body.classList.contains('sem-dados')) {
       const dadosRect = dados.getBoundingClientRect();
       x = Math.max(120, Math.round(dadosRect.height) - 2);
     } else {
@@ -4492,8 +4495,7 @@ window.addEventListener('resize', () => {
 });
 
 function refreshResponsibleCalendarOnScroll() {
-  if (!isResponsibleCalendarActive() || window.innerWidth < 1040) return;
-  renderResponsibleCalendar(getAppMode());
+  // Desativado para evitar piscadas (flicker) no calendário ao rolar a página
 }
 
 document.addEventListener('visibilitychange', () => {
