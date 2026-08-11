@@ -458,6 +458,214 @@ function getCleanDisciplineName(name) {
   return clean;
 }
 
+let responsibleCalendarMonthsCount = 3;
+let _loadingMoreMonths = false;
+
+function createEmptyCalendarFillerCell() {
+  const cell = document.createElement('div');
+  cell.className = 'home-calendar-day is-muted is-empty-filler';
+  return cell;
+}
+
+function createResponsibleCalendarDayCell(date, now, targetMonthStart, targetMonthEnd) {
+  const cell = document.createElement('div');
+  cell.className = 'home-calendar-day';
+
+  const isSameMonth = date.getMonth() === targetMonthStart.getMonth() && date.getFullYear() === targetMonthStart.getFullYear();
+  const isToday = date.toDateString() === now.toDateString();
+  const isNextMonth = date.getTime() > targetMonthEnd.getTime();
+  const isPrevMonth = date.getTime() < targetMonthStart.getTime();
+
+  if (isToday && isSameMonth) {
+    cell.classList.add('is-today');
+  }
+
+  if (!isSameMonth) {
+    cell.classList.add('is-muted');
+  }
+
+  if (isNextMonth) {
+    cell.classList.add('is-next-month');
+  }
+
+  const number = document.createElement('span');
+  number.className = 'home-calendar-day-number';
+  number.textContent = String(date.getDate()).padStart(2, '0');
+
+  const label = document.createElement('span');
+  label.className = 'home-calendar-day-label';
+  if (isToday && isSameMonth) {
+    label.textContent = 'Hoje';
+  } else if (isSameMonth) {
+    label.textContent = 'Dia';
+  } else if (isPrevMonth) {
+    label.textContent = 'Mês anterior';
+  } else {
+    const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
+    label.textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+  }
+
+  cell.appendChild(number);
+  cell.appendChild(label);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
+
+  const dayEvents = (cachedCalendarEvents || []).filter(e => e.data === dateStr);
+
+  const pendingDeliveries = (atividadesGlobais || [])
+    .filter(a => a.entregaMarcada && !a.concluida)
+    .filter(a => {
+      const aDate = parseAtividadeDate(a.data);
+      if (!aDate) return false;
+      const aYear = aDate.getFullYear();
+      const aMonth = String(aDate.getMonth() + 1).padStart(2, '0');
+      const aDay = String(aDate.getDate()).padStart(2, '0');
+      return `${aYear}-${aMonth}-${aDay}` === dateStr;
+    })
+    .map(a => ({
+      data: dateStr,
+      tipo: 'entrega',
+      titulo: `${a.disciplina}: ${a.descricao}`,
+      disciplina: a.disciplina
+    }));
+
+  const allDayEvents = [...dayEvents, ...pendingDeliveries];
+
+  if (allDayEvents.length > 0) {
+    cell.classList.add('has-events');
+
+    let primaryType = 'outros';
+    if (allDayEvents.some(e => e.tipo === 'feriado')) primaryType = 'feriado';
+    else if (allDayEvents.some(e => e.tipo === 'recesso')) primaryType = 'recesso';
+    else if (allDayEvents.some(e => e.tipo === 'prova')) primaryType = 'prova';
+    else if (allDayEvents.some(e => e.tipo === 'entrega')) primaryType = 'entrega';
+    else if (allDayEvents.some(e => e.tipo === 'inicio-aulas')) primaryType = 'inicio-aulas';
+    else if (allDayEvents.some(e => e.tipo === 'fim-aulas')) primaryType = 'fim-aulas';
+
+    cell.classList.add(`has-event-${primaryType}`);
+
+    const dotsContainer = document.createElement('div');
+    dotsContainer.className = 'home-calendar-day-events';
+
+    allDayEvents.forEach(evt => {
+      const eventTag = document.createElement('span');
+      eventTag.className = `home-calendar-event-tag home-calendar-event-tag-${evt.tipo}`;
+
+      const dot = document.createElement('span');
+      dot.className = `home-calendar-dot home-calendar-dot-${evt.tipo}`;
+
+      const text = document.createElement('span');
+      text.className = 'home-calendar-event-tag-text';
+
+      let shortType = 'Outros';
+      if (evt.tipo === 'feriado') shortType = 'Feriado';
+      else if (evt.tipo === 'recesso') shortType = 'Recesso';
+      else if (evt.tipo === 'prova') shortType = getCleanDisciplineName(evt.disciplina);
+      else if (evt.tipo === 'entrega') shortType = getCleanDisciplineName(evt.disciplina);
+      else if (evt.tipo === 'inicio-aulas') shortType = 'Início';
+      else if (evt.tipo === 'fim-aulas') shortType = 'Fim';
+
+      text.textContent = shortType;
+
+      eventTag.appendChild(dot);
+      eventTag.appendChild(text);
+      dotsContainer.appendChild(eventTag);
+    });
+
+    cell.appendChild(dotsContainer);
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'home-calendar-tooltip';
+
+    allDayEvents.forEach(evt => {
+      const item = document.createElement('div');
+      item.className = 'home-calendar-tooltip-item';
+
+      const indicator = document.createElement('span');
+      indicator.className = `home-calendar-tooltip-dot home-calendar-tooltip-dot-${evt.tipo}`;
+
+      const text = document.createElement('span');
+      text.className = 'home-calendar-tooltip-text';
+      text.textContent = evt.titulo;
+
+      item.appendChild(indicator);
+      item.appendChild(text);
+      tooltip.appendChild(item);
+    });
+
+    cell.appendChild(tooltip);
+  }
+
+  return cell;
+}
+
+function renderSingleResponsibleMonth(mIndex, now, gridContainer) {
+  const targetMonthStart = new Date(now.getFullYear(), now.getMonth() + mIndex, 1);
+  const targetMonthEnd = new Date(now.getFullYear(), now.getMonth() + mIndex + 1, 0);
+
+  if (mIndex > 0) {
+    const divider = document.createElement('div');
+    divider.className = 'home-calendar-month-divider';
+    const monthName = targetMonthStart.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    divider.innerHTML = `<span>${monthName.charAt(0).toUpperCase() + monthName.slice(1)}</span>`;
+    gridContainer.appendChild(divider);
+  }
+
+  if (mIndex === 0) {
+    const firstVisible = new Date(targetMonthStart);
+    firstVisible.setDate(targetMonthStart.getDate() - targetMonthStart.getDay());
+    let cur = new Date(firstVisible);
+    while (cur <= targetMonthEnd || cur.getDay() !== 0) {
+      gridContainer.appendChild(createResponsibleCalendarDayCell(new Date(cur), now, targetMonthStart, targetMonthEnd));
+      cur.setDate(cur.getDate() + 1);
+    }
+  } else {
+    const startDow = targetMonthStart.getDay();
+    for (let i = 0; i < startDow; i++) {
+      gridContainer.appendChild(createEmptyCalendarFillerCell());
+    }
+
+    const lastDayNum = targetMonthEnd.getDate();
+    for (let d = 1; d <= lastDayNum; d++) {
+      const cur = new Date(targetMonthStart.getFullYear(), targetMonthStart.getMonth(), d);
+      gridContainer.appendChild(createResponsibleCalendarDayCell(cur, now, targetMonthStart, targetMonthEnd));
+    }
+
+    const endDow = targetMonthEnd.getDay();
+    if (endDow < 6) {
+      for (let i = 0; i < 6 - endDow; i++) {
+        gridContainer.appendChild(createEmptyCalendarFillerCell());
+      }
+    }
+  }
+}
+
+function loadMoreResponsibleCalendarMonths() {
+  if (_loadingMoreMonths) return;
+  _loadingMoreMonths = true;
+
+  const grid = document.getElementById('responsavel-calendar-grid');
+  if (!grid) {
+    _loadingMoreMonths = false;
+    return;
+  }
+
+  const now = new Date();
+  const nextMonthIndex = responsibleCalendarMonthsCount;
+  responsibleCalendarMonthsCount += 2;
+
+  for (let m = nextMonthIndex; m < responsibleCalendarMonthsCount; m++) {
+    renderSingleResponsibleMonth(m, now, grid);
+  }
+
+  setTimeout(() => {
+    _loadingMoreMonths = false;
+  }, 100);
+}
+
 function renderResponsibleCalendar(mode = getAppMode()) {
   const container = document.getElementById('responsavel-calendar-container');
   const grid = document.getElementById('responsavel-calendar-grid');
@@ -475,37 +683,22 @@ function renderResponsibleCalendar(mode = getAppMode()) {
   }
 
   container.style.display = '';
-  container.style.height = '';
 
   const now = new Date();
   const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   title.textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
 
-  grid.innerHTML = '';
+  ajustarAlturaCalendarioResponsavel();
 
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const firstVisible = new Date(monthStart);
-  firstVisible.setDate(monthStart.getDate() - monthStart.getDay());
-
-  const availableHeight = ajustarAlturaCalendarioResponsavel() || Number(container.dataset.availableHeight) || 0;
-  const weeksToRender = getResponsibleCalendarWeeksToRender(availableHeight);
-
-  const weeks = [];
-  const current = new Date(firstVisible);
-  for (let row = 0; row < weeksToRender; row++) {
-    const week = [];
-    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-      week.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    weeks.push(week);
+  if (!grid.dataset.scrollBound) {
+    grid.dataset.scrollBound = 'true';
+    grid.addEventListener('scroll', () => {
+      if (grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 150) {
+        loadMoreResponsibleCalendarMonths();
+      }
+    }, { passive: true });
   }
 
-  const nextMonthLabel = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-    .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-
-  // Busca assíncrona dos eventos
   const curso = obterCursoDoPerfil();
   if (cachedCalendarEvents === null || lastFetchedCurso !== curso) {
     fetchCalendarEvents(curso).then(events => {
@@ -515,144 +708,16 @@ function renderResponsibleCalendar(mode = getAppMode()) {
     });
   }
 
-  weeks.forEach((week) => {
-    week.forEach((date) => {
-      const cell = document.createElement('div');
-      cell.className = 'home-calendar-day';
+  const savedScrollTop = grid.scrollTop;
+  grid.innerHTML = '';
 
-      const isSameMonth = date.getMonth() === now.getMonth();
-      const isNextMonth = (date.getFullYear() > now.getFullYear()) || (date.getFullYear() === now.getFullYear() && date.getMonth() > now.getMonth());
+  for (let m = 0; m < responsibleCalendarMonthsCount; m++) {
+    renderSingleResponsibleMonth(m, now, grid);
+  }
 
-      if (date.getDate() === now.getDate() && isSameMonth) {
-        cell.classList.add('is-today');
-      }
-
-      if (!isSameMonth) {
-        cell.classList.add('is-muted');
-      }
-
-      if (isNextMonth) {
-        cell.classList.add('is-next-month');
-      }
-
-      const number = document.createElement('span');
-      number.className = 'home-calendar-day-number';
-      number.textContent = String(date.getDate()).padStart(2, '0');
-
-      const label = document.createElement('span');
-      label.className = 'home-calendar-day-label';
-      if (date.toDateString() === now.toDateString()) {
-        label.textContent = 'Hoje';
-      } else if (isSameMonth) {
-        label.textContent = 'Dia';
-      } else if (date.getTime() < monthStart.getTime()) {
-        label.textContent = 'Mês anterior';
-      } else {
-        const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
-        label.textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-      }
-
-      cell.appendChild(number);
-      cell.appendChild(label);
-
-      // Renderiza eventos e tooltips se existirem no cache
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
-
-      const dayEvents = (cachedCalendarEvents || []).filter(e => e.data === dateStr);
-
-      // Obter tarefas pendentes com entrega marcada desse dia da lista atividadesGlobais
-      const pendingDeliveries = (atividadesGlobais || [])
-        .filter(a => a.entregaMarcada && !a.concluida)
-        .filter(a => {
-          const aDate = parseAtividadeDate(a.data);
-          if (!aDate) return false;
-          const aYear = aDate.getFullYear();
-          const aMonth = String(aDate.getMonth() + 1).padStart(2, '0');
-          const aDay = String(aDate.getDate()).padStart(2, '0');
-          return `${aYear}-${aMonth}-${aDay}` === dateStr;
-        })
-        .map(a => ({
-          data: dateStr,
-          tipo: 'entrega',
-          titulo: `${a.disciplina}: ${a.descricao}`,
-          disciplina: a.disciplina
-        }));
-
-      const allDayEvents = [...dayEvents, ...pendingDeliveries];
-
-      if (allDayEvents.length > 0) {
-        cell.classList.add('has-events');
-
-        // Mapeia tipo de evento primário para aplicar segunda borda no dia
-        let primaryType = 'outros';
-        if (allDayEvents.some(e => e.tipo === 'feriado')) primaryType = 'feriado';
-        else if (allDayEvents.some(e => e.tipo === 'recesso')) primaryType = 'recesso';
-        else if (allDayEvents.some(e => e.tipo === 'prova')) primaryType = 'prova';
-        else if (allDayEvents.some(e => e.tipo === 'entrega')) primaryType = 'entrega';
-        else if (allDayEvents.some(e => e.tipo === 'inicio-aulas')) primaryType = 'inicio-aulas';
-        else if (allDayEvents.some(e => e.tipo === 'fim-aulas')) primaryType = 'fim-aulas';
-
-        cell.classList.add(`has-event-${primaryType}`);
-
-        const dotsContainer = document.createElement('div');
-        dotsContainer.className = 'home-calendar-day-events';
-
-        allDayEvents.forEach(evt => {
-          const eventTag = document.createElement('span');
-          eventTag.className = `home-calendar-event-tag home-calendar-event-tag-${evt.tipo}`;
-
-          const dot = document.createElement('span');
-          dot.className = `home-calendar-dot home-calendar-dot-${evt.tipo}`;
-
-          const text = document.createElement('span');
-          text.className = 'home-calendar-event-tag-text';
-
-          let shortType = 'Outros';
-          if (evt.tipo === 'feriado') shortType = 'Feriado';
-          else if (evt.tipo === 'recesso') shortType = 'Recesso';
-          else if (evt.tipo === 'prova') shortType = getCleanDisciplineName(evt.disciplina);
-          else if (evt.tipo === 'entrega') shortType = getCleanDisciplineName(evt.disciplina);
-          else if (evt.tipo === 'inicio-aulas') shortType = 'Início';
-          else if (evt.tipo === 'fim-aulas') shortType = 'Fim';
-
-          text.textContent = shortType;
-
-          eventTag.appendChild(dot);
-          eventTag.appendChild(text);
-          dotsContainer.appendChild(eventTag);
-        });
-
-        cell.appendChild(dotsContainer);
-
-        // Tooltip customizado
-        const tooltip = document.createElement('div');
-        tooltip.className = 'home-calendar-tooltip';
-
-        allDayEvents.forEach(evt => {
-          const item = document.createElement('div');
-          item.className = 'home-calendar-tooltip-item';
-
-          const indicator = document.createElement('span');
-          indicator.className = `home-calendar-tooltip-dot home-calendar-tooltip-dot-${evt.tipo}`;
-
-          const text = document.createElement('span');
-          text.className = 'home-calendar-tooltip-text';
-          text.textContent = evt.titulo;
-
-          item.appendChild(indicator);
-          item.appendChild(text);
-          tooltip.appendChild(item);
-        });
-
-        cell.appendChild(tooltip);
-      }
-
-      grid.appendChild(cell);
-    });
-  });
+  if (savedScrollTop > 0) {
+    grid.scrollTop = savedScrollTop;
+  }
 }
 
 function syncAppModeSelect(mode) {
@@ -1142,6 +1207,7 @@ function atualizarSelectPerfisSalvos() {
   });
 
   updateComparisonToggleState();
+  applyDesktopProfileSelectVisibility();
 }
 
 function initSelectPerfisSalvos() {
@@ -1378,9 +1444,9 @@ async function consultarComToken(token, userFromLogin = '', requestedMode = null
       mode: 'cors',
       credentials: 'omit'
     }).catch(err => {
-      // Se HTTPS fails, tenta HTTP como fallback
-      console.warn(`[FETCH] Erro HTTPS, tentando HTTP fallback:`, err.message);
-      if (API_BASE.includes('https')) {
+      // Se HTTPS falhar, só tenta HTTP como fallback se a página não estiver sob HTTPS (ex: localhost)
+      console.warn(`[FETCH] Erro na requisição HTTPS:`, err.message);
+      if (API_BASE.includes('https') && window.location.protocol !== 'https:') {
         const httpFallback = API_BASE.replace('https://', 'http://').replace(':443', ':8080');
         return fetch(`${httpFallback}/api/scraper`, {
           method: 'POST',
@@ -1526,8 +1592,16 @@ window.addEventListener('DOMContentLoaded', () => {
   initSkipScheduleToggle();
   // Inicia toggle para esconder tipo de entrada e sigaa-form
   initHideHomeInputsToggle();
+  // Inicia toggle para exibir tempo de resposta da API
+  initApiResponseTimeToggle();
+  // Inicia toggle para exibir seleção de perfil no header
+  initDesktopProfileSelectToggle();
   // Inicia botão de logout no header
   initHeaderLogoutButton();
+  // Inicia botão de refresh no header
+  initHeaderRefreshButton();
+  // Inicia botões do container de usuário no mobile
+  initMobileUserCardButtons();
   // Inicia painel de logs na aba Configurações
   initDebugConsolePanel();
   initHomeModeSwitcher();
@@ -1546,6 +1620,49 @@ const HIDE_HOME_INPUTS_KEY = 'sigaa-hide-home-inputs';
 
 function isHideHomeInputsEnabled() {
   return localStorage.getItem(HIDE_HOME_INPUTS_KEY) === '1';
+}
+
+const SHOW_API_RESPONSE_TIME_KEY = 'sigaa-show-api-response-time';
+
+function isApiResponseTimeEnabled() {
+  return localStorage.getItem(SHOW_API_RESPONSE_TIME_KEY) === '1';
+}
+
+const SHOW_DESKTOP_PROFILE_SELECT_KEY = 'sigaa-show-desktop-profile-select';
+
+function isDesktopProfileSelectEnabled() {
+  return localStorage.getItem(SHOW_DESKTOP_PROFILE_SELECT_KEY) === '1';
+}
+
+function applyDesktopProfileSelectVisibility() {
+  const select = document.getElementById('desktop-saved-profile-select');
+  const label = document.querySelector('label[for="desktop-saved-profile-select"]');
+  const container = document.getElementById('desktop-saved-profiles-container');
+  const logoutBtn = document.getElementById('header-logout-btn');
+  const refreshBtn = document.getElementById('header-refresh-btn');
+
+  const showSelect = isDesktopProfileSelectEnabled();
+  const profiles = getSavedProfiles();
+  const isLoggedIn = !document.body.classList.contains('sem-dados');
+
+  if (select) select.style.display = showSelect ? '' : 'none';
+  if (label) label.style.display = showSelect ? '' : 'none';
+
+  if (container) {
+    if (showSelect) {
+      container.style.display = (profiles.length > 0 || isLoggedIn) ? '' : 'none';
+    } else {
+      container.style.display = isLoggedIn ? '' : 'none';
+    }
+  }
+
+  if (logoutBtn) {
+    logoutBtn.style.display = isLoggedIn ? '' : 'none';
+  }
+
+  if (refreshBtn) {
+    refreshBtn.style.display = isLoggedIn ? '' : 'none';
+  }
 }
 
 function applyHideHomeInputsState() {
@@ -1774,20 +1891,93 @@ function initHideHomeInputsToggle() {
   });
 }
 
+function initApiResponseTimeToggle() {
+  const toggle = document.getElementById('show-api-response-time-toggle');
+  if (!toggle) return;
+
+  toggle.checked = isApiResponseTimeEnabled();
+  toggle.addEventListener('change', () => {
+    localStorage.setItem(SHOW_API_RESPONSE_TIME_KEY, toggle.checked ? '1' : '0');
+    try {
+      const raw = localStorage.getItem(STORAGE_LAST_CONSULTA);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data.dadosInstitucionais) {
+          renderizarDadosInstitucionais(data.dadosInstitucionais, data.semestreAtual, data.tempoResposta);
+        }
+      }
+    } catch (e) { /* ignore */ }
+  });
+}
+
+function initDesktopProfileSelectToggle() {
+  const toggle = document.getElementById('show-desktop-profile-select-toggle');
+  if (!toggle) return;
+
+  toggle.checked = isDesktopProfileSelectEnabled();
+  applyDesktopProfileSelectVisibility();
+
+  toggle.addEventListener('change', () => {
+    localStorage.setItem(SHOW_DESKTOP_PROFILE_SELECT_KEY, toggle.checked ? '1' : '0');
+    applyDesktopProfileSelectVisibility();
+  });
+}
+
 function initHeaderLogoutButton() {
   const headerLogoutBtn = document.getElementById('header-logout-btn');
   if (headerLogoutBtn) {
-    headerLogoutBtn.addEventListener('click', () => {
-      const mainLogoutBtn = document.getElementById('logout-btn');
-      if (mainLogoutBtn) {
-        mainLogoutBtn.click();
+    headerLogoutBtn.addEventListener('click', executarLogoutAction);
+  }
+}
+
+function executarRefreshHeader() {
+  const info = getTokenInfo();
+  const token = info ? info.token : (localStorage.getItem('sigaa_token') || sessionStorage.getItem('sigaa_token'));
+  if (token) {
+    consultarComToken(token, getSelectedProfileUser());
+  } else {
+    const form = document.getElementById('sigaa-form');
+    if (form) {
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
       }
+    }
+  }
+}
+
+function initHeaderRefreshButton() {
+  const refreshBtn = document.getElementById('header-refresh-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      refreshBtn.classList.add('is-refreshing');
+      setTimeout(() => refreshBtn.classList.remove('is-refreshing'), 1000);
+      executarRefreshHeader();
     });
   }
 }
 
+function initMobileUserCardButtons() {
+  const mobileRefreshBtn = document.getElementById('mobile-refresh-btn');
+  if (mobileRefreshBtn && mobileRefreshBtn.dataset.bound !== '1') {
+    mobileRefreshBtn.dataset.bound = '1';
+    mobileRefreshBtn.addEventListener('click', () => {
+      mobileRefreshBtn.classList.add('is-refreshing');
+      setTimeout(() => mobileRefreshBtn.classList.remove('is-refreshing'), 1000);
+      executarRefreshHeader();
+    });
+  }
+
+  const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+  if (mobileLogoutBtn && mobileLogoutBtn.dataset.bound !== '1') {
+    mobileLogoutBtn.dataset.bound = '1';
+    mobileLogoutBtn.addEventListener('click', executarLogoutAction);
+  }
+}
+
 // Botão de logout/apagar informações
-document.getElementById('logout-btn').addEventListener('click', () => {
+function executarLogoutAction() {
   if (!confirm('Tem certeza que deseja sair?\nSeus dados salvos serão apagados.')) return;
 
   // 0. Para atualizações da barra de progresso
@@ -1929,6 +2119,9 @@ document.getElementById('logout-btn').addEventListener('click', () => {
     }
   }
   if (tabHomeDiv) tabHomeDiv.classList.add('sem-dados');
+  document.body.classList.add('sem-dados');
+  atualizarPainelSemDadosParaModo(getAppMode());
+  applyDesktopProfileSelectVisibility();
 
   // 15. Esconde elementos que só aparecem com dados
   const dadosInst = document.getElementById('dados-institucionais');
@@ -1953,7 +2146,7 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   if (scheduleInterval) clearInterval(scheduleInterval);
   const interactiveGuide = document.getElementById('interactive-schedule-guide');
   if (interactiveGuide) interactiveGuide.style.display = 'none';
-});
+}
 
 // Salva os dados para filtrar depois
 let frequenciasGlobais = [];
@@ -4144,6 +4337,7 @@ function removerEstiloSemDados() {
   }
   // Ajusta altura quando removemos o estilo sem-dados
   setTimeout(ajustarAlturaNovidades, 40);
+  applyDesktopProfileSelectVisibility();
 
   // Mostra a barra de tabs e o FAB novamente (respeitando estado minimizado)
   const tabsBar = document.querySelector('.tabs');
@@ -4220,9 +4414,37 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
     const key = k.charAt(0).toUpperCase() + k.slice(1);
     dadosFormatados[key] = v;
   });
-  if (semestre) dadosFormatados['Semestre'] = semestre;
+  delete dadosFormatados['Semestre'];
+  delete dadosFormatados['semestre'];
 
   let html = '<h2>Dados Institucionais do Usuário</h2><ul>';
+
+  // Procura o nome do usuário nas chaves
+  const nomeKey = Object.keys(dadosFormatados).find(k => 
+    /nome/i.test(k) || /usuario/i.test(k) || /discente/i.test(k)
+  );
+
+  let nomeUsuario = nomeKey ? dadosFormatados[nomeKey] : null;
+  if (nomeKey) {
+    delete dadosFormatados[nomeKey];
+  }
+
+  if (nomeUsuario) {
+    html += `
+      <li class="dados-user-row">
+        <span class="material-icons dados-user-avatar">person</span>
+        <div class="dados-user-details">
+          <span class="dados-user-title">Discente / Usuário</span>
+          <span class="dados-user-name">${nomeUsuario}</span>
+        </div>
+      </li>
+    `;
+  }
+
+  const mobileNameEl = document.getElementById('mobile-user-name');
+  if (mobileNameEl) {
+    mobileNameEl.textContent = nomeUsuario || getSelectedProfileUser() || 'Usuário';
+  }
 
   // Mostra só principais
   principais.forEach(chave => {
@@ -4238,8 +4460,8 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
       html += `<li><strong>${chave}:</strong> ${valor}</li>`;
     }
   });
-  // Adiciona o tempo de resposta como extra-info
-  if (tempoResposta) {
+  // Adiciona o tempo de resposta como extra-info apenas se a opção estiver ativada nas configurações
+  if (tempoResposta && isApiResponseTimeEnabled()) {
     html += `<li><strong>Tempo de resposta da API:</strong> ${tempoResposta}s</li>`;
   }
   html += `</div></ul>`;
@@ -4734,6 +4956,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('click', (e) => {
       if (!desktopMenu.contains(e.target) && !desktopToggle.contains(e.target)) closeDesktopMenu();
+      const configBtn = e.target.closest('[data-action="abrir-configuracoes"]');
+      if (configBtn) {
+        activateTab('tab-configuracoes');
+      }
     });
   }
 

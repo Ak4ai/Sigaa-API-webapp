@@ -58,7 +58,7 @@
 </script>
 <body>
   <header class="page-header">
-    <h1><img src="icon-web.png" alt="" class="header-logo">Consultas - SIGAA</h1>
+    <h1><img src="icon-web.png" alt="" class="header-logo"><span>Consultas - SIGAA</span></h1>
 
     <div class="page-header-right">
       <!-- Tabs -->
@@ -75,6 +75,10 @@
         <select id="desktop-saved-profile-select" name="desktop-saved-profile-select" aria-label="Selecionar usuário salvo">
           <option value="">Usuários salvos</option>
         </select>
+        <button id="header-refresh-btn" class="header-refresh-btn" title="Atualizar dados da consulta">
+          <span class="material-icons">refresh</span>
+          <span>Atualizar</span>
+        </button>
         <button id="header-logout-btn" class="header-logout-btn" title="Sair do perfil ativo">
           <span class="material-icons">logout</span>
           <span>Sair</span>
@@ -167,13 +171,13 @@
             <label for="pass">Senha:</label>
             <input type="password" id="pass" name="pass" required />
             <div class="password-info">
-              <button type="submit" class="login-action-btn">Consultar</button>
-              <button type="button" id="logout-btn" class="logout-inline-btn login-action-btn">
-                Sair
+              <button type="submit" class="login-action-btn">
+                <span class="material-icons" style="font-size: 18px; margin-right: 6px;">login</span>
+                <span>Login</span>
               </button>
               <label class="remember-login-label" for="manter-logado">
                 <input type="checkbox" id="manter-logado" />
-                Manter logado
+                <span>Manter logado</span>
               </label>
             </div>
             <div class="error" id="error"></div>
@@ -219,6 +223,26 @@
               <div id="queue-status-container" style="width: 100%; max-width: 400px; padding: 0px 20px;"></div>
             </div>
           </form>
+          <!-- Container de Usuário no Mobile (exibido apenas quando logado no mobile) -->
+          <div id="mobile-user-card" class="mobile-user-card">
+            <div class="mobile-user-card-header">
+              <span class="material-icons mobile-user-avatar">person</span>
+              <div class="mobile-user-details">
+                <span class="mobile-user-title">Discente / Usuário</span>
+                <span id="mobile-user-name" class="mobile-user-name">Usuário</span>
+              </div>
+            </div>
+            <div class="mobile-user-card-actions">
+              <button type="button" id="mobile-refresh-btn" class="mobile-user-btn mobile-user-btn-refresh" title="Atualizar dados">
+                <span class="material-icons">refresh</span>
+                <span>Atualizar</span>
+              </button>
+              <button type="button" id="mobile-logout-btn" class="mobile-user-btn mobile-user-btn-logout" title="Sair do perfil">
+                <span class="material-icons">logout</span>
+                <span>Sair</span>
+              </button>
+            </div>
+          </div>
           <div id="dados-institucionais"></div>
         </div>
 
@@ -295,13 +319,13 @@
       <div class="home-mode-shell home-mode-shell-graduacao">
         <div class="home-mode-hero">
           <div class="home-mode-hero-copy">
-            <span class="home-mode-eyebrow">Base graduação</span>
-            <h2>Interface padrão da consulta</h2>
-            <p>Esse modo compartilha a mesma área de consulta usada por todos os perfis, mas continua sendo a referência visual da aplicação.</p>
+            <span class="home-mode-eyebrow">Portal Acadêmico • Graduação</span>
+            <h2>Recursos Rápidos e Orientação</h2>
+            <p>Acesse calendários oficiais, formulários institucionais e personalização do sistema em um só lugar.</p>
           </div>
           <div class="home-mode-hero-panel">
-            <strong>Base atual</strong>
-            <span>Todo o fluxo original continua sendo o ponto de partida</span>
+            <strong>Dica Rápida</strong>
+            <span>Utilize os atalhos abaixo para abrir documentos oficiais ou ajustar suas preferências.</span>
           </div>
         </div>
 
@@ -327,15 +351,15 @@
             <span class="home-tech-widget-cta home-tech-widget-cta-disabled">Canal previsto</span>
           </article>
 
-          <article class="home-tech-widget home-tech-widget-development">
-            <span class="home-tech-widget-tag home-tech-widget-tag-dev">Guia de uso</span>
+          <button type="button" class="home-tech-widget home-tech-widget-link" data-action="abrir-configuracoes">
+            <span class="home-tech-widget-tag">Ajustes</span>
             <h3>Configurações do app</h3>
             <p>Área para personalizar preferências, atalhos e comportamento visual da aplicação.</p>
-            <span class="home-tech-widget-cta home-tech-widget-cta-disabled">Configuração prevista</span>
-          </article>
+            <span class="home-tech-widget-cta">Abrir configurações -&gt;</span>
+          </button>
         </div>
         <div class="home-mode-note">
-          <strong>Use estes atalhos:</strong> abra as páginas oficiais, consulte documentos e acompanhe os recursos que serão incorporados ao modo.
+          <strong>Atalhos Úteis:</strong> Clique em qualquer um dos cartões acima para abrir documentos oficiais, acessar links de suporte ou personalizar o aplicativo.
         </div>
       </div>
     </section>
@@ -344,13 +368,13 @@
       <div class="home-mode-shell home-mode-shell-tecnico">
         <div class="home-mode-hero">
           <div class="home-mode-hero-copy">
-            <span class="home-mode-eyebrow">Entrada técnica</span>
-            <h2>Interface técnica em construção</h2>
-            <p>Este modo já está separado da graduação para que possamos evoluir a experiência técnica sem tocar no restante da home.</p>
+            <span class="home-mode-eyebrow">Portal Acadêmico • Ensino Técnico</span>
+            <h2>Atalhos Técnicos e Serviços</h2>
+            <p>Consulte o calendário do curso técnico, documentos de atendimento e preferências para otimizar sua rotina.</p>
           </div>
           <div class="home-mode-hero-panel">
-            <strong>Foco atual</strong>
-            <span>Fluxo visual próprio para curso técnico</span>
+            <strong>Dica Rápida</strong>
+            <span>Acesse diretamente os prazos letivos e solicitações frequentes do curso técnico.</span>
           </div>
         </div>
 
@@ -376,15 +400,15 @@
             <span class="home-tech-widget-cta home-tech-widget-cta-disabled">Canal previsto</span>
           </article>
 
-          <article class="home-tech-widget home-tech-widget-development">
-            <span class="home-tech-widget-tag home-tech-widget-tag-dev">Guia de uso</span>
+          <button type="button" class="home-tech-widget home-tech-widget-link" data-action="abrir-configuracoes">
+            <span class="home-tech-widget-tag">Ajustes</span>
             <h3>Configurações do app</h3>
             <p>Área para personalizar preferências, atalhos e comportamento visual da aplicação técnica.</p>
-            <span class="home-tech-widget-cta home-tech-widget-cta-disabled">Configuração prevista</span>
-          </article>
+            <span class="home-tech-widget-cta">Abrir configurações -&gt;</span>
+          </button>
         </div>
         <div class="home-mode-note">
-          <strong>Use estes atalhos:</strong> consulte documentos, abra o calendário e acompanhe os recursos planejados para o modo técnico.
+          <strong>Atalhos Úteis:</strong> Clique em qualquer um dos cartões acima para abrir documentos oficiais, acessar links de suporte ou personalizar o aplicativo.
         </div>
       </div>
     </section>
@@ -393,13 +417,13 @@
       <div class="home-mode-shell home-mode-shell-responsavel">
         <div class="home-mode-hero home-mode-hero-responsavel">
           <div class="home-mode-hero-copy">
-            <span class="home-mode-eyebrow">Entrada responsável</span>
-            <h2>Painel para acompanhamento</h2>
-            <p>Esse modo fica separado para receber uma visão mais rápida, voltada ao acompanhamento e consulta do responsável.</p>
+            <span class="home-mode-eyebrow">Portal Acadêmico • Responsável</span>
+            <h2>Acompanhamento Escolar</h2>
+            <p>Visão simplificada para acompanhar o calendário acadêmico, formulários e preferências de exibição.</p>
           </div>
           <div class="home-mode-hero-panel home-mode-hero-panel-contrast">
-            <strong>Visão rápida</strong>
-            <span>Acesso pensado para consulta e monitoramento</span>
+            <strong>Dica Rápida</strong>
+            <span>Acompanhe datas importantes e configure a visualização da conta com praticidade.</span>
           </div>
         </div>
 
@@ -425,15 +449,15 @@
             <span class="home-tech-widget-cta home-tech-widget-cta-disabled">Canal previsto</span>
           </article>
 
-          <article class="home-tech-widget home-tech-widget-development">
-            <span class="home-tech-widget-tag home-tech-widget-tag-dev">Guia de uso</span>
+          <button type="button" class="home-tech-widget home-tech-widget-link" data-action="abrir-configuracoes">
+            <span class="home-tech-widget-tag">Ajustes</span>
             <h3>Configurações do app</h3>
             <p>Área para personalizar preferências, atalhos e acompanhamento da aplicação.</p>
-            <span class="home-tech-widget-cta home-tech-widget-cta-disabled">Configuração prevista</span>
-          </article>
+            <span class="home-tech-widget-cta">Abrir configurações -&gt;</span>
+          </button>
         </div>
         <div class="home-mode-note">
-          <strong>Use estes atalhos:</strong> consulte documentos, acesse o calendário e acompanhe os recursos planejados para o modo responsável.
+          <strong>Atalhos Úteis:</strong> Clique em qualquer um dos cartões acima para abrir documentos oficiais, acessar links de suporte ou personalizar o aplicativo.
         </div>
       </div>
     </section>
@@ -441,31 +465,31 @@
 
   <div class="tab-content" id="tab-simplificada">
     <!-- Barra de Progresso de Aula -->
-    <div id="class-progress-bar-container" style="margin-bottom: 16px; display: none;">
-      <div style="background: linear-gradient(to bottom, #f8fafc, #f0f4f9); border-radius: 8px; padding: 14px; border: 1px solid #d9e5ef; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);">
+    <div id="class-progress-bar-container" class="class-progress-bar-container" style="margin-bottom: 16px; display: none;">
+      <div class="class-progress-bar-card">
         <!-- Próxima aula -->
         <div id="next-class-info" style="display: none;">
-          <div style="font-size: 11px; color: #0f3f7a; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 6px; text-transform: uppercase;">Próxima Aula</div>
-          <div style="font-size: 14px; color: #1a3e6e; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <strong id="next-class-name" style="flex: 1; color: #0f3f7a;"></strong>
-            <span id="next-class-room" style="color: #555; font-size: 12px; background: rgba(0, 123, 255, 0.08); padding: 4px 8px; border-radius: 4px;">Sala: <strong></strong></span>
+          <div class="class-progress-title">Próxima Aula</div>
+          <div class="class-progress-row">
+            <strong id="next-class-name" class="class-progress-name"></strong>
+            <span id="next-class-room" class="class-progress-room-badge">Sala: <strong></strong></span>
           </div>
         </div>
         <!-- Aula em progresso -->
         <div id="active-class-info" style="display: none;">
-          <div style="font-size: 11px; color: #0f3f7a; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 8px; text-transform: uppercase;">Aula em Progresso</div>
+          <div class="class-progress-title">Aula em Progresso</div>
           <!-- Nome da disciplina -->
-          <div id="active-class-name" style="font-size: 15px; color: #0f3f7a; font-weight: 600; margin-bottom: 10px;"></div>
-          <div style="background: white; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e8f0fe; gap: 8px; flex-wrap: wrap;">
-            <span style="font-size: 12px; color: #666;"><strong id="active-class-time"></strong></span>
+          <div id="active-class-name" class="class-progress-active-name"></div>
+          <div class="class-progress-meta-box">
+            <span class="class-progress-time-text"><strong id="active-class-time"></strong></span>
             <!-- Countdown com segundos proeminentes -->
-            <span id="active-class-countdown" style="font-size: 18px; color: white; background: linear-gradient(135deg, #007bff, #0056b3); padding: 6px 14px; border-radius: 4px; font-weight: 700; font-family: 'Courier New', monospace; min-width: 85px; text-align: center; letter-spacing: 1px;">--:--</span>
-            <span id="active-class-room-small" style="color: #666; font-size: 11px; background: rgba(0, 123, 255, 0.12); padding: 4px 8px; border-radius: 3px; white-space: nowrap;">📍 <strong id="active-class-room-text">-</strong></span>
+            <span id="active-class-countdown" class="class-progress-countdown">--:--</span>
+            <span id="active-class-room-small" class="class-progress-room-badge">📍 <strong id="active-class-room-text">-</strong></span>
           </div>
-          <div style="width: 100%; height: 6px; background: #e8f0fe; border-radius: 3px; overflow: hidden; border: 1px solid #d0e3f7;">
-            <div id="progress-bar-fill" style="height: 100%; background: linear-gradient(90deg, #007bff, #0056b3); width: 0%; transition: width 0.3s ease; border-radius: 3px; box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);"></div>
+          <div class="class-progress-track">
+            <div id="progress-bar-fill" class="class-progress-fill"></div>
           </div>
-          <div style="font-size: 11px; color: #666; margin-top: 6px; text-align: right; font-weight: 500;">
+          <div class="class-progress-percent-label">
             <span id="progress-percentage">0%</span>
           </div>
         </div>
@@ -820,6 +844,18 @@
             <span>Pular ajuste de horários (mais rápido)</span>
           </label>
           <p class="settings-help">Quando ativado, o app não faz o fetch/scrap dos horários, tornando a consulta mais rápida. Desative se tiver bugs nos horários.</p>
+
+          <label class="settings-option" for="show-api-response-time-toggle" title="Exibe o tempo de resposta da API na tabela de Dados Institucionais">
+            <input type="checkbox" id="show-api-response-time-toggle" />
+            <span>Exibir tempo de resposta da API em Dados Institucionais</span>
+          </label>
+          <p class="settings-help">Quando ativado, mostra a linha com o tempo de resposta da requisição na tabela de Dados Institucionais.</p>
+
+          <label class="settings-option" for="show-desktop-profile-select-toggle" title="Exibe a seleção de perfil de usuário na barra superior (header)">
+            <input type="checkbox" id="show-desktop-profile-select-toggle" />
+            <span>Exibir seleção de perfil na barra superior (header)</span>
+          </label>
+          <p class="settings-help">Quando ativado, mostra o menu dropdown de seleção de perfis salvos na barra superior do aplicativo.</p>
 
         </div>
       </div>
