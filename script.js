@@ -2480,10 +2480,69 @@ document.getElementById('select-disciplina-notas').addEventListener('change', fu
   preencherTabelaNotas(notasGlobais, this.value);
 });
 
-// Função para preencher a aba de horários simplificados
+// Helper para obter período letivo baseado no calendário acadêmico
+async function obterPeriodoLetivo() {
+  const semestre = horariosGlobais[0]?.semestre || '';
+  const anoBase = semestre.split('.')[0] || new Date().getFullYear();
+  
+  // Fallbacks padrão caso o fetch de eventos falhe ou não encontre as datas exatas
+  let dataInicioStr = null;
+  let dataFimRaw = semestre.includes('.2') ? `${anoBase}-11-30` : `${anoBase}-07-31`;
+
+  try {
+    const curso = obterCursoDoPerfil();
+    if (cachedCalendarEvents === null) {
+      await fetchCalendarEvents(curso);
+    }
+    if (cachedCalendarEvents && cachedCalendarEvents.length > 0) {
+      // Busca término das aulas
+      const fimEvt = cachedCalendarEvents.find(e => 
+        e.tipo === 'fim-aulas' || 
+        (e.titulo && (
+          e.titulo.toLowerCase().includes('termino das aulas') || 
+          e.titulo.toLowerCase().includes('término das aulas') ||
+          e.titulo.toLowerCase().includes('termino do semestre') ||
+          e.titulo.toLowerCase().includes('término do semestre') ||
+          e.titulo.toLowerCase().includes('fim das aulas') ||
+          e.titulo.toLowerCase().includes('fim do semestre')
+        ))
+      );
+      if (fimEvt && fimEvt.data) {
+        dataFimRaw = fimEvt.data;
+      }
+
+      // Busca início das aulas
+      const inicioEvt = cachedCalendarEvents.find(e => 
+        e.tipo === 'inicio-aulas' || 
+        (e.titulo && (
+          e.titulo.toLowerCase().includes('inicio das aulas') || 
+          e.titulo.toLowerCase().includes('início das aulas') ||
+          e.titulo.toLowerCase().includes('inicio do semestre') ||
+          e.titulo.toLowerCase().includes('início do semestre')
+        ))
+      );
+      if (inicioEvt && inicioEvt.data) {
+        dataInicioStr = inicioEvt.data;
+      }
+    }
+  } catch (e) {
+    console.warn('Erro ao obter período letivo do calendário acadêmico:', e);
+  }
+
+  return { dataInicioStr, dataFimRaw };
+}
+
+// Retorna o dia seguinte em formato YYYYMMDD para usar como UNTIL no iCalendar (para incluir as aulas do último dia)
+function obterDiaSeguinte(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
+}
+
 // ─── Exportação Google Calendar (.ics) ────────────────────────────────────
 // ─── Abrir no Google Calendar (sem importar arquivo) ─────────────────────
-function abrirNoGoogleCalendar() {
+async function abrirNoGoogleCalendar() {
   if (!horariosGlobais || horariosGlobais.length === 0) {
     alert('Nenhum horário disponível. Faça o scraping primeiro.');
     return;
@@ -2498,18 +2557,27 @@ function abrirNoGoogleCalendar() {
     'Quinta-feira': 'TH', 'Sexta-feira': 'FR', 'Sábado': 'SA'
   };
 
-  const semestre = horariosGlobais[0]?.semestre || '';
-  const anoBase = semestre.split('.')[0] || new Date().getFullYear();
-  const dataFim = semestre.includes('.2') ? `${anoBase}1130T030000Z` : `${anoBase}0731T030000Z`;
+  const { dataInicioStr, dataFimRaw } = await obterPeriodoLetivo();
+  const dataFim = obterDiaSeguinte(dataFimRaw) + 'T030000Z';
 
-  function proximaOcorrencia(diaNome) {
-    const hoje = new Date();
-    const alvo = diasSemanaNum[diaNome];
-    let diff = alvo - hoje.getDay();
-    if (diff <= 0) diff += 7;
-    const d = new Date(hoje);
-    d.setDate(hoje.getDate() + diff);
-    return d;
+  function calcularDataInicial(diaNome) {
+    if (dataInicioStr) {
+      const baseDate = new Date(dataInicioStr + 'T00:00:00');
+      const alvo = diasSemanaNum[diaNome];
+      let diff = alvo - baseDate.getDay();
+      if (diff < 0) diff += 7;
+      const d = new Date(baseDate);
+      d.setDate(baseDate.getDate() + diff);
+      return d;
+    } else {
+      const hoje = new Date();
+      const alvo = diasSemanaNum[diaNome];
+      let diff = alvo - hoje.getDay();
+      if (diff <= 0) diff += 7;
+      const d = new Date(hoje);
+      d.setDate(hoje.getDate() + diff);
+      return d;
+    }
   }
 
   // Formato UTC para URL do Google Calendar (BRT = UTC-3)
@@ -2525,7 +2593,7 @@ function abrirNoGoogleCalendar() {
   // Monta links e exibe modal
   const links = horariosGlobais.map(({ disciplina, turma, dia, horário }) => {
     const [inicio, fim] = horário.split('-');
-    const dataBase = proximaOcorrencia(dia);
+    const dataBase = calcularDataInicial(dia);
     const dtStart = toGCalUTC(dataBase, inicio);
     const dtEnd = toGCalUTC(dataBase, fim);
     const titulo = encodeURIComponent(disciplina);
@@ -2567,7 +2635,7 @@ function abrirNoGoogleCalendar() {
 }
 // ───────────────────────────────────────────────────────────────────────────
 
-function exportarParaGoogleCalendar() {
+async function exportarParaGoogleCalendar() {
   if (!horariosGlobais || horariosGlobais.length === 0) {
     alert('Nenhum horário disponível. Faça o scraping primeiro.');
     return;
@@ -2583,18 +2651,27 @@ function exportarParaGoogleCalendar() {
   };
 
   const semestre = horariosGlobais[0]?.semestre || '';
-  // Fim do semestre: 1º=julho, 2º=novembro
-  const anoBase = semestre.split('.')[0] || new Date().getFullYear();
-  const dataFim = semestre.includes('.2') ? `${anoBase}1130` : `${anoBase}0731`;
+  const { dataInicioStr, dataFimRaw } = await obterPeriodoLetivo();
+  const dataFim = obterDiaSeguinte(dataFimRaw);
 
-  function proximaOcorrencia(diaNome) {
-    const hoje = new Date();
-    const alvo = diasSemanaNum[diaNome];
-    let diff = alvo - hoje.getDay();
-    if (diff <= 0) diff += 7;
-    const d = new Date(hoje);
-    d.setDate(hoje.getDate() + diff);
-    return d;
+  function calcularDataInicial(diaNome) {
+    if (dataInicioStr) {
+      const baseDate = new Date(dataInicioStr + 'T00:00:00');
+      const alvo = diasSemanaNum[diaNome];
+      let diff = alvo - baseDate.getDay();
+      if (diff < 0) diff += 7;
+      const d = new Date(baseDate);
+      d.setDate(baseDate.getDate() + diff);
+      return d;
+    } else {
+      const hoje = new Date();
+      const alvo = diasSemanaNum[diaNome];
+      let diff = alvo - hoje.getDay();
+      if (diff <= 0) diff += 7;
+      const d = new Date(hoje);
+      d.setDate(hoje.getDate() + diff);
+      return d;
+    }
   }
 
   // Formata datetime em UTC (Brasil = UTC-3)
@@ -2671,7 +2748,7 @@ function exportarParaGoogleCalendar() {
 
   horariosGlobais.forEach(({ disciplina, turma, dia, horário }) => {
     const [inicio, fim] = horário.split('-');
-    const dataBase = proximaOcorrencia(dia);
+    const dataBase = calcularDataInicial(dia);
     blocos.push(
       'BEGIN:VEVENT',
       fold(`UID:${uid()}`),
