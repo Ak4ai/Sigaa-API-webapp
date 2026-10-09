@@ -21,7 +21,16 @@ app.post('/api/logout',(req,res)=>res.json({success:true}));
 app.get('/api/queue-status',(req,res)=>res.json({position:1,avgTimeMs:1000}));
 app.get('/api/scraper-progress',(req,res)=>res.json({progress:100,status:'Concluído'}));
 app.get('/api/calendario',(req,res)=>res.json({link:'https://example.test/calendar.pdf'}));
-app.get('/api/calendario/eventos',(req,res)=>res.json({eventos:[]}));
+let examWrites = 0;
+const examClass = { id: 'verified-class', disciplina: 'Matemática', turma: '01', semestre: '2026.2', provasCadastradas: 0 };
+app.get('/api/calendario/eventos',(req,res)=>res.json({eventos:[], turmas: req.headers.authorization ? [{ ...examClass, provasCadastradas: examWrites }] : []}));
+app.post('/api/calendario/eventos',(req,res)=>{
+  assert.ok(req.headers.authorization?.startsWith('Bearer '));
+  assert.equal(req.body.turmaId, 'verified-class');
+  assert.equal(req.body.disciplina, undefined);
+  examWrites++;
+  res.json({success:true});
+});
 app.use(express.static(frontend));
 (async()=>{
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
@@ -212,6 +221,26 @@ app.use(express.static(frontend));
   await page.type('#user','111');await page.type('#pass','retry password');
   await page.click('#sigaa-form button[type=submit]');
   await page.waitForFunction(()=>getSavedProfiles().length===1 && !document.querySelector('#sigaa-form'));
+  await page.evaluate(async()=>{
+    cachedCalendarEvents = null;
+    await fetchCalendarEvents(obterCursoDoPerfil());
+    populateExamSubjects();
+  });
+  assert.ok((await page.$eval('#exam-subject', el => el.textContent)).includes('(0/6)'));
+  const sources = await page.evaluate(()=>[false,true].map(other => {
+    const card = createAgendaCard({type:'prova',title:'Prova',manual:true,other});
+    return card.querySelector('.exam-source-label').textContent;
+  }));
+  assert.ok(sources[0].includes('você'));
+  assert.ok(sources[1].includes('⚠'));
+  await page.evaluate(()=>{
+    document.getElementById('exam-subject').value = 'verified-class';
+    document.getElementById('exam-title').value = 'Prova de teste';
+    document.getElementById('exam-date').value = '2026-11-10';
+    document.getElementById('add-exam-form').dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
+  });
+  await page.waitForFunction(()=>document.getElementById('add-exam-status').textContent.includes('sucesso'));
+  assert.equal(examWrites, 1);
   assert.deepEqual(errors,[]);
   console.log('PASS: login hints, success signal, one/two profiles, add/cancel, swap, token ownership, mobile/desktop, preference off; no JS errors.');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

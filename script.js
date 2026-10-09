@@ -461,6 +461,7 @@ function obterCursoDoPerfil() {
     const raw = localStorage.getItem(STORAGE_LAST_CONSULTA);
     if (!raw) return 'mecatronica';
     const data = JSON.parse(raw);
+    if (['computacao', 'mecatronica'].includes(data.cursoCalendario)) return data.cursoCalendario;
     const dados = data.dadosInstitucionais || {};
     const curso = dados.Curso || dados.curso || '';
     const cursoNormalized = curso.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -478,7 +479,20 @@ function obterCursoDoPerfil() {
   }
 }
 
+let verifiedExamClasses = [];
+let calendarAccountKey = '';
+function examSession() {
+  const info = getTokenInfo();
+  return info?.token && info.user === getSelectedProfileUser() ? info : null;
+}
 async function fetchCalendarEvents(curso) {
+  const info = examSession();
+  const key = `${getSelectedProfileUser()}:${info?.token || ''}`;
+  if (calendarAccountKey !== key) {
+    calendarAccountKey = key;
+    cachedCalendarEvents = null;
+    verifiedExamClasses = [];
+  }
   if (lastFetchedCurso === curso && cachedCalendarEvents !== null) {
     return cachedCalendarEvents;
   }
@@ -488,10 +502,14 @@ async function fetchCalendarEvents(curso) {
   try {
     const url = `${API_BASE}/api/calendario/eventos?curso=${curso}`;
     console.log(`📡 Buscando eventos de calendário para ${curso} via ${url}...`);
-    const response = await fetch(url);
+    const response = await fetchApi(`/api/calendario/eventos?curso=${curso}`, { headers: info ? { Authorization: `Bearer ${info.token}` } : {} });
     if (response.ok) {
       const data = await response.json();
+      const currentInfo = examSession();
+      if (key !== `${getSelectedProfileUser()}:${currentInfo?.token || ''}`) return null;
       cachedCalendarEvents = data.eventos || [];
+      verifiedExamClasses = data.turmas || [];
+      populateExamSubjects();
       lastFetchedCurso = curso;
       console.log(`✨ Eventos carregados: ${cachedCalendarEvents.length} itens.`);
     } else {
@@ -636,7 +654,8 @@ function createResponsibleCalendarDayCell(date, now, targetMonthStart, targetMon
       else if (evt.tipo === 'inicio-aulas') shortType = 'Início';
       else if (evt.tipo === 'fim-aulas') shortType = 'Fim';
 
-      text.textContent = shortType;
+      text.textContent = (evt.manual && evt.porOutroUsuario ? '⚠ ' : '') + shortType;
+      if (evt.manual) eventTag.title = evt.porOutroUsuario ? 'Informada por outro estudante. Confirme com o professor.' : 'Cadastrada por você';
 
       eventTag.appendChild(dot);
       eventTag.appendChild(text);
@@ -657,7 +676,7 @@ function createResponsibleCalendarDayCell(date, now, targetMonthStart, targetMon
 
       const text = document.createElement('span');
       text.className = 'home-calendar-tooltip-text';
-      text.textContent = evt.titulo;
+      text.textContent = evt.titulo + (evt.manual ? (evt.porOutroUsuario ? ' · ⚠ Informada por outro estudante' : ' · Cadastrada por você') : '');
 
       item.appendChild(indicator);
       item.appendChild(text);
@@ -1311,6 +1330,8 @@ function switchSavedProfile(user) {
   const profile = getProfileByUser(user);
   if (!profile?.data) return;
   closeProfileLogin();
+  cachedCalendarEvents = null;
+  verifiedExamClasses = [];
   setSelectedProfileUser(profile.user);
   localStorage.setItem(STORAGE_LAST_CONSULTA, JSON.stringify(profile.data));
   aplicarDadosConsulta(profile.data);
@@ -1369,6 +1390,8 @@ function updateHomeAccountSelector() {
 }
 
 function aplicarDadosConsulta(data, tempoResposta) {
+  cachedCalendarEvents = null;
+  verifiedExamClasses = [];
   if (!data) return;
 
   removerEstiloSemDados();
@@ -5970,6 +5993,13 @@ function createAgendaCard(evt) {
   title.className = 'tab-agenda-card-title';
   title.textContent = evt.title;
   content.appendChild(title);
+  if (evt.manual) {
+    const source = document.createElement('span');
+    source.className = 'exam-source-label';
+    source.textContent = evt.other ? '⚠ Informada por outro estudante' : 'Cadastrada por você';
+    source.title = evt.other ? 'Data compartilhada por um colega. Confirme com o professor.' : 'Prova manual da sua turma';
+    content.appendChild(source);
+  }
   if (evt.subtitle) {
     const subtitle = document.createElement('div');
     subtitle.className = 'tab-agenda-card-subtitle';
@@ -6032,7 +6062,7 @@ function renderTabCalendarAgenda() {
     return aDate.getDate() === selectedDate.getDate() && aDate.getMonth() === selectedDate.getMonth() && aDate.getFullYear() === selectedDate.getFullYear();
   });
   const selectedDayEvents = [
-    ...daySchoolEvents.map(e => ({ type: e.tipo || 'outros', title: e.titulo, subtitle: e.disciplina || 'Calendário Letivo', isTask: false })),
+    ...daySchoolEvents.map(e => ({ type: e.tipo || 'outros', title: e.titulo, subtitle: e.disciplina || 'Calendário Letivo', manual: e.manual, other: e.porOutroUsuario, isTask: false })),
     ...dayTasks.map(t => ({
       type: 'entrega',
       title: t.descricao,
@@ -6092,6 +6122,7 @@ function renderTabCalendarAgenda() {
       type: e.tipo || 'outros',
       title: e.titulo,
       subtitle: e.disciplina || 'Calendário Letivo',
+      manual: e.manual, other: e.porOutroUsuario,
       isTask: false
     };
   });
@@ -6243,19 +6274,26 @@ function populateExamSubjects() {
   const select = document.getElementById('exam-subject');
   if (!select) return;
   select.innerHTML = '<option value="">Selecione uma matéria</option>';
-  const subjects = obterDisciplinasUnicas();
+  const subjects = examSession() ? verifiedExamClasses : [];
   subjects.forEach(subject => {
     const opt = document.createElement('option');
-    opt.value = subject;
-    opt.textContent = subject;
+    opt.value = subject.id;
+    opt.textContent = `${subject.disciplina} · Turma ${subject.turma} · ${subject.semestre} (${subject.provasCadastradas}/6)`;
+    opt.disabled = subject.provasCadastradas >= 6;
     select.appendChild(opt);
   });
+  const help = document.getElementById('exam-auth-help');
+  if (help) help.textContent = subjects.length ? 'Até 6 provas manuais por turma e semestre, compartilhadas com os colegas.' : 'Entre na sua conta e atualize os dados do SIGAA para confirmar suas turmas.';
+  const submit = document.querySelector('#add-exam-form button[type="submit"]');
+  if (submit) submit.disabled = !subjects.some(c => c.provasCadastradas < 6);
+
 }
 
 function initExamForm() {
   const form = document.getElementById('add-exam-form');
   if (!form || form.dataset.bound === '1') return;
   form.dataset.bound = '1';
+  document.getElementById('exam-refresh-access')?.addEventListener('click', executarRefreshHeader);
 
   // Triggers do modal de adicionar provas no mobile
   const openBtn = document.getElementById('mobile-add-exam-btn');
@@ -6299,13 +6337,16 @@ function initExamForm() {
 
     try {
       const curso = obterCursoDoPerfil();
-      const response = await fetch(`${API_BASE}/api/calendario/eventos?curso=${curso}`, {
+      const info = examSession();
+      if (!info) throw new Error('Entre na conta selecionada para cadastrar provas.');
+      const response = await fetchApi(`/api/calendario/eventos?curso=${curso}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${info.token}`
         },
         body: JSON.stringify({
-          disciplina: subject,
+          turmaId: subject,
           titulo: title,
           data: date
         })

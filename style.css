@@ -7263,3 +7263,8 @@ body.sem-dados #sigaa-form .login-action-btn { min-height: 46px; border-radius: 
   .login-brand-mark { flex-basis: 56px; min-height: 68px; padding: 10px 6px; }
   .login-brand-copy { padding-left: 12px; }
 }
+
+.exam-source-label { display: block; font-size: .75rem; opacity: .8; margin: 4px 0; }
+.exam-access-help { font-size: .85rem; line-height: 1.5; opacity: .85; }
+.exam-refresh-access { background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 8px; padding: 7px 12px; cursor: pointer; margin-bottom: 12px; }
+.exam-submit-btn:disabled { opacity: .5; cursor: not-allowed; }

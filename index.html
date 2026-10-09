@@ -804,6 +804,8 @@
           <div class="tab-calendar-form-card">
             <button type="button" id="close-exam-modal-btn" class="modal-close-btn" style="display: none;">✕</button>
             <h4>Adicionar Data de Prova</h4>
+            <p id="exam-auth-help" class="exam-access-help"></p>
+            <button type="button" id="exam-refresh-access" class="exam-refresh-access">Atualizar minhas turmas</button>
             <form id="add-exam-form">
               <label for="exam-subject">Matéria:</label>
               <select id="exam-subject" required>
@@ -811,7 +813,7 @@
               </select>
               
               <label for="exam-title">Título da Prova:</label>
-              <input type="text" id="exam-title" placeholder="Ex: Prova 1" required />
+              <input type="text" id="exam-title" maxlength="120" placeholder="Ex: Prova 1" required />
               
               <label for="exam-date">Data da Prova:</label>
               <input type="date" id="exam-date" required />
