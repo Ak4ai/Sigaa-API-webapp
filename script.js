@@ -6,6 +6,93 @@ const API_BASE = window.API_BASE_URL ||
   (((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port === '3000')
     ? 'http://localhost:3000'
     : 'https://ak4ai-sigaa.duckdns.org');
+let __logoutInProgress = false;
+let __sessionVersion = 0;
+let __loginFormState = null;
+
+function restoreLoginForm(fresh = false) {
+  let form = document.getElementById('sigaa-form') || __loginFormState?.form;
+  if (!form) return null;
+  if (fresh) {
+    const replacement = form.cloneNode(true);
+    replacement.querySelectorAll('[data-bound]').forEach(element => delete element.dataset.bound);
+    replacement.addEventListener('submit', handleLoginSubmit);
+    replacement.querySelector('#cancel-account-login').addEventListener('click', () => closeProfileLogin());
+    if (__loginFormState) {
+      __loginFormState.form = replacement;
+    } else {
+      form.replaceWith(replacement);
+    }
+    form = replacement;
+  }
+  if (__loginFormState) {
+    __loginFormState.placeholder.replaceWith(__loginFormState.form);
+    __loginFormState = null;
+  }
+  if (fresh) {
+    initSelectPerfisSalvos();
+    initHomeModeSwitcher();
+  }
+  return form;
+}
+
+async function notifySuccessfulLogin(user, pass) {
+  const form = document.getElementById('sigaa-form');
+  if (form) {
+    history.replaceState(history.state, '', window.location.href);
+    const placeholder = document.createComment('login-form');
+    __loginFormState = { form, placeholder };
+    form.replaceWith(placeholder);
+  }
+  try {
+    if (window.isSecureContext && window.PasswordCredential && navigator.credentials?.store) {
+      await navigator.credentials.store(new window.PasswordCredential({ id: user, password: pass }));
+    }
+  } catch (error) {
+    // A escolha do gerenciador de senhas não interfere no acesso ao aplicativo.
+  } finally {
+    const passwordInput = form?.querySelector('#pass');
+    if (passwordInput) passwordInput.value = '';
+  }
+}
+
+function openProfileLogin(user = '') {
+  if (!user && getSavedProfiles().length >= MAX_SAVED_PROFILES) return;
+  const form = restoreLoginForm(true);
+  if (!form) return;
+  document.body.classList.add('adding-account');
+  document.getElementById('user').value = user;
+  document.getElementById('pass').value = '';
+  document.getElementById('error').textContent = '';
+  document.getElementById('cancel-account-login').hidden = false;
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.getElementById('home-mode-select').value = getAppMode();
+  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById(user ? 'pass' : 'user').focus({ preventScroll: true });
+  requestAnimationFrame(() => { ajustarAlturaNovidades(); ajustarAlturaCalendarioResponsavel(); });
+}
+
+function closeProfileLogin(preservePassword = false) {
+  document.body.classList.remove('adding-account');
+  const button = document.getElementById('cancel-account-login');
+  if (button) button.hidden = true;
+  const passwordInput = document.getElementById('pass');
+  if (passwordInput && !preservePassword) passwordInput.value = '';
+  requestAnimationFrame(() => { ajustarAlturaNovidades(); ajustarAlturaCalendarioResponsavel(); });
+}
+
+async function fetchApi(endpoint, options) {
+  const url = new URL(`${API_BASE}${endpoint}`, window.location.href);
+  const isLoopback = hostname => ['localhost', '127.0.0.1', '[::1]'].includes(hostname);
+  const isLocalDevelopment = url.protocol === 'http:' &&
+    isLoopback(url.hostname) && isLoopback(window.location.hostname);
+  if (url.protocol !== 'https:' && !isLocalDevelopment) {
+    throw new Error('A conexão com o servidor precisa usar HTTPS.');
+  }
+  return fetch(url.href, { ...options, redirect: 'error' });
+}
+
 const STORAGE_LAST_CONSULTA = 'sigaaUltimaConsulta';
 const STORAGE_SAVED_PROFILES = 'sigaaPerfisSalvos';
 const STORAGE_SELECTED_PROFILE = 'sigaaPerfilSelecionado';
@@ -325,49 +412,30 @@ function clearResponsibleCalendar() {
   if (grid) grid.innerHTML = '';
 }
 
+function getHomePanelAvailableHeight(panel) {
+  const reference = document.getElementById('home-content-header');
+  if (!reference || !panel || !panel.getClientRects().length) return 0;
+  const rect = reference.getBoundingClientRect();
+  return rect.height ? Math.max(120, Math.floor(rect.bottom - panel.getBoundingClientRect().top)) : 0;
+}
+
 function ajustarAlturaCalendarioResponsavel() {
-  try {
-    const form = document.getElementById('sigaa-form');
-    const dados = document.getElementById('dados-institucionais');
-    const calendar = document.getElementById('responsavel-calendar-container');
-    if (!form || !dados || !calendar) return;
-
-    if (window.innerWidth < 1040 || !isResponsibleCalendarActive()) {
-      calendar.style.height = '';
-      calendar.style.maxHeight = '';
-      calendar.style.overflow = '';
-      return;
-    }
-
-    let availableHeight;
-    if (!document.body.classList.contains('sem-dados')) {
-      const dadosRect = dados.getBoundingClientRect();
-      availableHeight = Math.max(180, Math.round(dadosRect.height));
-    } else if (isHideHomeInputsEnabled()) {
-      const dadosRect = dados.getBoundingClientRect();
-      availableHeight = Math.max(120, Math.round(dadosRect.height) - 38);
-    } else {
-      const formRect = form.getBoundingClientRect();
-      const dadosRect = dados.getBoundingClientRect();
-      const formStyle = window.getComputedStyle(form);
-      const dadosStyle = window.getComputedStyle(dados);
-
-      const formMarginTop = parseFloat(formStyle.marginTop || '0') || 0;
-      const dadosMarginBottom = parseFloat(dadosStyle.marginBottom || '0') || 0;
-      const top = formRect.top - formMarginTop;
-      const bottom = dadosRect.bottom + dadosMarginBottom;
-      availableHeight = Math.max(120, Math.round(bottom - top)) + 182;
-    }
-
-    calendar.dataset.availableHeight = String(availableHeight);
-    calendar.style.height = `${availableHeight}px`;
-    calendar.style.maxHeight = `${availableHeight}px`;
-    calendar.style.overflow = 'hidden';
-    return availableHeight;
-  } catch (e) {
-    console.warn('Erro ao ajustar altura do calendário responsável:', e);
+  const calendar = document.getElementById('responsavel-calendar-container');
+  if (!calendar) return 0;
+  if (window.matchMedia('(max-width: 1040px)').matches || !isResponsibleCalendarActive()) {
+    calendar.style.height = '';
+    calendar.style.maxHeight = '';
+    calendar.style.overflow = '';
+    delete calendar.dataset.availableHeight;
     return 0;
   }
+  const availableHeight = getHomePanelAvailableHeight(calendar);
+  if (!availableHeight) return 0;
+  calendar.dataset.availableHeight = String(availableHeight);
+  calendar.style.height = availableHeight + 'px';
+  calendar.style.maxHeight = availableHeight + 'px';
+  calendar.style.overflow = 'hidden';
+  return availableHeight;
 }
 
 function getResponsibleCalendarWeeksToRender(availableHeight) {
@@ -973,12 +1041,29 @@ function getProfileByUser(user) {
 }
 
 function escapeHtml(value) {
-  return String(value || '')
+  return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+
+function setTextCells(row, values, tag = 'td') {
+  row.replaceChildren(...values.map(value => {
+    const cell = document.createElement(tag);
+    cell.textContent = String(value ?? '');
+    return cell;
+  }));
+}
+
+function safeHttpUrl(value) {
+  try {
+    const url = new URL(String(value), window.location.href);
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) return '';
+    return url.href;
+  } catch (error) { return ''; }
 }
 
 function normalizeTextForMatch(value) {
@@ -1165,10 +1250,6 @@ function getProfileSelectBindings() {
     {
       container: document.getElementById('saved-profiles-container'),
       select: document.getElementById('saved-profile-select')
-    },
-    {
-      container: document.getElementById('desktop-saved-profiles-container'),
-      select: document.getElementById('desktop-saved-profile-select')
     }
   ];
 }
@@ -1221,22 +1302,70 @@ function initSelectPerfisSalvos() {
       const selectedUser = select.value;
       if (!selectedUser) return;
 
-      const profile = getProfileByUser(selectedUser);
-      if (!profile || !profile.data) return;
-
-      setSelectedProfileUser(selectedUser);
-      localStorage.setItem(STORAGE_LAST_CONSULTA, JSON.stringify(profile.data));
-      aplicarDadosConsulta(profile.data);
-
-      const userInput = document.getElementById('user');
-      if (userInput) userInput.value = selectedUser;
-
-      bindings.forEach(({ select: otherSelect }) => {
-        if (!otherSelect) return;
-        otherSelect.value = selectedUser;
-      });
+      switchSavedProfile(selectedUser);
     });
   });
+}
+
+function switchSavedProfile(user) {
+  const profile = getProfileByUser(user);
+  if (!profile?.data) return;
+  closeProfileLogin();
+  setSelectedProfileUser(profile.user);
+  localStorage.setItem(STORAGE_LAST_CONSULTA, JSON.stringify(profile.data));
+  aplicarDadosConsulta(profile.data);
+  const userInput = document.getElementById('user');
+  if (userInput) userInput.value = profile.user;
+  atualizarSelectPerfisSalvos();
+}
+
+function updateHomeAccountSelector() {
+  const details = document.querySelector('#dados-institucionais .dados-user-details');
+  if (!details) return;
+  const previous = details.querySelector('.dados-user-name');
+  const name = details.dataset.accountName || previous?.textContent || 'Usuário';
+  if (!isDesktopProfileSelectEnabled()) {
+    const label = document.createElement('span');
+    label.className = 'dados-user-name';
+    label.textContent = name;
+    previous?.replaceWith(label);
+    return;
+  }
+  const selectedUser = getSelectedProfileUser();
+  const profiles = getSavedProfiles();
+  const select = document.createElement('select');
+  select.id = 'home-account-select';
+  select.className = 'dados-user-name home-account-select';
+  select.setAttribute('aria-label', 'Trocar conta salva');
+  select.title = name;
+  const current = document.createElement('option');
+  current.value = selectedUser;
+  current.textContent = name;
+  current.selected = true;
+  current.disabled = true;
+  current.hidden = true;
+  select.appendChild(current);
+  profiles.filter(profile => profile.user !== selectedUser).forEach(profile => {
+    const option = document.createElement('option');
+    option.value = profile.user;
+    option.textContent = getFirstNameFromDadosInstitucionais(profile.data.dadosInstitucionais, profile.user);
+    select.appendChild(option);
+  });
+  if (profiles.length < MAX_SAVED_PROFILES) {
+    const option = document.createElement('option');
+    option.value = '__add_account__';
+    option.textContent = 'Adicionar conta';
+    select.appendChild(option);
+  }
+  select.addEventListener('change', () => {
+    if (select.value === '__add_account__') {
+      select.value = selectedUser;
+      openProfileLogin();
+    } else {
+      switchSavedProfile(select.value);
+    }
+  });
+  previous?.replaceWith(select);
 }
 
 function aplicarDadosConsulta(data, tempoResposta) {
@@ -1369,11 +1498,13 @@ document.addEventListener('DOMContentLoaded', function () {
     document.body.style.paddingTop = currentPadding + 'px';
   }, { passive: true });
 });
-document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
+async function handleLoginSubmit(e) {
   e.preventDefault();
+  if (__logoutInProgress) return;
+  const sessionVersion = __sessionVersion;
 
   const user = document.getElementById('user').value.trim();
-  const pass = document.getElementById('pass').value.trim();
+  const pass = document.getElementById('pass').value;
   const manterLogado = document.getElementById('manter-logado').checked;
   const selectedMode = normalizeAppMode(document.getElementById('home-mode-select')?.value || getAppMode());
 
@@ -1385,20 +1516,32 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
 
   try {
     // 1. Login e salva token
-    const resp = await fetch(`${API_BASE}/api/login`, {
+    const resp = await fetchApi('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user, pass })
     });
-    if (!resp.ok) throw new Error('Usuário ou senha inválidos');
+    if (!resp.ok) {
+      const failure = await resp.json().catch(() => ({}));
+      throw new Error(failure.error || 'Não foi possível fazer login. Tente novamente.');
+    }
     const { token } = await resp.json();
+    if (sessionVersion !== __sessionVersion || __logoutInProgress) {
+      await fetchApi('/api/logout', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }), signal: AbortSignal.timeout(10000)
+      });
+      if (overlayDiv) overlayDiv.style.display = 'none';
+      return;
+    }
 
     // Salva token junto com informação de expiry (se disponível)
     const storageType = manterLogado ? 'local' : 'session';
-    saveTokenWithExpiry(token, storageType);
+    saveTokenWithExpiry(token, storageType, user);
 
     // 2. Usa token para buscar dados
-    await consultarComToken(token, user, selectedMode);
+    const success = await consultarComToken(token, user, selectedMode);
+    if (success) await notifySuccessfulLogin(user, pass);
   } catch (error) {
     console.error('Erro no login:', error);
     const isNetworkError = error.name === 'AbortError' || error.name === 'TypeError' || error.message === 'Failed to fetch';
@@ -1408,9 +1551,16 @@ document.getElementById('sigaa-form').addEventListener('submit', async (e) => {
     // Em falha de login (antes de consultar), garante fechamento do overlay
     if (overlayDiv) overlayDiv.style.display = 'none';
   }
-});
+}
+
+document.getElementById('sigaa-form').addEventListener('submit', handleLoginSubmit);
+
+document.getElementById('cancel-account-login').addEventListener('click', () => closeProfileLogin());
 
 async function consultarComToken(token, userFromLogin = '', requestedMode = null) {
+  if (__logoutInProgress) return;
+  restoreLoginForm();
+  const sessionVersion = __sessionVersion;
   const errorDiv = document.getElementById('error');
   const dadosDiv = document.getElementById('dados-institucionais');
   const overlayDiv = document.getElementById('loading-overlay');
@@ -1434,29 +1584,14 @@ async function consultarComToken(token, userFromLogin = '', requestedMode = null
     const FETCH_TIMEOUT_MS = 180_000;
     const fetchTimeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-    // Inicia fetch (pode ficar na fila do backend)
-    // Tenta HTTPS primeiro (via proxy), fallback para HTTP se falhar
-    const fetchPromise = fetch(`${API_BASE}/api/scraper`, {
+    // Tokens nunca são reenviados por HTTP se a conexão HTTPS falhar.
+    const fetchPromise = fetchApi('/api/scraper', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, clientId, skipSchedule: isSkipScheduleEnabled() }),
       signal: controller.signal,
       mode: 'cors',
       credentials: 'omit'
-    }).catch(err => {
-      // Se HTTPS falhar, só tenta HTTP como fallback se a página não estiver sob HTTPS (ex: localhost)
-      console.warn(`[FETCH] Erro na requisição HTTPS:`, err.message);
-      if (API_BASE.includes('https') && window.location.protocol !== 'https:') {
-        const httpFallback = API_BASE.replace('https://', 'http://').replace(':443', ':8080');
-        return fetch(`${httpFallback}/api/scraper`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, clientId, skipSchedule: isSkipScheduleEnabled() }),
-          signal: controller.signal,
-          mode: 'cors'
-        });
-      }
-      throw err;
     }).finally(() => clearTimeout(fetchTimeoutId));
 
     // Mostra display de fila imediatamente (o fetch pode demorar)
@@ -1507,10 +1642,19 @@ async function consultarComToken(token, userFromLogin = '', requestedMode = null
     const duracaoSegundos = ((fim - inicio) / 1000).toFixed(2);
 
     const data = await response.json();
+    if (sessionVersion !== __sessionVersion) return;
     console.log('Resposta da API:', data);
     console.log(`⏱ Tempo de resposta da API: ${duracaoSegundos}s`);
 
     if (!response.ok) {
+      if (response.status === 401) {
+        clearStoredTokenInfo();
+        stopTokenTimer();
+        openProfileLogin(userFromLogin || getSelectedProfileUser());
+        const loginError = document.getElementById('error');
+        if (loginError) loginError.textContent = data.error || 'Sua sessão expirou. Faça login novamente.';
+        return false;
+      }
       // Verifica se é erro de notificações acadêmicas pendentes
       if (data.type === 'ACADEMIC_NOTIFICATIONS_PENDING') {
         console.log('⚠️  Notificações acadêmicas pendentes detectadas');
@@ -1528,8 +1672,11 @@ async function consultarComToken(token, userFromLogin = '', requestedMode = null
     const selectedUser = (userFromLogin || document.getElementById('user')?.value || getSelectedProfileUser() || '').trim();
     saveConsultaForUser(selectedUser, data);
     aplicarDadosConsulta(data, duracaoSegundos);
+    closeProfileLogin(true);
+    return true;
 
   } catch (error) {
+    if (sessionVersion !== __sessionVersion) return;
     console.error('Erro ao consultar com token:', error);
     const isNetworkError = error.name === 'AbortError' || error.name === 'TypeError' || error.message === 'Failed to fetch';
     errorDiv.textContent = isNetworkError
@@ -1574,7 +1721,9 @@ window.addEventListener('DOMContentLoaded', () => {
       return;
     }
     console.log('Token encontrado, realizando consulta automática...');
-    consultarComToken(token, getSelectedProfileUser());
+    if (info?.user && info.user === getSelectedProfileUser()) {
+      consultarComToken(token, info?.user || getSelectedProfileUser());
+    }
   }
   initSelectPerfisSalvos();
   atualizarSelectPerfisSalvos();
@@ -1635,34 +1784,26 @@ function isDesktopProfileSelectEnabled() {
 }
 
 function applyDesktopProfileSelectVisibility() {
-  const select = document.getElementById('desktop-saved-profile-select');
-  const label = document.querySelector('label[for="desktop-saved-profile-select"]');
-  const container = document.getElementById('desktop-saved-profiles-container');
-  const logoutBtn = document.getElementById('header-logout-btn');
-  const refreshBtn = document.getElementById('header-refresh-btn');
-
-  const showSelect = isDesktopProfileSelectEnabled();
-  const profiles = getSavedProfiles();
+  document.body.classList.toggle('home-account-switcher-enabled', isDesktopProfileSelectEnabled());
   const isLoggedIn = !document.body.classList.contains('sem-dados');
-
-  if (select) select.style.display = showSelect ? '' : 'none';
-  if (label) label.style.display = showSelect ? '' : 'none';
-
-  if (container) {
-    if (showSelect) {
-      container.style.display = (profiles.length > 0 || isLoggedIn) ? '' : 'none';
-    } else {
-      container.style.display = isLoggedIn ? '' : 'none';
-    }
+  const container = document.getElementById('desktop-saved-profiles-container');
+  if (container) container.style.display = isLoggedIn ? '' : 'none';
+  for (const id of ['header-logout-btn', 'header-refresh-btn']) {
+    const button = document.getElementById(id);
+    if (button) button.style.display = isLoggedIn ? '' : 'none';
   }
-
-  if (logoutBtn) {
-    logoutBtn.style.display = isLoggedIn ? '' : 'none';
+  const quickActions = document.getElementById('desktop-quick-actions');
+  if (quickActions) {
+    quickActions.style.display = isLoggedIn ? '' : 'none';
+    quickActions.setAttribute('aria-hidden', String(!isLoggedIn));
   }
-
-  if (refreshBtn) {
-    refreshBtn.style.display = isLoggedIn ? '' : 'none';
+  if (!isLoggedIn) {
+    document.getElementById('desktop-actions-menu')?.classList.remove('open');
+    document.getElementById('desktop-actions-menu')?.setAttribute('aria-hidden', 'true');
+    document.getElementById('mobile-fab-menu')?.classList.remove('open');
+    document.getElementById('fab-minimized')?.classList.remove('visible');
   }
+  updateHomeAccountSelector();
 }
 
 function applyHideHomeInputsState() {
@@ -1933,6 +2074,10 @@ function initHeaderLogoutButton() {
 function executarRefreshHeader() {
   const info = getTokenInfo();
   const token = info ? info.token : (localStorage.getItem('sigaa_token') || sessionStorage.getItem('sigaa_token'));
+  if (!info?.user || info.user !== getSelectedProfileUser()) {
+    openProfileLogin(getSelectedProfileUser());
+    return;
+  }
   if (token) {
     consultarComToken(token, getSelectedProfileUser());
   } else {
@@ -1977,8 +2122,40 @@ function initMobileUserCardButtons() {
 }
 
 // Botão de logout/apagar informações
-function executarLogoutAction() {
+async function executarLogoutAction() {
+  if (__logoutInProgress) return;
   if (!confirm('Tem certeza que deseja sair?\nSeus dados salvos serão apagados.')) return;
+
+  __logoutInProgress = true;
+  try {
+    const tokens = new Set();
+    for (const storage of [localStorage, sessionStorage]) {
+      const token = storage.getItem('sigaa_token');
+      if (token) tokens.add(token);
+      try {
+        const info = JSON.parse(storage.getItem('sigaa_token_info'));
+        if (typeof info?.token === 'string' && info.token) tokens.add(info.token);
+      } catch (error) { /* Mantém suporte ao armazenamento antigo. */ }
+    }
+    for (const token of tokens) {
+      const response = await fetchApi('/api/logout', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }), signal: AbortSignal.timeout(10000)
+      });
+      // Um token com assinatura inválida já não permite acesso à API.
+      if (!response.ok && response.status !== 401) throw new Error('Logout não confirmado.');
+    }
+  } catch (error) {
+    alert('Não foi possível encerrar a sessão no servidor. Verifique sua conexão e tente novamente.');
+    return;
+  } finally {
+    __logoutInProgress = false;
+  }
+  __sessionVersion++;
+  restoreLoginForm(true);
+  closeProfileLogin();
+  stopPollingProgress();
+  hideQueueDisplay();
 
   // 0. Para atualizações da barra de progresso
   stopClassProgressBarUpdates();
@@ -2146,6 +2323,7 @@ function executarLogoutAction() {
   if (scheduleInterval) clearInterval(scheduleInterval);
   const interactiveGuide = document.getElementById('interactive-schedule-guide');
   if (interactiveGuide) interactiveGuide.style.display = 'none';
+  applyDesktopProfileSelectVisibility();
 }
 
 // Salva os dados para filtrar depois
@@ -2366,14 +2544,8 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
       const faltasRestantesAulas = (faltasRestantes / 2).toFixed(1);
 
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><span class="disc-name">${disciplina}</span></td>
-        <td>${nAulas}</td>
-        <td>${totalFaltas}</td>
-        <td>${presenca ? presenca + '%' : ''}</td>
-        <td>${faltasRestantes}</td>
-        <td>${faltasRestantesAulas}</td>
-      `;
+      setTextCells(tr, [disciplina, nAulas, totalFaltas, presenca ? presenca + '%' : '', faltasRestantes, faltasRestantesAulas]);
+      tr.cells[0].classList.add('disc-name');
       tbody.appendChild(tr);
     });
     barraDiv.innerHTML = '';
@@ -2411,11 +2583,11 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
           </thead>
           <tbody>
             <tr>
-              <td><span class="disc-name">${disciplina}</span></td>
+              <td><span class="disc-name">${escapeHtml(disciplina)}</span></td>
               <td>${nAulas}</td>
               <td>${totalFaltas}</td>
               <td>${presenca ? presenca + '%' : ''}</td>
-              <td>${porcentagemFrequencia ? porcentagemFrequencia + '%' : ''}</td>
+              <td>${escapeHtml(porcentagemFrequencia ? porcentagemFrequencia + '%' : '')}</td>
               <td>${faltasRestantes}</td>
               <td>${faltasRestantesAulas}</td>
             </tr>
@@ -2457,12 +2629,7 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
       const { disciplina, frequencia = [] } = disc;
       frequencia.forEach((f, idx) => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${idx + 1}</td>
-          <td>${disciplina}</td>
-          <td>${f.data}</td>
-          <td>${f.status}</td>
-        `;
+        setTextCells(tr, [idx + 1, disciplina, f.data, f.status]);
         tbody.appendChild(tr);
       });
     });
@@ -2620,11 +2787,11 @@ async function abrirNoGoogleCalendar() {
             <div style="padding:16px 24px">
                 <p style="margin:0 0 14px;color:#555;font-size:13px">Clique em cada disciplina para abrir o Google Agenda com o evento já preenchido. Basta confirmar o salvamento.</p>
                 ${links.map(({ disciplina, turma, dia, horário, url }) => `
-                    <a href="${url}" target="_blank" rel="noopener" style="display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:8px;text-decoration:none;color:inherit;transition:background 0.15s" onmouseover="this.style.background='#f1f7ff'" onmouseout="this.style.background=''">
+                    <a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:8px;text-decoration:none;color:inherit;transition:background 0.15s" onmouseover="this.style.background='#f1f7ff'" onmouseout="this.style.background=''">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="#1a73e8" style="flex-shrink:0;margin-top:2px"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
                         <div>
-                            <div style="font-weight:600;font-size:14px">${disciplina}</div>
-                            <div style="font-size:12px;color:#666;margin-top:2px">${dia} · ${horário} · ${turma}</div>
+                            <div style="font-weight:600;font-size:14px">${escapeHtml(disciplina)}</div>
+                            <div style="font-size:12px;color:#666;margin-top:2px">${escapeHtml(dia)} · ${escapeHtml(horário)} · ${escapeHtml(turma)}</div>
                         </div>
                     </a>
                 `).join('')}
@@ -2897,13 +3064,7 @@ function preencherTabelaDia(table, mainList, compareList, comparisonCtx) {
     const orderedMain = ordenarHorarios(mainList);
     orderedMain.forEach(({ disciplina, turma, dia, período, horário }) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${disciplina || ''}</td>
-        <td>${turma || ''}</td>
-        <td>${dia || ''}</td>
-        <td>${período || ''}</td>
-        <td>${horário || ''}</td>
-      `;
+      setTextCells(tr, [disciplina, turma, dia, período, horário]);
       tbody.appendChild(tr);
     });
     table.style.display = orderedMain.length > 0 ? '' : 'none';
@@ -2920,10 +3081,10 @@ function preencherTabelaDia(table, mainList, compareList, comparisonCtx) {
     tr.innerHTML = `
       <td><span class="comparison-cell-text comparison-discipline-link comparison-discipline-main" role="button" tabindex="0" title="${escapeHtml(disciplinaMain)}">${escapeHtml(getDisciplinaLabelForComparisonMobile(disciplinaMain))}</span></td>
       <td class="compare-col"><span class="comparison-cell-text comparison-discipline-link comparison-discipline-compare" role="button" tabindex="0" title="${escapeHtml(disciplinaCompare)}">${escapeHtml(getDisciplinaLabelForComparisonMobile(disciplinaCompare))}</span></td>
-      <td><span class="comparison-cell-text">${main?.turma || '-'}</span></td>
-      <td class="compare-col"><span class="comparison-cell-text">${compare?.turma || '-'}</span></td>
-      <td><span class="comparison-cell-text">${periodoCompartilhado}</span></td>
-      <td><span class="comparison-cell-text">${horarioCompartilhado}</span></td>
+      <td><span class="comparison-cell-text">${escapeHtml(main?.turma || '-')}</span></td>
+      <td class="compare-col"><span class="comparison-cell-text">${escapeHtml(compare?.turma || '-')}</span></td>
+      <td><span class="comparison-cell-text">${escapeHtml(periodoCompartilhado)}</span></td>
+      <td><span class="comparison-cell-text">${escapeHtml(horarioCompartilhado)}</span></td>
     `;
 
     const bindOpenModal = (element, info) => {
@@ -3988,14 +4149,7 @@ function preencherTabelaDetalhada(horarios) {
   tbody.innerHTML = '';
   horarios.forEach(item => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-            <td>${item.disciplina}</td>
-            <td>${item.turma}</td>
-            <td>${item.dia}</td>
-            <td>${item.período}</td>
-            <td>${item.slot}</td>
-            <td>${item.horário}</td>
-        `;
+    setTextCells(tr, [item.disciplina, item.turma, item.dia, item.período, item.slot, item.horário]);
     tbody.appendChild(tr);
   });
   // Mostra a tabela se houver dados
@@ -4140,16 +4294,16 @@ function preencherTabelaAtividades(atividades) {
           }
         }
 
-        tr.innerHTML = `
-          <td>${a.disciplina}</td>
-          <td>${a.data || ''}</td>
-          <td>
-            <div class="atividade-desc-cell">
-              ${statusBadge}
-              <span class="atividade-desc-text">${a.descricao || ''}</span>
-            </div>
-          </td>
-        `;
+        setTextCells(tr, [a.disciplina, a.data || '', '']);
+        const description = document.createElement('div');
+        description.className = 'atividade-desc-cell';
+        // O badge contém apenas markup fixo definido acima.
+        description.innerHTML = statusBadge;
+        const text = document.createElement('span');
+        text.className = 'atividade-desc-text';
+        text.textContent = String(a.descricao ?? '');
+        description.appendChild(text);
+        tr.cells[2].appendChild(description);
         tbody.appendChild(tr);
       });
     };
@@ -4183,7 +4337,7 @@ function preencherTabelaNovidades(novidades) {
     if (novidades.length > 0) {
       novidades.forEach(n => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${n.disciplina}</td><td>${n.data}</td><td>${n.descricao}</td>`;
+        setTextCells(tr, [n.disciplina, n.data, n.descricao]);
         tbody.appendChild(tr);
       });
     }
@@ -4482,73 +4636,48 @@ window.addEventListener('DOMContentLoaded', () => {
 function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
   const dadosDiv = document.getElementById('dados-institucionais');
   if (!dadosDiv) return;
-
-  // Campos principais
   const principais = ['Matrícula', 'Email', 'Curso'];
-  // Garante que as chaves estejam com a primeira letra maiúscula
-  const dadosFormatados = {};
-  Object.entries(dados).forEach(([k, v]) => {
-    const key = k.charAt(0).toUpperCase() + k.slice(1);
-    dadosFormatados[key] = v;
+  const dadosFormatados = Object.create(null);
+  Object.entries(dados).forEach(([key, value]) => {
+    dadosFormatados[key.charAt(0).toUpperCase() + key.slice(1)] = value;
   });
-  delete dadosFormatados['Semestre'];
-  delete dadosFormatados['semestre'];
-
-  let html = '<h2>Dados Institucionais do Usuário</h2><ul>';
-
-  // Procura o nome do usuário nas chaves
-  const nomeKey = Object.keys(dadosFormatados).find(k => 
-    /nome/i.test(k) || /usuario/i.test(k) || /discente/i.test(k)
-  );
-
-  let nomeUsuario = nomeKey ? dadosFormatados[nomeKey] : null;
-  if (nomeKey) {
-    delete dadosFormatados[nomeKey];
-  }
-
-  if (nomeUsuario) {
-    html += `
-      <li class="dados-user-row">
-        <span class="material-icons dados-user-avatar">person</span>
-        <div class="dados-user-details">
-          <span class="dados-user-title">Discente / Usuário</span>
-          <span class="dados-user-name">${nomeUsuario}</span>
-        </div>
-      </li>
-    `;
-  }
-
-  const mobileNameEl = document.getElementById('mobile-user-name');
-  if (mobileNameEl) {
-    mobileNameEl.textContent = nomeUsuario || getSelectedProfileUser() || 'Usuário';
-  }
-
-  // Mostra só principais
-  principais.forEach(chave => {
-    if (dadosFormatados[chave]) {
-      html += `<li><strong>${chave}:</strong> ${dadosFormatados[chave]}</li>`;
-    }
+  delete dadosFormatados.Semestre;
+  const nomeKey = Object.keys(dadosFormatados).find(key => /nome|usuario|discente/i.test(key));
+  const nomeUsuario = String((nomeKey && dadosFormatados[nomeKey]) || getSelectedProfileUser() || 'Usuário');
+  if (nomeKey) delete dadosFormatados[nomeKey];
+  const heading = document.createElement('h2');
+  heading.textContent = 'Dados Institucionais do Usuário';
+  const list = document.createElement('ul');
+  const userRow = document.createElement('li');
+  userRow.className = 'dados-user-row';
+  userRow.innerHTML = '<span class="material-icons dados-user-avatar">person</span><div class="dados-user-details"><span class="dados-user-title">Discente / Usuário</span><span class="dados-user-name"></span></div>';
+  userRow.querySelector('.dados-user-details').dataset.accountName = nomeUsuario;
+  userRow.querySelector('.dados-user-name').textContent = nomeUsuario;
+  list.appendChild(userRow);
+  const appendField = (parent, key, value) => {
+    const row = document.createElement('li');
+    const label = document.createElement('strong');
+    label.textContent = key + ':';
+    row.append(label, document.createTextNode(' ' + String(value ?? '')));
+    parent.appendChild(row);
+  };
+  principais.forEach(key => { if (dadosFormatados[key]) appendField(list, key, dadosFormatados[key]); });
+  const extras = document.createElement('div');
+  extras.className = 'extra-info';
+  Object.entries(dadosFormatados).forEach(([key, value]) => {
+    if (!principais.includes(key)) appendField(extras, key, value);
   });
-
-  // Extras
-  html += `<div class="extra-info">`;
-  Object.entries(dadosFormatados).forEach(([chave, valor]) => {
-    if (!principais.includes(chave)) {
-      html += `<li><strong>${chave}:</strong> ${valor}</li>`;
-    }
-  });
-  // Adiciona o tempo de resposta como extra-info apenas se a opção estiver ativada nas configurações
-  if (tempoResposta && isApiResponseTimeEnabled()) {
-    html += `<li><strong>Tempo de resposta da API:</strong> ${tempoResposta}s</li>`;
-  }
-  html += `</div></ul>`;
-
-  dadosDiv.innerHTML = html;
+  if (tempoResposta && isApiResponseTimeEnabled()) appendField(extras, 'Tempo de resposta da API', String(tempoResposta) + 's');
+  list.appendChild(extras);
+  dadosDiv.replaceChildren(heading, list);
+  const mobileName = document.getElementById('mobile-user-name');
+  if (mobileName) mobileName.textContent = nomeUsuario;
+  updateHomeAccountSelector();
 
   // Sempre permite expandir/colapsar ao toque/click
   dadosDiv.onclick = function (e) {
     // Evita toggle se clicar em link ou botão dentro do bloco
-    if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+    if (e.target.closest('a, button, select, input, label')) return;
     // Em mobile, sempre faz toggle; em desktop, só se não estiver com hover
     if (
       window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
@@ -4576,9 +4705,12 @@ function renderizarDadosInstitucionais(dados, semestre, tempoResposta) {
       // ResizeObserver para mudanças de layout/altura
       if (typeof ResizeObserver !== 'undefined') {
         const ro = new ResizeObserver(() => {
-          try { ajustarAlturaNovidades(); } catch (e) { /* ignore */ }
+          ajustarAlturaNovidades();
+          ajustarAlturaCalendarioResponsavel();
         });
         ro.observe(dadosDiv);
+        const header = document.getElementById('home-content-header');
+        if (header) ro.observe(header);
         // guarda referência para possível limpeza futura
         dadosDiv.__resizeObserver = ro;
       }
@@ -4645,7 +4777,7 @@ async function atualizarLinkCalendarioParaCurso(dados) {
       if (response && response.ok) {
         const data = await response.json();
         if (data && data.link) {
-          linkParaAlterar = data.link;
+          linkParaAlterar = safeHttpUrl(data.link) || fallbackUrl;
           console.log('✨ Calendário retornado pelo backend:', linkParaAlterar);
         }
       } else {
@@ -4739,47 +4871,29 @@ window.addEventListener('resize', agendarAjusteDados);
 window.addEventListener('scroll', agendarAjusteDados, { passive: true });
 
 function ajustarAlturaNovidades() {
-  try {
-    const form = document.getElementById('sigaa-form');
-    const dados = document.getElementById('dados-institucionais');
-    const novidadesContainer = document.getElementById('tabela-novidades-container');
-    const atividadesContainer = document.getElementById('tabela-atividades-container');
-    if (!form || !dados || !novidadesContainer || !atividadesContainer) return;
-
-    if (window.innerWidth < 1040) {
-      novidadesContainer.style.maxHeight = '';
-      atividadesContainer.style.maxHeight = '';
-      novidadesContainer.style.overflow = '';
-      atividadesContainer.style.overflow = '';
-      return;
-    }
-
-    let x;
-    if (isHideHomeInputsEnabled() || !document.body.classList.contains('sem-dados')) {
-      const dadosRect = dados.getBoundingClientRect();
-      x = Math.max(120, Math.round(dadosRect.height) - 2);
-    } else {
-      // Soma real do bloco esquerdo: topo externo do formulário até base externa dos dados.
-      const formRect = form.getBoundingClientRect();
-      const dadosRect = dados.getBoundingClientRect();
-      const formStyle = window.getComputedStyle(form);
-      const dadosStyle = window.getComputedStyle(dados);
-
-      const formMarginTop = parseFloat(formStyle.marginTop || '0') || 0;
-      const dadosMarginBottom = parseFloat(dadosStyle.marginBottom || '0') || 0;
-      const top = formRect.top - formMarginTop;
-      const bottom = dadosRect.bottom + dadosMarginBottom;
-      // Acrescenta +182 conforme solicitado para dar folga extra ao cálculo
-      x = Math.max(120, Math.round(bottom - top)) + 182;
-    }
-
-    novidadesContainer.style.maxHeight = x + 'px';
-    atividadesContainer.style.maxHeight = x + 'px';
-    novidadesContainer.style.overflow = 'auto';
-    atividadesContainer.style.overflow = 'auto';
-  } catch (e) {
-    console.warn('Erro ao ajustar altura de novidades:', e);
+  const reference = document.getElementById('home-content-header');
+  const lists = document.getElementById('home-listas-container');
+  const panels = [document.getElementById('tabela-novidades-container'),
+    document.getElementById('tabela-atividades-container')].filter(Boolean);
+  if (window.matchMedia('(max-width: 1040px)').matches) {
+    panels.forEach(panel => {
+      panel.style.height = '';
+      panel.style.maxHeight = '';
+      panel.style.overflow = '';
+      panel.style.removeProperty('--home-panel-heading-height');
+    });
+    return;
   }
+  if (!reference || !lists || !lists.getClientRects().length) return;
+  const available = getHomePanelAvailableHeight(lists);
+  if (!available) return;
+  panels.forEach(panel => {
+    panel.style.height = available + 'px';
+    panel.style.maxHeight = available + 'px';
+    panel.style.overflow = 'auto';
+    const heading = panel.querySelector('.home-painel-titulo');
+    if (heading) panel.style.setProperty('--home-panel-heading-height', heading.getBoundingClientRect().height + 'px');
+  });
 }
 
 // Ajusta ao redimensionar a janela
@@ -5209,105 +5323,67 @@ function preencherSelectorNotas(avisosPorDisciplina) {
   });
 }
 
-function preencherTabelaNotas(avisosPorDisciplina, filtro = "todas") {
+function preencherTabelaNotas(avisosPorDisciplina, filtro = 'todas') {
   const wrapper = document.getElementById('tabela-notas-wrapper');
-  wrapper.innerHTML = '';
-
-  let disciplinas = avisosPorDisciplina;
-  if (filtro !== "todas") {
-    disciplinas = avisosPorDisciplina.filter(d => d.disciplina === filtro);
-  }
-
-  disciplinas.forEach(disc => {
-    const { disciplina, turma, notas } = disc;
-    if (!notas || (!notas.headers.length && !notas.valores.length && !notas.avaliacoes.length)) return;
-
-    let html = `<h4>${disciplina}${turma ? ' - ' + turma : ''}</h4>`;
-
-    // Monta tabela organizada
-    if (notas.avaliacoes && notas.avaliacoes.length > 0 && notas.valores.length > 0) {
-      // Procura a linha do aluno (normalmente a primeira)
+  wrapper.replaceChildren();
+  const disciplinas = filtro === 'todas' ? avisosPorDisciplina : avisosPorDisciplina.filter(disc => disc.disciplina === filtro);
+  disciplinas.forEach(({ disciplina, turma, notas }) => {
+    if (!notas || (!notas.headers?.length && !notas.valores?.length && !notas.avaliacoes?.length)) return;
+    const heading = document.createElement('h4');
+    heading.textContent = String(disciplina ?? '') + (turma ? ' - ' + turma : '');
+    wrapper.appendChild(heading);
+    if (notas.avaliacoes?.length && notas.valores?.length) {
+      const box = document.createElement('div');
+      box.className = 'tabela-notas-wrapper';
+      const table = document.createElement('table');
+      table.className = 'tabela-notas';
+      const thead = document.createElement('thead');
+      const header = document.createElement('tr');
+      setTextCells(header, ['Disciplina', 'Sigla', 'Descrição', 'Nota Total', 'Peso', 'Sua Nota'], 'th');
+      thead.appendChild(header);
+      const tbody = document.createElement('tbody');
       const linhaAluno = notas.valores[0];
-
-      // Apenas a tabela dentro da div, sem o título
-      html += `<div class="tabela-notas-wrapper"><table class="tabela-notas">
-        <thead>
-          <tr>
-            <th>Disciplina</th>
-            <th>Sigla</th>
-            <th>Descrição</th>
-            <th>Nota Total</th>
-            <th>Peso</th>
-            <th>Sua Nota</th>
-          </tr>
-        </thead>
-        <tbody>`;
-
-      // Variáveis para calcular totais
-      let notaTotalSomada = 0;
-      let somaNotasAluno = 0;
-      let somaPesos = 0;
-
+      let notaTotalSomada = 0, somaNotasAluno = 0, somaPesos = 0;
       notas.avaliacoes.forEach((av, idx) => {
-        let idxHeader = notas.headers.findIndex(h => h === av.abrev);
+        let idxHeader = (notas.headers || []).findIndex(header => header === av.abrev);
         if (idxHeader === -1) idxHeader = idx;
-        let suaNota = (linhaAluno && linhaAluno[idxHeader + 2]) ? linhaAluno[idxHeader + 2] : '';
-
-        // Calcula totais para o rodapé
+        const suaNota = String(linhaAluno?.[idxHeader + 2] ?? '');
         const notaTotal = parseFloat(av.nota) || 0;
-        let peso = parseFloat(av.peso) || 1;
-        const notaAluno = parseFloat(suaNota.replace(',', '.')) || 0; // Converte vírgula para ponto
-
-        // Lógica inteligente para pesos
-        let notaCalculada = 0;
-        if (peso === 1) {
-          // Peso igual a 1: mantém o valor original da nota
-          notaCalculada = notaAluno;
-        } else if (peso > 1) {
-          // Peso maior que 1: trata como porcentagem
-          notaCalculada = (notaAluno * peso) / 100;
-        } else {
-          // Peso menor que 1: multiplica diretamente (fração)
-          notaCalculada = notaAluno * peso;
-        }
-
+        const peso = parseFloat(av.peso) || 1;
+        const notaAluno = parseFloat(suaNota.replace(',', '.')) || 0;
+        const notaCalculada = peso === 1 ? notaAluno : (peso > 1 ? notaAluno * peso / 100 : notaAluno * peso);
         notaTotalSomada += notaTotal;
         somaPesos += peso;
-
-        // Só conta no cálculo se o aluno tem nota lançada
-        if (suaNota && suaNota.trim() !== '' && !isNaN(notaAluno)) {
-          somaNotasAluno += notaCalculada;
-        }
-
-        html += `<tr>
-          <td>${disciplina}</td>
-          <td>${av.abrev}</td>
-          <td>${av.den}</td>
-          <td>${av.nota}</td>
-          <td>${av.peso}</td>
-          <td>${suaNota}</td>
-        </tr>`;
+        if (suaNota.trim() && !isNaN(notaAluno)) somaNotasAluno += notaCalculada;
+        const row = document.createElement('tr');
+        setTextCells(row, [disciplina, av.abrev, av.den, av.nota, av.peso, suaNota]);
+        tbody.appendChild(row);
       });
-
-      // Adiciona linha de rodapé com totais
-      html += `<tr class="tabela-notas-rodape">
-        <td><strong>${disciplina}</strong></td>
-        <td colspan="2"><strong>Totais</strong></td>
-        <td><strong>${notaTotalSomada.toFixed(2)}</strong></td>
-        <td><strong>${somaPesos.toFixed(2)}</strong></td>
-        <td><strong>${somaNotasAluno.toFixed(2)}</strong></td>
-      </tr>`;
-
-      html += `</tbody></table></div>`;
+      const total = document.createElement('tr');
+      total.className = 'tabela-notas-rodape';
+      setTextCells(total, [disciplina, 'Totais', notaTotalSomada.toFixed(2), somaPesos.toFixed(2), somaNotasAluno.toFixed(2)]);
+      total.cells[1].colSpan = 2;
+      Array.from(total.cells).forEach(cell => {
+        const strong = document.createElement('strong');
+        strong.textContent = cell.textContent;
+        cell.replaceChildren(strong);
+      });
+      tbody.appendChild(total);
+      table.append(thead, tbody);
+      box.appendChild(table);
+      wrapper.appendChild(box);
     } else {
-      html += `<div style="color:#888; margin-bottom:12px;">Nenhuma nota lançada.</div>`;
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:#888;margin-bottom:12px';
+      empty.textContent = 'Nenhuma nota lançada.';
+      wrapper.appendChild(empty);
     }
-
-    wrapper.innerHTML += html;
   });
-
-  if (wrapper.innerHTML === '') {
-    wrapper.innerHTML = `<div style="color:#888;">Nenhuma nota encontrada para o filtro selecionado.</div>`;
+  if (!wrapper.childNodes.length) {
+    const empty = document.createElement('div');
+    empty.style.color = '#888';
+    empty.textContent = 'Nenhuma nota encontrada para o filtro selecionado.';
+    wrapper.appendChild(empty);
   }
 }
 
@@ -5568,6 +5644,8 @@ function stopPollingProgress() {
 // ── Fim animação de barra ────────────────────────────────────────────┘
 
 function updateQueueDisplay(position, avgTimeMs) {
+  position = Number.isSafeInteger(position) ? position : -1;
+  avgTimeMs = Number.isFinite(avgTimeMs) && avgTimeMs > 0 ? avgTimeMs : 60000;
   let el = document.getElementById('queue-status-display');
   const container = document.getElementById('queue-status-container');
   if (!container) return; // Container não existe, não fazer nada
@@ -5687,14 +5765,14 @@ function parseJwtExpiry(token) {
   return null;
 }
 
-function saveTokenWithExpiry(token, storageType = 'local') {
+function saveTokenWithExpiry(token, storageType = 'local', user = '') {
   // Tenta extrair expiry do JWT
   let expiresAt = parseJwtExpiry(token);
 
   // Se backend retornar expiresIn (não presente atualmente), você pode
   // adaptar para usar esse valor. Aqui assume expiry embutido no JWT.
 
-  const info = { token, expiresAt };
+  const info = { token, expiresAt, user };
   if (storageType === 'session') {
     sessionStorage.setItem('sigaa_token', token);
     sessionStorage.setItem('sigaa_token_info', JSON.stringify(info));

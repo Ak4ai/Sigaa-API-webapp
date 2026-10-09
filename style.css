@@ -6866,3 +6866,400 @@ body[data-app-mode="responsavel"] #sigaa-form .remember-login-label {
   border-color: #e1d0ff !important;
   color: #4d2c91 !important;
 }
+
+/* Tipo de entrada e credenciais compõem um único card de login. */
+#sigaa-form .home-mode-switcher {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 0 20px !important;
+  padding: 0 0 18px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--app-border, #e2e8f0) !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#sigaa-form .home-mode-hint {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#dados-institucionais .dados-user-details {
+  flex: 1;
+}
+
+#dados-institucionais li.dados-user-row .home-account-select {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  margin: 0;
+  padding: 7px 24px 7px 8px;
+  border: 1px solid color-mix(in srgb, var(--app-accent, #1a73e8) 20%, #e2e8f0);
+  border-radius: 9px;
+  background-color: color-mix(in srgb, var(--app-accent, #1a73e8) 4%, #fff);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 18px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+#dados-institucionais li.dados-user-row .home-account-select:hover {
+  border-color: var(--app-accent, #1a73e8);
+  background-color: color-mix(in srgb, var(--app-accent, #1a73e8) 7%, #fff);
+}
+
+#dados-institucionais .home-account-select:focus-visible {
+  outline: 2px solid var(--app-accent, #1a73e8);
+  outline-offset: 3px;
+}
+
+body.adding-account #home-content-header {
+  display: block !important;
+  grid-area: dados !important;
+}
+
+body.adding-account #sigaa-form,
+body.adding-account #sigaa-form .home-mode-switcher {
+  display: block !important;
+}
+
+body.adding-account #sigaa-form {
+  margin: 0 auto !important;
+}
+
+body.adding-account #dados-institucionais {
+  display: none !important;
+}
+
+.cancel-account-login {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+}
+
+@media (min-width: 1041px) {
+  body:not(.sem-dados) #home-content-header {
+    grid-area: dados;
+    align-self: start;
+    min-width: 0;
+  }
+
+  #home-listas-container {
+    min-height: 0;
+    min-width: 0;
+    align-self: start;
+  }
+
+  #home-listas-container .home-lista-container {
+    min-height: 0;
+    min-width: 0;
+    box-sizing: border-box;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    transition: box-shadow 0.2s ease;
+  }
+
+  #home-listas-container .home-lista-container:hover {
+    transform: none;
+  }
+
+  #home-listas-container .home-painel-titulo {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  #home-listas-container thead th {
+    top: var(--home-panel-heading-height, 40px);
+  }
+
+  #responsavel-calendar-container {
+    min-height: 0 !important;
+    box-sizing: border-box;
+  }
+}
+
+body.sem-dados #desktop-saved-profiles-container,
+body.sem-dados #header-refresh-btn,
+body.sem-dados #header-logout-btn,
+body.sem-dados #desktop-quick-actions,
+body.sem-dados #home-calendar-toggle-wrapper,
+body.sem-dados #mobile-fab,
+body.sem-dados #fab-minimized {
+  display: none !important;
+}
+
+@media (max-width: 1040px) {
+  body.home-account-switcher-enabled #dados-institucionais li.dados-user-row {
+    display: flex !important;
+  }
+
+  body.home-account-switcher-enabled .mobile-user-card-header {
+    display: none;
+  }
+
+  body.adding-account .mobile-user-card {
+    display: none !important;
+  }
+}
+
+/* Login: fundo institucional e um único card adaptável à viewport. */
+.login-backdrop { display: none; }
+
+body.sem-dados {
+  height: auto !important;
+  min-height: 100svh;
+  min-height: 100dvh;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  isolation: isolate;
+}
+
+body.sem-dados[data-app-mode="graduacao"] {
+  background: linear-gradient(135deg, #dceafa, #eff6ff 48%, #d2e4f8) !important;
+}
+
+body.sem-dados[data-app-mode="tecnico"] {
+  background: linear-gradient(135deg, #d7eee1, #effaf4 48%, #cde8da) !important;
+}
+
+body.sem-dados[data-app-mode="responsavel"] {
+  background: linear-gradient(135deg, #e4dbf5, #f6f1ff 48%, #ded0f4) !important;
+}
+
+body.sem-dados .login-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.login-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 20% 20%, rgba(255,255,255,0.55), transparent 55%),
+    radial-gradient(ellipse at 85% 80%, color-mix(in srgb, var(--app-accent) 9%, transparent), transparent 55%);
+}
+
+.login-backdrop span {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--size, clamp(80px, 9vw, 130px));
+  aspect-ratio: 1.25;
+  background: var(--app-accent-strong, #0f3f7a);
+  opacity: 0.045;
+  -webkit-mask: url('Logo_CEFET-MG.png') center / contain no-repeat;
+  mask: url('Logo_CEFET-MG.png') center / contain no-repeat;
+  transform: rotate(var(--angle, -18deg));
+  animation: cefet-background-breathe var(--duration, 22s) ease-in-out var(--delay, 0s) infinite;
+}
+
+.login-backdrop span:nth-child(1) { --x: 3%; --y: 7%; --size: clamp(130px, 16vw, 230px); --angle: -22deg; --delay: -8s; --duration: 24s; }
+.login-backdrop span:nth-child(2) { --x: 30%; --y: 4%; --size: clamp(68px, 8vw, 110px); --angle: 14deg; --delay: -3s; --duration: 19s; }
+.login-backdrop span:nth-child(3) { --x: 70%; --y: 9%; --size: clamp(95px, 13vw, 175px); --angle: -8deg; --delay: -15s; }
+.login-backdrop span:nth-child(4) { --x: 89%; --y: 28%; --size: clamp(160px, 24vw, 320px); --angle: 20deg; --delay: -10s; --duration: 29s; }
+.login-backdrop span:nth-child(5) { --x: 8%; --y: 40%; --size: clamp(60px, 6vw, 90px); --angle: 12deg; --delay: -18s; }
+.login-backdrop span:nth-child(6) { --x: 24%; --y: 29%; --size: clamp(105px, 12vw, 165px); --angle: -30deg; --delay: -5s; --duration: 26s; }
+.login-backdrop span:nth-child(7) { --x: 76%; --y: 48%; --size: clamp(70px, 8vw, 120px); --angle: -18deg; --delay: -12s; --duration: 20s; }
+.login-backdrop span:nth-child(8) { --x: -5%; --y: 67%; --size: clamp(170px, 25vw, 340px); --angle: 18deg; --delay: -2s; --duration: 30s; }
+.login-backdrop span:nth-child(9) { --x: 29%; --y: 80%; --size: clamp(65px, 8vw, 110px); --angle: -10deg; --delay: -17s; }
+.login-backdrop span:nth-child(10) { --x: 59%; --y: 85%; --size: clamp(115px, 15vw, 210px); --angle: -25deg; --delay: -6s; --duration: 27s; }
+.login-backdrop span:nth-child(11) { --x: 86%; --y: 81%; --size: clamp(60px, 7vw, 95px); --angle: 12deg; --delay: -14s; --duration: 18s; }
+.login-backdrop span:nth-child(12) { --x: 48%; --y: 53%; --size: clamp(80px, 10vw, 140px); --angle: 24deg; --delay: -9s; }
+
+@keyframes cefet-background-breathe {
+  0%, 100% { opacity: 0.025; transform: translate3d(0, 0, 0) rotate(var(--angle, -18deg)) scale(0.97); }
+  50% { opacity: 0.095; transform: translate3d(6px, -12px, 0) rotate(calc(var(--angle, -18deg) + 4deg)) scale(1.035); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-backdrop span { animation: none; opacity: 0.045; }
+}
+
+body.sem-dados .page-header {
+  z-index: 1;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 22px 32px !important;
+}
+
+body.sem-dados .page-header h1 { font-size: 18px; }
+
+body.sem-dados #tab-home.sem-dados {
+  position: relative;
+  z-index: 1;
+  flex: 1 0 auto;
+  min-height: 0 !important;
+  width: 100%;
+  padding: clamp(16px, 4vh, 40px) max(16px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+
+body.sem-dados #home-consultation-shell {
+  width: 100%;
+  max-width: 440px;
+  min-width: 0;
+}
+
+body.sem-dados[data-app-mode] #home-content.sem-dados {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  gap: 0 !important;
+  padding: clamp(22px, 5vw, 32px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  border-radius: 22px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: 0 20px 60px color-mix(in srgb, var(--app-accent-strong) 13%, transparent),
+    0 2px 8px rgba(15, 23, 42, 0.04) !important;
+}
+
+body.sem-dados[data-app-mode] #home-content.sem-dados #home-content-header {
+  gap: 0;
+  min-width: 0;
+}
+
+body.sem-dados[data-app-mode] #home-content.sem-dados #sigaa-form {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.sem-dados #sigaa-form::before { display: none !important; }
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 26px;
+}
+
+.login-brand-logo {
+  flex: none;
+  width: 42px;
+  height: 36px;
+  margin-top: 0;
+  background: var(--app-accent-strong, #0f3f7a);
+  -webkit-mask: url('Logo_CEFET-MG.png') center / contain no-repeat;
+  mask: url('Logo_CEFET-MG.png') center / contain no-repeat;
+}
+
+.login-brand > div { min-width: 0; }
+
+.login-brand-mark {
+  flex: 0 0 66px;
+  min-height: 78px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 14%, #e2e8f0);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-accent) 6%, #fff);
+}
+
+.login-brand-mark-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--app-accent-strong);
+  white-space: nowrap;
+}
+
+.login-brand-copy {
+  flex: 1;
+  padding-left: 16px;
+  border-left: 1px solid color-mix(in srgb, var(--app-accent) 16%, #e2e8f0);
+}
+
+.login-brand-eyebrow {
+  color: var(--app-accent-strong, #0f3f7a);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#sigaa-form .login-brand h2 {
+  margin: 7px 0 8px;
+  padding: 0;
+  color: #172b40;
+  font-size: clamp(20px, 4.8vw, 24px);
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  background: transparent;
+}
+
+.login-brand p { margin: 0; font-size: 12px; line-height: 1.6; color: #64748b; }
+
+body.sem-dados #sigaa-form label:not(.remember-login-label) {
+  width: 100%;
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+body.sem-dados #sigaa-form input[type="text"],
+body.sem-dados #sigaa-form input[type="password"],
+body.sem-dados #sigaa-form .home-mode-switcher select {
+  width: 100% !important;
+  min-width: 0;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 18%, #dbe3ed) !important;
+  border-radius: 10px;
+  background: #fff !important;
+  font-size: 16px;
+}
+
+body.sem-dados #sigaa-form input[type="text"],
+body.sem-dados #sigaa-form input[type="password"] { margin-bottom: 18px; }
+
+body.sem-dados #sigaa-form .password-info { margin-top: 4px; gap: 10px; }
+body.sem-dados #sigaa-form .login-action-btn { min-height: 46px; border-radius: 10px; }
+
+@media (max-width: 1040px) {
+  body.sem-dados #tab-home.sem-dados { justify-content: center; }
+  .login-backdrop span:nth-child(3) { --x: 78%; }
+  .login-backdrop span:nth-child(5) { --x: -7%; }
+  .login-backdrop span:nth-child(7) { --x: 88%; }
+}
+
+@media (max-width: 360px), (max-height: 680px) {
+  body.sem-dados #tab-home.sem-dados { padding-top: 12px; padding-bottom: 16px; }
+  body.sem-dados[data-app-mode] #home-content.sem-dados { padding: 20px !important; border-radius: 18px !important; }
+  .login-brand { gap: 10px; margin-bottom: 20px; }
+  .login-brand-logo { width: 34px; height: 28px; }
+  .login-brand-mark { flex-basis: 56px; min-height: 68px; padding: 10px 6px; }
+  .login-brand-copy { padding-left: 12px; }
+}

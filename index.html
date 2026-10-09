@@ -9,8 +9,8 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#094384">
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   
   <!-- BARRA DE PROGRESSO NO TOPO (visível em qualquer aba) -->
   <div id="top-progress-bar"></div>
@@ -56,7 +56,12 @@
     });
   }
 </script>
-<body>
+<body class="sem-dados">
+  <div class="login-backdrop" aria-hidden="true">
+    <span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span>
+  </div>
   <header class="page-header">
     <h1><img src="icon-web.png" alt="" class="header-logo"><span>Consultas - SIGAA</span></h1>
 
@@ -71,10 +76,6 @@
       </div>
 
       <div id="desktop-saved-profiles-container" class="desktop-saved-profiles" style="display:none;">
-        <label for="desktop-saved-profile-select">Perfil:</label>
-        <select id="desktop-saved-profile-select" name="desktop-saved-profile-select" aria-label="Selecionar usuário salvo">
-          <option value="">Usuários salvos</option>
-        </select>
         <button id="header-refresh-btn" class="header-refresh-btn" title="Atualizar dados da consulta">
           <span class="material-icons">refresh</span>
           <span>Atualizar</span>
@@ -146,6 +147,19 @@
         </div>
       </div>
       <div id="home-content">
+        <div id="home-content-header">
+          <form id="sigaa-form" method="post" autocomplete="on">
+            <div class="login-brand">
+              <div class="login-brand-mark">
+                <span class="login-brand-logo" role="img" aria-label="CEFET-MG"></span>
+                <span class="login-brand-mark-label">CEFET-MG</span>
+              </div>
+              <div class="login-brand-copy">
+                <span class="login-brand-eyebrow">Portal acadêmico</span>
+                <h2>Seu acesso ao SIGAA</h2>
+                <p>Escolha seu perfil e entre com suas credenciais.</p>
+              </div>
+            </div>
         <div class="home-mode-switcher">
           <label for="home-mode-select">Tipo de entrada</label>
           <select id="home-mode-select" name="home-mode-select" aria-label="Selecionar tipo de entrada">
@@ -153,13 +167,11 @@
             <option value="tecnico">Técnico</option>
             <option value="responsavel">Responsável</option>
           </select>
-          <p class="home-mode-hint">A mudança só entra em vigor depois de clicar em Consultar. Até lá, a interface continua com a última consulta aplicada.</p>
+          <p class="home-mode-hint">O tipo de entrada é aplicado ao fazer login.</p>
         </div>
 
-        <div id="home-content-header">
-          <form id="sigaa-form">
             <label for="user">CPF (sem pontos ou traços):</label>
-            <input type="text" id="user" name="user" required />
+            <input type="text" id="user" name="username" autocomplete="username" inputmode="numeric" autocapitalize="none" spellcheck="false" required />
 
             <div id="saved-profiles-container" class="saved-profiles-container" style="display:none;">
               <label for="saved-profile-select">Usuários salvos:</label>
@@ -169,7 +181,7 @@
             </div>
 
             <label for="pass">Senha:</label>
-            <input type="password" id="pass" name="pass" required />
+            <input type="password" id="pass" name="password" autocomplete="current-password" required />
             <div class="password-info">
               <button type="submit" class="login-action-btn">
                 <span class="material-icons" style="font-size: 18px; margin-right: 6px;">login</span>
@@ -181,6 +193,7 @@
               </label>
             </div>
             <div class="error" id="error"></div>
+            <button type="button" id="cancel-account-login" class="cancel-account-login" hidden>Voltar para minha conta</button>
 
             <!-- OVERLAY MODAL ESCURO COM SPINNER CENTRALIZADO -->
             <div id="loading-overlay" style="
@@ -851,11 +864,11 @@
           </label>
           <p class="settings-help">Quando ativado, mostra a linha com o tempo de resposta da requisição na tabela de Dados Institucionais.</p>
 
-          <label class="settings-option" for="show-desktop-profile-select-toggle" title="Exibe a seleção de perfil de usuário na barra superior (header)">
+          <label class="settings-option" for="show-desktop-profile-select-toggle" title="Permite trocar contas na primeira linha dos Dados Institucionais, na Home">
             <input type="checkbox" id="show-desktop-profile-select-toggle" />
-            <span>Exibir seleção de perfil na barra superior (header)</span>
+            <span>Trocar contas nos Dados Institucionais da Home</span>
           </label>
-          <p class="settings-help">Quando ativado, mostra o menu dropdown de seleção de perfis salvos na barra superior do aplicativo.</p>
+          <p class="settings-help">Toque no nome para trocar de conta. Com uma conta salva, você também pode adicionar outra. Disponível no celular e no computador.</p>
 
         </div>
       </div>

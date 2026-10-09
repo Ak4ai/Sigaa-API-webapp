@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sigaa-pwa-v33';
+const CACHE_NAME = 'sigaa-pwa-v42';
 const SW_PATH = self.location.pathname;
 const BASE_PATH = SW_PATH.replace(/\/service-worker\.js$/, '');
 
@@ -8,6 +8,8 @@ const urlsToCache = [
   `${BASE_PATH}/style.css`,
   `${BASE_PATH}/script.js`,
   `${BASE_PATH}/manifest.json`,
+  `${BASE_PATH}/vendor/jspdf.umd.min.js`,
+  `${BASE_PATH}/vendor/jspdf.plugin.autotable.min.js`,
   `${BASE_PATH}/icon-192.png`,
   `${BASE_PATH}/icon-512.png`
 ];
@@ -43,6 +45,7 @@ self.addEventListener('fetch', event => {
 
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
+  if (requestUrl.pathname.startsWith('/api/')) return;
 
   event.respondWith(
     fetch(event.request)
