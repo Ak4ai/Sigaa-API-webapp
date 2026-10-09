@@ -15,17 +15,31 @@ function data(name) {
     horariosDetalhados: [], horariosSimplificados: [], avisosPorDisciplina: [], atividadesPortal: [] };
 }
 app.get('/', (req,res) => res.send(fs.readFileSync(path.join(frontend,'index.html'),'utf8').replace('</head>','<script>window.API_BASE_URL=window.location.origin;</script></head>')));
-app.post('/api/login',(req,res)=>{loginUser=req.body.user;res.json({token:'test.'+Buffer.from(JSON.stringify({exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')+'.test'});});
-app.post('/api/scraper',(req,res)=>{scraperCalls++;res.json(data(loginUser==='222'?'Bruno Lima':'Ana Silva'));});
-app.post('/api/logout',(req,res)=>res.json({success:true}));
+process.env.SECRET = 'browser-test-only-secret';
+process.env.ENC_SECRET = 'a'.repeat(32);
+process.env.ENC_SECRET_USER = 'b'.repeat(32);
+process.env.TOKEN_REVOCATION_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'sigaa-browser-revocations-'));
+const browserSession = require(path.join(backend, 'lib/browser-session'));
+const auth = require(path.join(backend, 'api/auth'));
+app.use('/api', browserSession.middleware);
+app.get('/api/session', browserSession.sessionHandler);
+app.post('/api/login', require(path.join(backend, 'api/login')));
+app.post('/api/scraper', async (req,res) => {
+  const payload = await auth.validarTokenLogin(req.body.token);
+  if (!payload) return res.status(401).json({error:'Invalid session'});
+  loginUser = payload.user;
+  scraperCalls++;
+  res.json(data(loginUser === '222' ? 'Bruno Lima' : 'Ana Silva'));
+});
+app.post('/api/logout', require(path.join(backend, 'api/logout')));
 app.get('/api/queue-status',(req,res)=>res.json({position:1,avgTimeMs:1000}));
 app.get('/api/scraper-progress',(req,res)=>res.json({progress:100,status:'Concluído'}));
 app.get('/api/calendario',(req,res)=>res.json({link:'https://example.test/calendar.pdf'}));
 let examWrites = 0;
 const examClass = { id: 'verified-class', disciplina: 'Matemática', turma: '01', semestre: '2026.2', provasCadastradas: 0 };
-app.get('/api/calendario/eventos',(req,res)=>res.json({eventos:[], turmas: req.headers.authorization ? [{ ...examClass, provasCadastradas: examWrites }] : []}));
+app.get('/api/calendario/eventos',(req,res)=>res.json({eventos:[], turmas: browserSession.cookieToken(req) ? [{ ...examClass, provasCadastradas: examWrites }] : []}));
 app.post('/api/calendario/eventos',(req,res)=>{
-  assert.ok(req.headers.authorization?.startsWith('Bearer '));
+  assert.ok(browserSession.cookieToken(req));
   assert.equal(req.body.turmaId, 'verified-class');
   assert.equal(req.body.disciplina, undefined);
   examWrites++;
@@ -37,6 +51,12 @@ app.use(express.static(frontend));
  const browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH || ['C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/google-chrome', '/usr/bin/chromium'].find(file=>fs.existsSync(file)),headless:true});
  try{
   const page=await browser.newPage();const errors=[];
+  page.on('request', request => {
+    if (request.url().includes('/api/')) {
+      assert.equal(request.headers().authorization, undefined);
+      if (request.postData()) assert.equal(JSON.parse(request.postData()).token, undefined);
+    }
+  });
   page.on('pageerror',error=>errors.push(error.message));
   await page.setRequestInterception(true);
   page.on('request',request=>request.url().startsWith('http://127.0.0.1:')?request.continue():request.abort());
@@ -241,6 +261,22 @@ app.use(express.static(frontend));
   });
   await page.waitForFunction(()=>document.getElementById('add-exam-status').textContent.includes('sucesso'));
   assert.equal(examWrites, 1);
+  const cookieCheck = await page.evaluate(() => ({
+    accessible: document.cookie,
+    session: JSON.parse(localStorage.getItem('sigaa_session_info')),
+    localToken: localStorage.getItem('sigaa_token'),
+    sessionToken: sessionStorage.getItem('sigaa_token')
+  }));
+  assert.ok(!cookieCheck.accessible.includes('sigaa_session'));
+  assert.ok(cookieCheck.session.cookie);
+  assert.equal(cookieCheck.session.token, undefined);
+  assert.equal(cookieCheck.localToken, null);
+  assert.equal(cookieCheck.sessionToken, null);
+  const beforeReload = scraperCalls;
+  await page.evaluate(() => localStorage.removeItem('sigaa_session_info'));
+  await page.reload({waitUntil:'networkidle0'});
+  assert.ok(await page.evaluate(() => getTokenInfo()?.cookie));
+  assert.ok(scraperCalls > beforeReload, 'cookie restores the session without browser storage credentials');
   assert.deepEqual(errors,[]);
   console.log('PASS: login hints, success signal, one/two profiles, add/cancel, swap, token ownership, mobile/desktop, preference off; no JS errors.');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

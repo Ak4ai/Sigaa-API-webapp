@@ -38,6 +38,7 @@ function context(base = 'https://api.example.test', page = 'https://app.example.
     vm.createContext(sandbox);
     vm.runInContext(source.slice(0, source.indexOf('const STORAGE_LAST_CONSULTA')), sandbox);
     vm.runInContext(`
+        __csrfToken = 'test-csrf';
         const STORAGE_SAVED_PROFILES = 'sigaaPerfisSalvos';
         const STORAGE_SELECTED_PROFILE = 'sigaaPerfilSelecionado';
         const STORAGE_COMPARISON_MODE = 'sigaaComparisonMode';
@@ -86,7 +87,9 @@ test('logout waits for server confirmation before deleting local tokens and data
     await pending;
     assert.equal(localStorage.getItem('sigaa_token'), null);
     assert.equal(localStorage.getItem('sigaaUltimaConsulta'), null);
-    assert.equal(JSON.parse(calls[0].options.body).token, 'test-token');
+    assert.equal(JSON.parse(calls[0].options.body).token, undefined);
+    assert.equal(calls[0].options.credentials, 'include');
+    assert.equal(calls[0].options.headers['X-CSRF-Token'], 'test-csrf');
     assert.equal(vm.runInContext('__sessionVersion', sandbox), 1);
 });
 
@@ -103,14 +106,30 @@ test('logout outage preserves the session and allows retry', async () => {
     assert.equal(localStorage.getItem('sigaa_token'), null);
 });
 
-test('logout covers legacy storage, deduplicates tokens, and clears already invalid tokens', async () => {
+test('cookie logout clears legacy storage without resending its tokens', async () => {
     const { sandbox, localStorage, sessionStorage, calls } = context();
     localStorage.setItem('sigaa_token', 'first');
     localStorage.setItem('sigaa_token_info', JSON.stringify({ token: 'first' }));
     sessionStorage.setItem('sigaa_token_info', JSON.stringify({ token: 'second' }));
     sandbox.fetch = async (url, options) => { calls.push({ url, options }); return { ok: false, status: 401 }; };
     await sandbox.executarLogoutAction();
-    assert.deepEqual(calls.map(call => JSON.parse(call.options.body).token), ['first', 'second']);
+    assert.equal(calls.length, 1);
+    assert.equal(JSON.parse(calls[0].options.body).token, undefined);
     assert.equal(localStorage.getItem('sigaa_token'), null);
     assert.equal(sessionStorage.getItem('sigaa_token_info'), null);
+});
+
+test('first login obtains a CSRF proof before sending credentials and never stores a JWT', async () => {
+    const { sandbox, calls, localStorage } = context();
+    vm.runInContext('__csrfToken = null', sandbox);
+    sandbox.fetch = async (url, options) => {
+        calls.push({ url, options });
+        return { ok: true, status: 200, json: async () => ({ loggedIn: false, csrf: 'fresh-proof' }) };
+    };
+    await sandbox.fetchApi('/api/login', { method: 'POST', body: JSON.stringify({user:'test',pass:'test'}) });
+    assert.equal(calls.length, 2);
+    assert.ok(calls[0].url.endsWith('/api/session'));
+    assert.equal(calls[1].options.headers['X-CSRF-Token'], 'fresh-proof');
+    assert.ok(calls.every(call => call.options.credentials === 'include'));
+    assert.equal(localStorage.getItem('sigaa_token'), null);
 });

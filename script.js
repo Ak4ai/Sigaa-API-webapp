@@ -9,6 +9,12 @@ const API_BASE = window.API_BASE_URL ||
 let __logoutInProgress = false;
 let __sessionVersion = 0;
 let __loginFormState = null;
+let __csrfToken = null;
+let __sessionBootstrap = null;
+for (const storage of [localStorage, sessionStorage]) {
+  storage.removeItem('sigaa_token');
+  storage.removeItem('sigaa_token_info');
+}
 
 function restoreLoginForm(fresh = false) {
   let form = document.getElementById('sigaa-form') || __loginFormState?.form;
@@ -90,7 +96,31 @@ async function fetchApi(endpoint, options) {
   if (url.protocol !== 'https:' && !isLocalDevelopment) {
     throw new Error('A conexão com o servidor precisa usar HTTPS.');
   }
-  return fetch(url.href, { ...options, redirect: 'error' });
+  const method = (options?.method || 'GET').toUpperCase();
+  if (!['GET', 'HEAD'].includes(method) && !__csrfToken) await loadBrowserSession();
+  const headers = { ...(options?.headers || {}) };
+  if (endpoint.startsWith('/api/calendario/eventos') && typeof getSelectedProfileUser === 'function') {
+    const profile = getSelectedProfileUser();
+    if (profile) headers['X-Profile-User'] = profile;
+  }
+  if (!['GET', 'HEAD'].includes(method)) headers['X-CSRF-Token'] = __csrfToken;
+  return fetch(url.href, { ...options, headers, credentials: 'include', redirect: 'error' });
+}
+
+async function loadBrowserSession() {
+  if (__sessionBootstrap) return __sessionBootstrap;
+  __sessionBootstrap = (async () => {
+    const response = await fetchApi('/api/session');
+    if (!response.ok) throw new Error('Não foi possível verificar a sessão. Tente novamente.');
+    const info = await response.json();
+    __csrfToken = info.csrf;
+    if (!__csrfToken) throw new Error('Verificação de segurança indisponível. Atualize a página.');
+    if (info.loggedIn) saveSessionInfo(info);
+    else clearStoredTokenInfo();
+    return info;
+  })();
+  try { return await __sessionBootstrap; }
+  finally { __sessionBootstrap = null; }
 }
 
 const STORAGE_LAST_CONSULTA = 'sigaaUltimaConsulta';
@@ -483,11 +513,11 @@ let verifiedExamClasses = [];
 let calendarAccountKey = '';
 function examSession() {
   const info = getTokenInfo();
-  return info?.token && info.user === getSelectedProfileUser() ? info : null;
+  return info?.cookie && info.user === getSelectedProfileUser() ? info : null;
 }
 async function fetchCalendarEvents(curso) {
   const info = examSession();
-  const key = `${getSelectedProfileUser()}:${info?.token || ''}`;
+  const key = `${getSelectedProfileUser()}:${info?.expiresAt || ''}`;
   if (calendarAccountKey !== key) {
     calendarAccountKey = key;
     cachedCalendarEvents = null;
@@ -502,13 +532,13 @@ async function fetchCalendarEvents(curso) {
   try {
     const url = `${API_BASE}/api/calendario/eventos?curso=${curso}`;
     console.log(`📡 Buscando eventos de calendário para ${curso} via ${url}...`);
-    const response = await fetchApi(`/api/calendario/eventos?curso=${curso}`, { headers: info ? { Authorization: `Bearer ${info.token}` } : {} });
+    const response = await fetchApi(`/api/calendario/eventos?curso=${curso}`, {});
     if (response.ok) {
       const data = await response.json();
       const currentInfo = examSession();
-      if (key !== `${getSelectedProfileUser()}:${currentInfo?.token || ''}`) return null;
-      cachedCalendarEvents = data.eventos || [];
-      verifiedExamClasses = data.turmas || [];
+      if (key !== `${getSelectedProfileUser()}:${currentInfo?.expiresAt || ''}`) return null;
+      cachedCalendarEvents = info ? (data.eventos || []) : (data.eventos || []).filter(e => !e.manual);
+      verifiedExamClasses = info ? (data.turmas || []) : [];
       populateExamSubjects();
       lastFetchedCurso = curso;
       console.log(`✨ Eventos carregados: ${cachedCalendarEvents.length} itens.`);
@@ -1542,28 +1572,28 @@ async function handleLoginSubmit(e) {
     const resp = await fetchApi('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user, pass })
+      body: JSON.stringify({ user, pass, remember: manterLogado })
     });
     if (!resp.ok) {
       const failure = await resp.json().catch(() => ({}));
       throw new Error(failure.error || 'Não foi possível fazer login. Tente novamente.');
     }
-    const { token } = await resp.json();
+    const session = await resp.json();
+    __csrfToken = session.csrf;
     if (sessionVersion !== __sessionVersion || __logoutInProgress) {
       await fetchApi('/api/logout', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }), signal: AbortSignal.timeout(10000)
+        body: JSON.stringify({}), signal: AbortSignal.timeout(10000)
       });
       if (overlayDiv) overlayDiv.style.display = 'none';
       return;
     }
 
     // Salva token junto com informação de expiry (se disponível)
-    const storageType = manterLogado ? 'local' : 'session';
-    saveTokenWithExpiry(token, storageType, user);
+    saveSessionInfo(session);
 
     // 2. Usa token para buscar dados
-    const success = await consultarComToken(token, user, selectedMode);
+    const success = await consultarComToken(null, user, selectedMode);
     if (success) await notifySuccessfulLogin(user, pass);
   } catch (error) {
     console.error('Erro no login:', error);
@@ -1610,11 +1640,11 @@ async function consultarComToken(token, userFromLogin = '', requestedMode = null
     // Tokens nunca são reenviados por HTTP se a conexão HTTPS falhar.
     const fetchPromise = fetchApi('/api/scraper', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, clientId, skipSchedule: isSkipScheduleEnabled() }),
+      headers: { 'Content-Type': 'application/json', 'X-Profile-User': userFromLogin || getSelectedProfileUser() },
+      body: JSON.stringify({ clientId, skipSchedule: isSkipScheduleEnabled() }),
       signal: controller.signal,
       mode: 'cors',
-      credentials: 'omit'
+      credentials: 'include'
     }).finally(() => clearTimeout(fetchTimeoutId));
 
     // Mostra display de fila imediatamente (o fetch pode demorar)
@@ -1718,7 +1748,8 @@ async function consultarComToken(token, userFromLogin = '', requestedMode = null
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  try { await loadBrowserSession(); } catch (error) { console.warn(error.message); }
   // Inicia display do status do token e tenta usar token salvo
   startTokenTimer();
 
@@ -1733,7 +1764,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   const info = getTokenInfo();
-  const token = info ? info.token : (localStorage.getItem('sigaa_token') || sessionStorage.getItem('sigaa_token'));
+  const token = info?.cookie;
   if (token) {
     const now = Date.now();
     const expiresAt = info && info.expiresAt ? info.expiresAt : null;
@@ -2096,7 +2127,7 @@ function initHeaderLogoutButton() {
 
 function executarRefreshHeader() {
   const info = getTokenInfo();
-  const token = info ? info.token : (localStorage.getItem('sigaa_token') || sessionStorage.getItem('sigaa_token'));
+  const token = info?.cookie;
   if (!info?.user || info.user !== getSelectedProfileUser()) {
     openProfileLogin(getSelectedProfileUser());
     return;
@@ -2151,23 +2182,13 @@ async function executarLogoutAction() {
 
   __logoutInProgress = true;
   try {
-    const tokens = new Set();
-    for (const storage of [localStorage, sessionStorage]) {
-      const token = storage.getItem('sigaa_token');
-      if (token) tokens.add(token);
-      try {
-        const info = JSON.parse(storage.getItem('sigaa_token_info'));
-        if (typeof info?.token === 'string' && info.token) tokens.add(info.token);
-      } catch (error) { /* Mantém suporte ao armazenamento antigo. */ }
-    }
-    for (const token of tokens) {
-      const response = await fetchApi('/api/logout', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }), signal: AbortSignal.timeout(10000)
-      });
-      // Um token com assinatura inválida já não permite acesso à API.
-      if (!response.ok && response.status !== 401) throw new Error('Logout não confirmado.');
-    }
+    const response = await fetchApi('/api/logout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}), signal: AbortSignal.timeout(10000)
+    });
+    if (!response.ok && response.status !== 401) throw new Error('Logout não confirmado.');
+    __csrfToken = null;
+
   } catch (error) {
     alert('Não foi possível encerrar a sessão no servidor. Verifique sua conexão e tente novamente.');
     return;
@@ -5773,62 +5794,25 @@ function stopScrapeCounter(success = true, durationSec = null) {
 }
 
 
-function parseJwtExpiry(token) {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    if (payload && payload.exp) {
-      // exp em segundos desde epoch
-      return payload.exp * 1000;
-    }
-  } catch (e) {
-    return null;
+function saveSessionInfo(session) {
+  const info = { cookie: true, user: session.user, expiresAt: session.expiresAt };
+  localStorage.setItem('sigaa_session_info', JSON.stringify(info));
+  for (const storage of [localStorage, sessionStorage]) {
+    storage.removeItem('sigaa_token');
+    storage.removeItem('sigaa_token_info');
   }
-  return null;
-}
-
-function saveTokenWithExpiry(token, storageType = 'local', user = '') {
-  // Tenta extrair expiry do JWT
-  let expiresAt = parseJwtExpiry(token);
-
-  // Se backend retornar expiresIn (não presente atualmente), você pode
-  // adaptar para usar esse valor. Aqui assume expiry embutido no JWT.
-
-  const info = { token, expiresAt, user };
-  if (storageType === 'session') {
-    sessionStorage.setItem('sigaa_token', token);
-    sessionStorage.setItem('sigaa_token_info', JSON.stringify(info));
-    localStorage.removeItem('sigaa_token');
-    localStorage.removeItem('sigaa_token_info');
-  } else {
-    localStorage.setItem('sigaa_token', token);
-    localStorage.setItem('sigaa_token_info', JSON.stringify(info));
-    sessionStorage.removeItem('sigaa_token');
-    sessionStorage.removeItem('sigaa_token_info');
-  }
-
-  // Inicia/atualiza timer de exibição do token
   startTokenTimer();
 }
-
 function getTokenInfo() {
-  const infoLocal = localStorage.getItem('sigaa_token_info');
-  if (infoLocal) {
-    try { return JSON.parse(infoLocal); } catch (e) { /* fallthrough */ }
-  }
-  const infoSession = sessionStorage.getItem('sigaa_token_info');
-  if (infoSession) {
-    try { return JSON.parse(infoSession); } catch (e) { /* fallthrough */ }
-  }
-  return null;
+  try { return JSON.parse(localStorage.getItem('sigaa_session_info')); }
+  catch { return null; }
 }
-
 function clearStoredTokenInfo() {
-  localStorage.removeItem('sigaa_token');
-  localStorage.removeItem('sigaa_token_info');
-  sessionStorage.removeItem('sigaa_token');
-  sessionStorage.removeItem('sigaa_token_info');
+  localStorage.removeItem('sigaa_session_info');
+  for (const storage of [localStorage, sessionStorage]) {
+    storage.removeItem('sigaa_token');
+    storage.removeItem('sigaa_token_info');
+  }
 }
 
 function ensureTokenStatusElement() {
@@ -5863,27 +5847,27 @@ function formatTimeRemaining(ms) {
 function updateTokenStatusUI() {
   const info = getTokenInfo();
   const el = ensureTokenStatusElement();
-  if (!info || !info.token) {
-    el.textContent = 'Sem token salvo';
+  if (!info || !info.cookie) {
+    el.textContent = 'Sem sessão ativa';
     return;
   }
 
   if (!info.expiresAt) {
-    el.textContent = 'Token presente (expiração desconhecida)';
+    el.textContent = 'Sessão ativa';
     return;
   }
 
   const now = Date.now();
   const remaining = info.expiresAt - now;
   if (remaining <= 0) {
-    el.textContent = 'Token expirado';
+    el.textContent = 'Sessão expirada';
     // opcional: remover token expirado automaticamente
     // clearStoredTokenInfo();
     // stopTokenTimer();
     return;
   }
 
-  el.textContent = `Token válido por: ${formatTimeRemaining(remaining)}`;
+  el.textContent = `Sessão válida por: ${formatTimeRemaining(remaining)}`;
 }
 
 function startTokenTimer() {
@@ -5902,7 +5886,7 @@ function startTokenTimer() {
       stopTokenTimer();
       // notifica o usuário visualmente
       const el = ensureTokenStatusElement();
-      el.textContent = 'Token expirado — faça login novamente';
+      el.textContent = 'Sessão expirada — faça login novamente';
       return;
     }
     updateTokenStatusUI();
@@ -6342,8 +6326,7 @@ function initExamForm() {
       const response = await fetchApi(`/api/calendario/eventos?curso=${curso}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${info.token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           turmaId: subject,
