@@ -1569,10 +1569,16 @@ async function handleLoginSubmit(e) {
     const resp = await fetchApi('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user, pass, remember: manterLogado })
+      body: JSON.stringify({ user, pass, remember: manterLogado }),
+      signal: AbortSignal.timeout(50000)
     });
     if (!resp.ok) {
       const failure = await resp.json().catch(() => ({}));
+      if (failure.type === 'ACADEMIC_NOTIFICATIONS_PENDING') {
+        showAcademicNotificationsModal({ ...failure, sigaaUrl: 'https://sig.cefetmg.br/sigaa/verTelaLogin.do', instructions: 'Acesse o SIGAA, visualize suas notificações acadêmicas e tente novamente.' });
+        if (overlayDiv) overlayDiv.style.display = 'none';
+        return;
+      }
       throw new Error(failure.error || 'Não foi possível fazer login. Tente novamente.');
     }
     const session = await resp.json();

@@ -20,6 +20,8 @@ process.env.SECRET = 'browser-test-only-secret';
 process.env.ENC_SECRET = 'a'.repeat(32);
 process.env.ENC_SECRET_USER = 'b'.repeat(32);
 process.env.TOKEN_REVOCATION_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'sigaa-browser-revocations-'));
+process.env.SESSION_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'sigaa-browser-sessions-'));
+require.cache[require.resolve(path.join(backend, 'lib/sigaa-login'))] = { exports: { verifySigaaLogin: async () => true } };
 const browserSession = require(path.join(backend, 'lib/browser-session'));
 const auth = require(path.join(backend, 'api/auth'));
 app.use('/api', browserSession.middleware);
