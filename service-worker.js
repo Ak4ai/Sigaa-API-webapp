@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sigaa-pwa-v44';
+const CACHE_NAME = 'sigaa-pwa-v45';
 const SW_PATH = self.location.pathname;
 const BASE_PATH = SW_PATH.replace(/\/service-worker\.js$/, '');
 
@@ -7,6 +7,9 @@ const urlsToCache = [
   `${BASE_PATH}/index.html`,
   `${BASE_PATH}/style.css`,
   `${BASE_PATH}/script.js`,
+  `${BASE_PATH}/redirect.js`,
+  `${BASE_PATH}/pwa.js`,
+  `${BASE_PATH}/boletim.js`,
   `${BASE_PATH}/manifest.json`,
   `${BASE_PATH}/vendor/jspdf.umd.min.js`,
   `${BASE_PATH}/vendor/jspdf.plugin.autotable.min.js`,

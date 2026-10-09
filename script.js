@@ -2,10 +2,7 @@
 // <script src="boletim.js"></script> deve estar incluído no index.html antes de script.js para garantir que a função esteja disponível
 
 // URL base da API — em desenvolvimento local o server.js injeta window.API_BASE_URL via index.html
-const API_BASE = window.API_BASE_URL ||
-  (((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port === '3000')
-    ? 'http://localhost:3000'
-    : 'https://ak4ai-sigaa.duckdns.org');
+const API_BASE = window.API_BASE_URL || window.location.origin;
 let __logoutInProgress = false;
 let __sessionVersion = 0;
 let __loginFormState = null;

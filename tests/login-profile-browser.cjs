@@ -9,12 +9,13 @@ const express = require(path.join(backend, 'node_modules/express'));
 const puppeteer = require(path.join(backend, 'node_modules/puppeteer-core'));
 const app = express();
 app.use(express.json());
+app.use(require(path.join(backend, 'lib/security-headers')));
 let loginUser = '', scraperCalls = 0;
 function data(name) {
   return { dadosInstitucionais: { Nome: name, 'Matrícula': '123456', Curso: 'Engenharia da Computação', Email: 'teste@example.test' },
     horariosDetalhados: [], horariosSimplificados: [], avisosPorDisciplina: [], atividadesPortal: [] };
 }
-app.get('/', (req,res) => res.send(fs.readFileSync(path.join(frontend,'index.html'),'utf8').replace('</head>','<script>window.API_BASE_URL=window.location.origin;</script></head>')));
+app.get('/', (req,res) => res.send(fs.readFileSync(path.join(frontend,'index.html'),'utf8')));
 process.env.SECRET = 'browser-test-only-secret';
 process.env.ENC_SECRET = 'a'.repeat(32);
 process.env.ENC_SECRET_USER = 'b'.repeat(32);
@@ -58,6 +59,7 @@ app.use(express.static(frontend));
     }
   });
   page.on('pageerror',error=>errors.push(error.message));
+  await page.evaluateOnNewDocument(() => document.addEventListener('securitypolicyviolation', e => { (window.__cspViolations ||= []).push(e.violatedDirective); }));
   await page.setRequestInterception(true);
   page.on('request',request=>request.url().startsWith('http://127.0.0.1:')?request.continue():request.abort());
   await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
@@ -277,6 +279,21 @@ app.use(express.static(frontend));
   await page.reload({waitUntil:'networkidle0'});
   assert.ok(await page.evaluate(() => getTokenInfo()?.cookie));
   assert.ok(scraperCalls > beforeReload, 'cookie restores the session without browser storage credentials');
+  assert.deepEqual(await page.evaluate(()=>window.__cspViolations || []),[]);
+  const blocked = await page.evaluate(async () => {
+    window.__injectedScript = 0;
+    const script = document.createElement('script');
+    script.textContent = 'window.__injectedScript = 1';
+    document.head.appendChild(script);
+    const button = document.createElement('button');
+    button.setAttribute('onclick', 'window.__injectedScript = 2');
+    document.body.appendChild(button); button.click();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    script.remove(); button.remove();
+    return { executed: window.__injectedScript, violations: window.__cspViolations || [] };
+  });
+  assert.equal(blocked.executed, 0);
+  assert.ok(blocked.violations.some(value => value.startsWith('script-src')));
   assert.deepEqual(errors,[]);
   console.log('PASS: login hints, success signal, one/two profiles, add/cancel, swap, token ownership, mobile/desktop, preference off; no JS errors.');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
