@@ -1699,7 +1699,7 @@ async function consultarComToken(token, userFromLogin = '', requestedMode = null
 
     const data = await response.json();
     if (sessionVersion !== __sessionVersion) return;
-    console.log('Resposta da API:', data);
+    console.log('Consulta concluída.');
     console.log(`⏱ Tempo de resposta da API: ${duracaoSegundos}s`);
 
     if (!response.ok) {
@@ -4787,7 +4787,7 @@ async function atualizarLinkCalendarioParaCurso(dados) {
   if (!dados) return;
 
   const curso = dados.Curso || dados.curso || '';
-  console.log('🔍 Curso detectado:', curso);
+  console.log('Curso identificado para atualizar o calendário.');
 
   const urlPadrao = 'https://www.divinopolis.cefetmg.br/alunos/horario-2/cursos-tecnicos/';
   const urlCalendarioEng = 'https://www.eng-computacao.divinopolis.cefetmg.br/2019/03/18/calendario-letivo/';
@@ -5667,7 +5667,7 @@ function startPollingProgress(clientId) {
 
       if (response.ok) {
         const data = await response.json();
-        console.log(`[PROGRESS] ${data.progress}% - ${data.status}`);
+        console.log(`[PROGRESS] ${data.progress}%`);
         updateProgressBar(data.progress);
 
         // Continua polling até hideQueueDisplay() parar (quando fetch completa)
