@@ -26,7 +26,7 @@ function context(base = 'https://api.example.test', page = 'https://app.example.
         alert: message => alerts.push(message),
         document: {
             getElementById: () => null, querySelector: () => null,
-            querySelectorAll: () => [], body: { classList: { add() {}, remove() {} } }
+            querySelectorAll: () => [], body: { classList: { add() {}, remove() {}, contains() { return false; } } }
         },
         fetch: async (url, options) => { calls.push({ url, options }); return { ok: true, status: 200 }; },
         getAppMode: () => 'graduacao',

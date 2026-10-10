@@ -134,13 +134,6 @@
             <label for="user">CPF (sem pontos ou traços):</label>
             <input type="text" id="user" name="username" autocomplete="username" inputmode="numeric" autocapitalize="none" spellcheck="false" required />
 
-            <div id="saved-profiles-container" class="saved-profiles-container" style="display:none;">
-              <label for="saved-profile-select">Usuários salvos:</label>
-              <select id="saved-profile-select" name="saved-profile-select">
-                <option value="">Selecione um usuário salvo</option>
-              </select>
-            </div>
-
             <label for="pass">Senha:</label>
             <input type="password" id="pass" name="password" autocomplete="current-password" required />
             <div class="password-info">
@@ -709,6 +702,9 @@
   <!-- Aba Calendário -->
   <div class="tab-content" id="tab-calendario">
     <div class="tab-calendar-container">
+      <div class="calendar-page-heading">
+        <div><span class="calendar-page-eyebrow">Sua rotina acadêmica</span><h2>Calendário</h2><p>Atividades, datas institucionais e provas da sua turma em um só lugar.</p></div>
+      </div>
       <div class="tab-calendar-layout-grid">
         <!-- Lado Esquerdo: Calendário Grid -->
         <div class="tab-calendar-main-panel">
@@ -719,8 +715,8 @@
             <div class="tab-calendar-actions">
               <button id="mobile-add-exam-btn" class="calendar-action-btn-today" style="display: none;">Adicionar Prova</button>
               <button id="tab-calendar-today-btn" class="calendar-action-btn-today">Hoje</button>
-              <button id="tab-calendar-prev" class="calendar-nav-btn" title="Mês anterior"><span class="material-icons">chevron_left</span></button>
-              <button id="tab-calendar-next" class="calendar-nav-btn" title="Próximo mês"><span class="material-icons">chevron_right</span></button>
+              <button id="tab-calendar-prev" class="calendar-nav-btn" title="Mês anterior" aria-label="Mês anterior">‹</button>
+              <button id="tab-calendar-next" class="calendar-nav-btn" title="Próximo mês" aria-label="Próximo mês">›</button>
             </div>
           </div>
           
@@ -745,7 +741,7 @@
 
           <!-- Nota de calendário não oficial -->
           <div class="tab-calendar-warning">
-            <span class="material-icons warning-icon">info</span>
+            <span class="warning-icon" aria-hidden="true">ⓘ</span>
             <span>Este calendário não é 100% oficial e serve apenas como guia de fácil acesso.</span>
           </div>
         </div>
@@ -762,11 +758,12 @@
 
         <!-- Lado Direito: Adicionar Prova (Apenas Desktop) -->
         <div class="tab-calendar-form-panel">
-          <div class="tab-calendar-form-card">
+          <div class="tab-calendar-form-card" role="dialog" aria-modal="true" aria-labelledby="exam-dialog-title">
             <button type="button" id="close-exam-modal-btn" class="modal-close-btn" style="display: none;">✕</button>
-            <h4>Adicionar Data de Prova</h4>
+            <h4 id="exam-dialog-title">Adicionar prova</h4>
             <p id="exam-auth-help" class="exam-access-help"></p>
             <button type="button" id="exam-refresh-access" class="exam-refresh-access">Atualizar minhas turmas</button>
+            <button type="button" id="exam-retry-events" class="exam-refresh-access" hidden>Tentar carregar matérias novamente</button>
             <form id="add-exam-form">
               <label for="exam-subject">Matéria:</label>
               <select id="exam-subject" required>

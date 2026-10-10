@@ -1,4 +1,15 @@
-if ('serviceWorker' in navigator) {
+const localPreview = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+if (localPreview && 'serviceWorker' in navigator) {
+  // Local previews should always use the current files, without an old PWA controller.
+  window.addEventListener('load', async () => {
+    const controlled = !!navigator.serviceWorker.controller;
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map(registration => registration.unregister()));
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames.filter(name => name.startsWith('sigaa-pwa-')).map(name => caches.delete(name)));
+    if (controlled) location.reload();
+  });
+} else if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
       navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).then(function(registration) {
         if (registration.waiting) {

@@ -10,7 +10,7 @@ const puppeteer = require(path.join(backend, 'node_modules/puppeteer-core'));
 const app = express();
 app.use(express.json());
 app.use(require(path.join(backend, 'lib/security-headers')));
-let loginUser = '', scraperCalls = 0;
+let loginUser = '', scraperCalls = 0, scraperDelay = 0, scraperFailure = false;
 function data(name) {
   return { dadosInstitucionais: { Nome: name, 'Matrícula': '123456', Curso: 'Engenharia da Computação', Email: 'teste@example.test' },
     horariosDetalhados: [], horariosSimplificados: [], avisosPorDisciplina: [], atividadesPortal: [] };
@@ -32,6 +32,8 @@ app.post('/api/scraper', async (req,res) => {
   if (!payload) return res.status(401).json({error:'Invalid session'});
   loginUser = payload.user;
   scraperCalls++;
+  if (scraperDelay) await new Promise(resolve => setTimeout(resolve, scraperDelay));
+  if (scraperFailure) return res.status(503).json({error:'Falha temporária de teste'});
   res.json(data(loginUser === '222' ? 'Bruno Lima' : 'Ana Silva'));
 });
 app.post('/api/logout', require(path.join(backend, 'api/logout')));
@@ -39,13 +41,30 @@ app.get('/api/queue-status',(req,res)=>res.json({position:1,avgTimeMs:1000}));
 app.get('/api/scraper-progress',(req,res)=>res.json({progress:100,status:'Concluído'}));
 app.get('/api/calendario',(req,res)=>res.json({link:'https://example.test/calendar.pdf'}));
 let examWrites = 0;
+let savedExam = null;
 const examClass = { id: 'verified-class', disciplina: 'Matemática', turma: '01', semestre: '2026.2', provasCadastradas: 0 };
-app.get('/api/calendario/eventos',(req,res)=>res.json({eventos:[], turmas: browserSession.cookieToken(req) ? [{ ...examClass, provasCadastradas: examWrites }] : []}));
+const visualEvents = [
+  {data:'2026-10-12',titulo:'Feriado institucional',tipo:'feriado'},
+  {data:'2026-10-12',titulo:'Prazo para requerimentos acadêmicos e confirmação de matrícula',tipo:'outros'},
+  {data:'2026-10-12',titulo:'Recesso escolar',tipo:'recesso'}
+];
+app.get('/api/calendario/eventos',(req,res)=>res.json({eventos:[...visualEvents,...(savedExam ? [savedExam] : [])], turmas: browserSession.cookieToken(req) ? [
+  { ...examClass, provasCadastradas: examWrites },
+  { ...examClass, id:'project-without-schedule', disciplina:'Projeto Integrador de Engenharia e Desenvolvimento de Sistemas Computacionais', provasCadastradas:0 },
+  { ...examClass, id:'full-class', disciplina:'Estágio', provasCadastradas:6 }
+] : []}));
 app.post('/api/calendario/eventos',(req,res)=>{
   assert.ok(browserSession.cookieToken(req));
+  if (req.body.acao === 'remover') {
+    assert.equal(req.body.provaId, savedExam.id);
+    savedExam = null;
+    examWrites--;
+    return res.json({success:true});
+  }
   assert.equal(req.body.turmaId, 'verified-class');
   assert.equal(req.body.disciplina, undefined);
   examWrites++;
+  savedExam = { id:'11111111-1111-4111-8111-111111111111', data:req.body.data, titulo:req.body.titulo, tipo:'prova', manual:true, porOutroUsuario:false, disciplina:examClass.disciplina };
   res.json({success:true});
 });
 app.use(express.static(frontend));
@@ -63,10 +82,10 @@ app.use(express.static(frontend));
   page.on('pageerror',error=>errors.push(error.message));
   await page.evaluateOnNewDocument(() => document.addEventListener('securitypolicyviolation', e => { (window.__cspViolations ||= []).push(e.violatedDirective); }));
   await page.setRequestInterception(true);
-  page.on('request',request=>request.url().startsWith('http://127.0.0.1:')?request.continue():request.abort());
+  page.on('request',request=>request.url().startsWith('http://127.0.0.1:') || process.env.SIGAA_VISUAL_NETWORK === '1' && /^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(request.url()) ?request.continue():request.abort());
   await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
   await page.goto('http://127.0.0.1:'+server.address().port,{waitUntil:'networkidle0'});
-  await page.evaluate(()=>{navigator.credentials.store=async credential=>{window.__storedCredential={id:credential.id,password:credential.password};return credential;};});
+  await page.evaluate(()=>{navigator.credentials.store=async credential=>{window.__credentialStoreCalls=(window.__credentialStoreCalls || 0)+1;window.__storedCredential={id:credential.id,password:credential.password};return credential;};});
   await page.evaluate(()=>{localStorage.setItem('sigaa-show-desktop-profile-select','1');localStorage.setItem('sigaa_aviso_fechado','1');});
   await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
   const backdrop = await page.evaluate(()=>Array.from(document.querySelectorAll('.login-backdrop span')).map(logo=>{
@@ -84,6 +103,7 @@ app.use(express.static(frontend));
     const backgrounds = new Set();
     for (const [mode,accent] of themes) {
       await page.select('#home-mode-select',mode);
+      await page.evaluate(() => fitLoginCard());
       const layout = await page.evaluate(()=>{
         const card = document.getElementById('home-content').getBoundingClientRect();
         const form = document.getElementById('sigaa-form').getBoundingClientRect();
@@ -94,7 +114,14 @@ app.use(express.static(frontend));
       });
       assert.ok(layout.left>=8 && layout.right<=layout.width-8 && layout.scrollWidth<=layout.width && layout.formFits,JSON.stringify(layout));
       assert.equal(layout.accent,accent);
-      assert.equal(layout.overflow,'auto');
+      assert.equal(layout.overflow,'hidden');
+      assert.equal(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight), true);
+      assert.ok(await page.$eval('#home-content', el => {
+        const card = el.getBoundingClientRect();
+        const panel = document.getElementById('tab-home').getBoundingClientRect();
+        const shell = document.getElementById('home-consultation-shell');
+        return Math.abs((card.top + card.bottom) / 2 - (panel.top + panel.bottom) / 2) <= 12 && card.top >= panel.top && card.bottom <= panel.bottom && getComputedStyle(shell).overflowY === 'visible';
+      }), 'login card must be vertically centered');
       backgrounds.add(layout.background);
       if(width===390 && height===844 || width===1366) {
         await page.screenshot({path:path.join(os.tmpdir(),`sigaa-login-${mode}-${width}.png`),fullPage:true});
@@ -118,13 +145,58 @@ app.use(express.static(frontend));
   assert.equal(await page.$eval('#home-mode-select',el=>el.closest('form').id),'sigaa-form');
   await page.screenshot({path:path.join(os.tmpdir(), 'sigaa-login-mobile.png'),fullPage:true});
   await page.type('#user','111');await page.type('#pass',' test password ');
-  await page.click('#sigaa-form button[type=submit]');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.evaluate(() => document.activeElement.id === 'pass'), false, 'Enter removes the input focus before showing the loading overlay');
   await page.waitForFunction(()=>document.querySelector('#home-account-select') && !document.querySelector('#sigaa-form'));
-  await page.waitForSelector('#home-account-select',{visible:true});
+  await page.waitForSelector('#mobile-user-name.home-account-select',{visible:true});
+  assert.equal(await page.$eval('#mobile-user-name', el => el.selectedOptions[0]?.textContent), 'Ana Silva');
+  assert.ok(await page.evaluate(() => {
+    const name = document.getElementById('mobile-user-name').getBoundingClientRect();
+    const actions = document.querySelector('.mobile-user-card-actions').getBoundingClientRect();
+    return name.bottom <= actions.top;
+  }), 'mobile selector must sit above refresh/logout');
   let options=await page.$eval('#home-account-select',el=>Array.from(el.options).filter(o=>!o.hidden).map(o=>o.textContent));
-  assert.deepEqual(options,['Adicionar conta']);
+  assert.deepEqual(options,['＋ Adicionar conta']);
   assert.equal(await page.evaluate(()=>getTokenInfo().user),'111');
   assert.deepEqual(await page.evaluate(()=>window.__storedCredential),{id:'111',password:' test password '});
+  for (const width of [390,768,820,1024,1040]) {
+    await page.setViewport({width,height:1100,isMobile:true,hasTouch:true});
+    await page.evaluate(() => activateTab('tab-home'));
+    assert.ok(await page.evaluate(() => {
+      const header = document.getElementById('home-content-header').getBoundingClientRect();
+      const user = document.getElementById('mobile-user-card').getBoundingClientRect();
+      const institution = document.getElementById('dados-institucionais').getBoundingClientRect();
+      return Math.abs(user.width-header.width)<2 && Math.abs(institution.width-header.width)<2 && header.width>=innerWidth-64 && institution.right<=innerWidth;
+    }), `home cards must use the available width at ${width}`);
+    if (width === 820) await page.screenshot({path:path.join(os.tmpdir(),'sigaa-home-ipad.png'),fullPage:true});
+  }
+  const attendance = await page.evaluate(() => {
+    const items = [
+      {disciplina:'Sistemas Digitais',numeroAulasDefinidas:0,frequencia:[]},
+      {disciplina:'Projeto',numeroAulasDefinidas:60,frequencia:[]},
+      {disciplina:'Matemática',numeroAulasDefinidas:80,frequencia:[{data:'2026-10-01',status:'2 Faltas'}]}
+    ];
+    preencherSelectorFrequencias(items);
+    preencherTabelaFrequencias(items);
+    const rows = [...document.querySelectorAll('#tabela-frequencias tbody tr')].map(row => row.textContent);
+    const options = [...document.getElementById('select-disciplina-frequencia').options].map(option => option.value);
+    preencherTabelaFrequencias(items,'Sistemas Digitais');
+    const empty = document.getElementById('resumo-frequencia-disciplina').textContent;
+    const noBar = document.getElementById('barra-progresso-faltas').style.display === 'none';
+    preencherTabelaFrequencias(items,'Matemática');
+    const normal = document.querySelector('#tabela-frequencias tbody').textContent;
+    const noticeCleared = !document.getElementById('resumo-frequencia-disciplina').classList.contains('frequency-empty-notice');
+    preencherSelectorFrequencias(frequenciasGlobais);
+    preencherTabelaFrequencias(frequenciasGlobais);
+    return {rows,options,empty,noBar,normal,noticeCleared};
+  });
+  assert.equal(attendance.rows.length,3);
+  assert.ok(attendance.rows[0].includes('não registrada'));
+  assert.ok(attendance.rows[1].includes('não registrada'));
+  assert.ok(attendance.rows[2].includes('97.5%'));
+  assert.ok(attendance.options.includes('Sistemas Digitais'));
+  assert.ok(attendance.empty.includes('não registrada'));
+  assert.ok(attendance.noBar && attendance.noticeCleared && attendance.normal.includes('2 Faltas'));
   await page.setViewport({width:1366,height:900,isMobile:true,hasTouch:true});
   await page.evaluate(async()=>{
     const checkbox = document.getElementById('calendar-view-checkbox');
@@ -149,9 +221,20 @@ app.use(express.static(frontend));
   assert.equal(await calendarFits(),true);
   await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
   assert.equal(await page.$eval('#user',el=>el.autocomplete),'username');
+  await page.$eval('#cancel-account-login', el => el.scrollIntoView({ behavior: 'instant', block: 'center' }));
+  await new Promise(resolve => setTimeout(resolve, 350));
   await page.click('#cancel-account-login');
   assert.equal(await page.evaluate(()=>document.body.classList.contains('adding-account')),false);
-  await page.select('#home-account-select','__add_account__');
+  await page.select('#mobile-user-name','__add_account__');
+  for (const width of [390,768,820,1024,1040]) {
+    await page.setViewport({width,height:1100,isMobile:true,hasTouch:true});
+    assert.ok(await page.$eval('#sigaa-form', form => {
+      const rect = form.getBoundingClientRect();
+      const header = document.getElementById('home-content-header').getBoundingClientRect();
+      return Math.abs(rect.width-header.width)<2 && rect.width>=innerWidth-64 && rect.right<=innerWidth;
+    }), `add-account form should use the available width at ${width}`);
+  }
+  await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
   await page.$eval('#user',el=>el.value='');
   await page.$eval('#pass',el=>el.value='');
   await page.type('#user','222');await page.type('#pass','another password');
@@ -159,7 +242,10 @@ app.use(express.static(frontend));
   await page.waitForFunction(()=>getSavedProfiles().length===2 && !document.querySelector('#sigaa-form'));
   options=await page.$eval('#home-account-select',el=>Array.from(el.options).filter(o=>!o.hidden).map(o=>o.textContent));
   assert.deepEqual(options,['Ana']);
-  await page.select('#home-account-select','111');
+  const credentialCallsBeforeSwitch = await page.evaluate(() => window.__credentialStoreCalls);
+  await page.select('#mobile-user-name','111');
+  assert.equal(await page.evaluate(() => window.__credentialStoreCalls), credentialCallsBeforeSwitch, 'switching saved profiles never stores a password');
+  assert.deepEqual(await page.evaluate(() => ({connected:!!document.getElementById('sigaa-form'),user:__loginFormState.form.querySelector('#user').value,pass:__loginFormState.form.querySelector('#pass').value})), {connected:false,user:'',pass:''});
   assert.equal(await page.evaluate(()=>getSelectedProfileUser()),'111');
   assert.equal(await page.$eval('#home-account-select',el=>el.selectedOptions[0].textContent),'Ana Silva');
   assert.deepEqual(await page.$eval('#home-account-select',el=>Array.from(el.options).filter(o=>!o.hidden).map(o=>o.textContent)),['Bruno']);
@@ -265,6 +351,73 @@ app.use(express.static(frontend));
   });
   await page.waitForFunction(()=>document.getElementById('add-exam-status').textContent.includes('sucesso'));
   assert.equal(examWrites, 1);
+  await page.waitForFunction(() => cachedCalendarEvents?.some(event => event.manual));
+  await page.evaluate(() => {
+    tabCalendarSelectedDate = new Date(2026, 10, 10);
+    tabCalendarCurrentDate = new Date(2026, 10, 1);
+    activateTab('tab-calendario');
+    renderTabCalendar();
+  });
+  assert.equal(await page.$eval('#exam-subject', el => el.options.length), 4, 'all authorized subjects appear, including classes without schedules');
+  assert.equal(await page.$eval('#exam-subject', el => el.querySelector('option[value="full-class"]').disabled), true, 'a full class remains visible');
+  await page.select('#exam-subject', 'verified-class');
+  await page.evaluate(() => populateExamSubjects());
+  assert.equal(await page.$eval('#exam-subject', el => el.value), 'verified-class', 'render preserves selected class');
+  assert.equal(await page.evaluate(() => !!createAgendaCard({id:'other',manual:true,other:true,title:'Outra prova',type:'prova'}).querySelector('.exam-remove-btn')), false);
+  for (const width of [320,390,768,1040,1041,1366,1600]) {
+    await page.setViewport({width,height:900});
+    await new Promise(resolve => setTimeout(resolve,100));
+    await page.evaluate(() => activateTab('tab-calendario'));
+    await page.evaluate(() => {
+      tabCalendarCurrentDate = new Date(2026, 9, 1);
+      tabCalendarSelectedDate = new Date(2026, 9, 12);
+      renderTabCalendar();
+    });
+    await page.screenshot({path:path.join(os.tmpdir(),`sigaa-calendar-${width}.png`),fullPage:true});
+    assert.ok(await page.$eval('.tab-calendar-container', el => el.getBoundingClientRect().width > 0 && el.scrollWidth <= el.clientWidth + 1), `calendar overflows at ${width}`);
+    assert.equal(await page.$$eval('#tab-calendar-grid .tab-calendar-day', cells => cells.length), 35);
+    if (width <= 1040) assert.ok(await page.evaluate(() => {
+      const main = document.querySelector('.tab-calendar-main-panel').getBoundingClientRect();
+      const grid = document.querySelector('.tab-calendar-layout-grid').getBoundingClientRect();
+      return Math.abs(main.width - grid.width) <= 1;
+    }), 'mobile and tablet panels should use the full available width');
+    if (width > 1040) assert.equal(await page.$$eval('#tab-calendar-grid .tab-calendar-day', cells => new Set(cells.map(cell => Math.round(cell.getBoundingClientRect().height))).size), 1);
+    {
+      await page.click('#mobile-add-exam-btn');
+      const modalFits = await page.$eval('.tab-calendar-form-card', el => {
+        const rect = el.getBoundingClientRect();
+        return rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight && el.scrollWidth <= el.clientWidth;
+      });
+      assert.ok(modalFits, `exam dialog overflows at ${width}`);
+      await page.screenshot({path:path.join(os.tmpdir(),`sigaa-calendar-dialog-${width}.png`),fullPage:true});
+      await page.click('#close-exam-modal-btn');
+      assert.equal(await page.evaluate(() => document.body.classList.contains('calendar-dialog-open')), false);
+    }
+  }
+  await page.setViewport({width:390,height:360});
+  await page.evaluate(() => activateTab('tab-calendario'));
+  await page.click('#mobile-add-exam-btn');
+  assert.ok(await page.$eval('.tab-calendar-form-card', el => {
+    const rect = el.getBoundingClientRect();
+    return rect.top >= 0 && rect.bottom <= innerHeight && el.scrollHeight >= el.clientHeight;
+  }), 'short-screen dialog stays inside the viewport');
+  await page.keyboard.press('Tab');
+  assert.ok(await page.evaluate(() => !!document.activeElement.closest('.tab-calendar-form-card')));
+  await page.keyboard.press('Escape');
+  assert.equal(await page.evaluate(() => document.body.classList.contains('calendar-dialog-open')), false);
+  await page.setViewport({width:1600,height:900});
+  await page.evaluate(() => {
+    activateTab('tab-calendario');
+    tabCalendarCurrentDate = new Date(2026, 7, 31);
+    renderTabCalendar();
+  });
+  assert.equal(await page.$$eval('#tab-calendar-grid .tab-calendar-day', cells => cells.length), 42, 'six-week months retain their last days');
+  await page.click('#tab-calendar-next');
+  assert.ok((await page.$eval('#tab-calendar-title', el => el.textContent)).toLowerCase().includes('setembro'), 'navigation on day 31 does not skip a month');
+  await page.waitForSelector('.exam-remove-btn', {visible:true});
+  await page.click('.exam-remove-btn');
+  await page.waitForFunction(() => !cachedCalendarEvents?.some(event => event.manual));
+  assert.equal(examWrites, 0);
   const cookieCheck = await page.evaluate(() => ({
     accessible: document.cookie,
     session: JSON.parse(localStorage.getItem('sigaa_session_info')),
@@ -281,6 +434,74 @@ app.use(express.static(frontend));
   await page.reload({waitUntil:'networkidle0'});
   assert.ok(await page.evaluate(() => getTokenInfo()?.cookie));
   assert.ok(scraperCalls > beforeReload, 'cookie restores the session without browser storage credentials');
+  // A slow refresh must preserve both columns, even if the request fails.
+  await page.waitForFunction(() => !__consultaInProgress);
+  await page.waitForFunction(() => !document.getElementById('loading-overlay') || getComputedStyle(document.getElementById('loading-overlay')).display === 'none');
+  for (const width of [390, 1366]) {
+    await page.setViewport({width,height:900});
+    await page.evaluate(() => activateTab('tab-home'));
+    await new Promise(resolve => setTimeout(resolve, 250));
+    const before = await page.$eval('#dados-institucionais', el => ({html:el.innerHTML,height:el.getBoundingClientRect().height}));
+    scraperDelay = 1000;
+    scraperFailure = width === 1366;
+    const calls = scraperCalls;
+    await page.evaluate(() => { executarRefreshHeader(); executarRefreshHeader(); });
+    await page.waitForFunction(() => document.getElementById('home-content').getAttribute('aria-busy') === 'true');
+    const during = await page.$eval('#dados-institucionais', el => ({html:el.innerHTML,height:el.getBoundingClientRect().height}));
+    assert.deepEqual(during, before, 'institutional data must not collapse while refreshing');
+    assert.equal(await page.$eval('#loading-overlay', el => el.parentElement.id), 'home-content');
+    await page.waitForFunction(() => !__consultaInProgress);
+    assert.equal(scraperCalls, calls + 1, 'duplicate refresh is ignored');
+    if (scraperFailure) assert.equal(await page.$eval('#dados-institucionais', el => el.innerHTML), before.html);
+    assert.equal(await page.$eval('#home-content', el => el.hasAttribute('aria-busy')), false);
+    assert.equal(await page.evaluate(() => __loginFormState?.form.querySelector('#loading-overlay')?.parentElement.id), 'sigaa-form');
+    assert.equal(await page.$('#sigaa-form'), null, 'refresh must not restore password-manager credential fields');
+  }
+  scraperDelay = 0;
+  scraperFailure = false;
+  const calendarChecks = await page.evaluate(async () => {
+    const original = fetchApi;
+    let calls = 0;
+    const holiday = { data: '2026-10-12', titulo: 'Feriado de teste', tipo: 'feriado' };
+    try {
+      cachedCalendarEvents = null;
+      fetchApi = async () => {
+        calls++;
+        await new Promise(resolve => setTimeout(resolve, 50));
+        return { ok: true, json: async () => ({ eventos: [holiday], turmas: [] }) };
+      };
+      const both = await Promise.all([fetchCalendarEvents('computacao'), fetchCalendarEvents('computacao')]);
+      const shared = calls === 1 && both.every(events => events?.[0]?.tipo === 'feriado');
+      cachedCalendarEvents = null;
+      calls = 0;
+      fetchApi = async () => { calls++; throw new Error('Temporary test outage'); };
+      await fetchCalendarEvents('computacao');
+      const retryable = cachedCalendarEvents === null && calls === 3;
+      calls = 0;
+      fetchApi = async (endpoint, options) => {
+        calls++;
+        if (options.credentials !== 'omit') return { ok: false, status: 409 };
+        return { ok: true, json: async () => ({ eventos: [holiday, {...holiday, manual: true}], turmas: [{ id: 'private' }] }) };
+      };
+      const publicEvents = await fetchCalendarEvents('computacao');
+      const publicOnly = calls === 2 && publicEvents.length === 1 && verifiedExamClasses.length === 0;
+      invalidateCalendarEvents();
+      let releaseOld;
+      fetchApi = async () => {
+        await new Promise(resolve => { releaseOld = resolve; });
+        return {ok:true,json:async()=>({eventos:[],turmas:[]})};
+      };
+      const oldRequest = fetchCalendarEvents('computacao');
+      invalidateCalendarEvents();
+      fetchApi = async () => ({ok:true,json:async()=>({eventos:[holiday],turmas:[{id:'new-class',disciplina:'Nova matéria',turma:'01',semestre:'2026.2',provasCadastradas:0}]})});
+      await fetchCalendarEvents('computacao');
+      releaseOld();
+      await oldRequest;
+      const staleSafe = verifiedExamClasses.length === 1 && verifiedExamClasses[0].id === 'new-class' && cachedCalendarEvents.length === 1;
+      return {shared, retryable, publicOnly, staleSafe};
+    } finally { fetchApi = original; cachedCalendarEvents = null; }
+  });
+  assert.deepEqual(calendarChecks, {shared:true,retryable:true,publicOnly:true,staleSafe:true});
   assert.deepEqual(await page.evaluate(()=>window.__cspViolations || []),[]);
   const blocked = await page.evaluate(async () => {
     window.__injectedScript = 0;

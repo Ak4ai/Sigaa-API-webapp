@@ -17,6 +17,7 @@ function restoreLoginForm(fresh = false) {
   let form = document.getElementById('sigaa-form') || __loginFormState?.form;
   if (!form) return null;
   if (fresh) {
+    clearLoginFields(form);
     const replacement = form.cloneNode(true);
     replacement.querySelectorAll('[data-bound]').forEach(element => delete element.dataset.bound);
     replacement.addEventListener('submit', handleLoginSubmit);
@@ -39,13 +40,25 @@ function restoreLoginForm(fresh = false) {
   return form;
 }
 
+function clearLoginFields(form) {
+  form?.querySelectorAll('#user, #pass').forEach(input => {
+    input.value = '';
+    input.defaultValue = '';
+  });
+}
+
+function detachLoginForm(form = document.getElementById('sigaa-form')) {
+  if (!form?.isConnected) return;
+  const placeholder = document.createComment('login-form');
+  __loginFormState = { form, placeholder };
+  form.replaceWith(placeholder);
+}
+
 async function notifySuccessfulLogin(user, pass) {
   const form = document.getElementById('sigaa-form');
   if (form) {
     history.replaceState(history.state, '', window.location.href);
-    const placeholder = document.createComment('login-form');
-    __loginFormState = { form, placeholder };
-    form.replaceWith(placeholder);
+    detachLoginForm(form);
   }
   try {
     if (window.isSecureContext && window.PasswordCredential && navigator.credentials?.store) {
@@ -54,8 +67,7 @@ async function notifySuccessfulLogin(user, pass) {
   } catch (error) {
     // A escolha do gerenciador de senhas não interfere no acesso ao aplicativo.
   } finally {
-    const passwordInput = form?.querySelector('#pass');
-    if (passwordInput) passwordInput.value = '';
+    clearLoginFields(form);
   }
 }
 
@@ -82,6 +94,11 @@ function closeProfileLogin(preservePassword = false) {
   if (button) button.hidden = true;
   const passwordInput = document.getElementById('pass');
   if (passwordInput && !preservePassword) passwordInput.value = '';
+  if (!preservePassword && !document.body.classList.contains('sem-dados')) {
+    const form = document.getElementById('sigaa-form');
+    clearLoginFields(form);
+    detachLoginForm(form);
+  }
   requestAnimationFrame(() => { ajustarAlturaNovidades(); ajustarAlturaCalendarioResponsavel(); });
 }
 
@@ -96,12 +113,13 @@ async function fetchApi(endpoint, options) {
   const method = (options?.method || 'GET').toUpperCase();
   if (!['GET', 'HEAD'].includes(method) && !__csrfToken) await loadBrowserSession();
   const headers = { ...(options?.headers || {}) };
-  if (endpoint.startsWith('/api/calendario/eventos') && typeof getSelectedProfileUser === 'function') {
+  const publicCalendar = endpoint.startsWith('/api/calendario/eventos') && method === 'GET' && options?.credentials === 'omit';
+  if (endpoint.startsWith('/api/calendario/eventos') && !publicCalendar && typeof getSelectedProfileUser === 'function') {
     const profile = getSelectedProfileUser();
     if (profile) headers['X-Profile-User'] = profile;
   }
   if (!['GET', 'HEAD'].includes(method)) headers['X-CSRF-Token'] = __csrfToken;
-  return fetch(url.href, { ...options, headers, credentials: 'include', redirect: 'error' });
+  return fetch(url.href, { ...options, headers, credentials: publicCalendar ? 'omit' : 'include', redirect: 'error' });
 }
 
 async function loadBrowserSession() {
@@ -480,8 +498,16 @@ function getResponsibleCalendarWeeksToRender(availableHeight) {
 }
 
 let cachedCalendarEvents = null;
-let fetchingCalendarEvents = false;
+let calendarEventsRequest = null;
 let lastFetchedCurso = null;
+let calendarEventsRevision = 0;
+function invalidateCalendarEvents() {
+  calendarEventsRevision++;
+  cachedCalendarEvents = null;
+  calendarEventsRequest = null;
+  verifiedExamClasses = [];
+  calendarEventsState = 'idle';
+}
 
 function obterCursoDoPerfil() {
   try {
@@ -493,12 +519,7 @@ function obterCursoDoPerfil() {
     const curso = dados.Curso || dados.curso || '';
     const cursoNormalized = curso.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-    const temDCDV = cursoNormalized.includes('DCDV');
-    const temDivinopolis = cursoNormalized.includes('DIVINOPOLIS');
-    const temBacharelado = cursoNormalized.includes('BACHARELADO');
-    const temMT = cursoNormalized.includes('MT');
-
-    const isComputacao = cursoNormalized.includes('ENGENHARIA DE COMPUTACAO') && temDCDV && temDivinopolis && temBacharelado && temMT;
+    const isComputacao = cursoNormalized.includes('COMPUTACAO');
     return isComputacao ? 'computacao' : 'mecatronica';
   } catch (e) {
     console.warn('Erro ao obter curso do perfil, usando padrão mecatronica:', e);
@@ -507,6 +528,7 @@ function obterCursoDoPerfil() {
 }
 
 let verifiedExamClasses = [];
+let calendarEventsState = 'idle';
 let calendarAccountKey = '';
 function examSession() {
   const info = getTokenInfo();
@@ -517,39 +539,56 @@ async function fetchCalendarEvents(curso) {
   const key = `${getSelectedProfileUser()}:${info?.expiresAt || ''}`;
   if (calendarAccountKey !== key) {
     calendarAccountKey = key;
-    cachedCalendarEvents = null;
-    verifiedExamClasses = [];
+    invalidateCalendarEvents();
   }
   if (lastFetchedCurso === curso && cachedCalendarEvents !== null) {
     return cachedCalendarEvents;
   }
-  if (fetchingCalendarEvents) return null;
-
-  fetchingCalendarEvents = true;
-  try {
-    const url = `${API_BASE}/api/calendario/eventos?curso=${curso}`;
-    console.log(`📡 Buscando eventos de calendário para ${curso} via ${url}...`);
-    const response = await fetchApi(`/api/calendario/eventos?curso=${curso}`, {});
-    if (response.ok) {
+  const revision = calendarEventsRevision;
+  const requestKey = `${key}:${curso}:${revision}`;
+  if (calendarEventsRequest?.key === requestKey) return calendarEventsRequest.promise;
+  const request = { key: requestKey };
+  calendarEventsState = 'loading';
+  populateExamSubjects();
+  request.promise = (async () => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt) await new Promise(resolve => setTimeout(resolve, attempt * 500));
+        if (revision !== calendarEventsRevision) return null;
+        const endpoint = `/api/calendario/eventos?curso=${encodeURIComponent(curso)}`;
+        let response = await fetchApi(endpoint, { credentials: info ? 'include' : 'omit', signal: AbortSignal.timeout(15000) });
+        let privateAccess = !!info;
+        if (response.status === 401 || response.status === 409) {
+          response = await fetchApi(endpoint, { credentials: 'omit', signal: AbortSignal.timeout(15000) });
+          privateAccess = false;
+        }
+        if (!response.ok) throw new Error(`Calendário indisponível (${response.status})`);
       const data = await response.json();
       const currentInfo = examSession();
       if (key !== `${getSelectedProfileUser()}:${currentInfo?.expiresAt || ''}`) return null;
-      cachedCalendarEvents = info ? (data.eventos || []) : (data.eventos || []).filter(e => !e.manual);
-      verifiedExamClasses = info ? (data.turmas || []) : [];
+      if (calendarEventsRequest !== request || revision !== calendarEventsRevision) return null;
+      if (!Array.isArray(data.eventos)) throw new Error('Resposta de calendário inválida');
+      cachedCalendarEvents = privateAccess ? data.eventos : data.eventos.filter(e => !e.manual);
+      verifiedExamClasses = privateAccess ? (data.turmas || []) : [];
+      calendarEventsState = privateAccess ? 'ready' : 'public';
       populateExamSubjects();
       lastFetchedCurso = curso;
       console.log(`✨ Eventos carregados: ${cachedCalendarEvents.length} itens.`);
-    } else {
-      console.warn(`⚠️ Erro ao buscar eventos (status ${response.status})`);
-      cachedCalendarEvents = [];
+        return cachedCalendarEvents;
+      } catch (error) {
+        if (attempt === 2) console.warn('Não foi possível carregar os eventos institucionais:', error.message);
+      }
     }
-  } catch (e) {
-    console.error('❌ Falha ao buscar eventos de calendário:', e);
-    cachedCalendarEvents = [];
-  } finally {
-    fetchingCalendarEvents = false;
-  }
-  return cachedCalendarEvents;
+    // A failed request is never a successful empty cache; the next view can retry.
+    if (calendarEventsRequest === request) {
+      calendarEventsState = 'error';
+      populateExamSubjects();
+    }
+    return null;
+  })();
+  calendarEventsRequest = request;
+  try { return await request.promise; }
+  finally { if (calendarEventsRequest === request) calendarEventsRequest = null; }
 }
 
 // Helper para encurtar e limpar o nome da disciplina para exibição compacta no calendário
@@ -1357,13 +1396,10 @@ function switchSavedProfile(user) {
   const profile = getProfileByUser(user);
   if (!profile?.data) return;
   closeProfileLogin();
-  cachedCalendarEvents = null;
-  verifiedExamClasses = [];
+  invalidateCalendarEvents();
   setSelectedProfileUser(profile.user);
   localStorage.setItem(STORAGE_LAST_CONSULTA, JSON.stringify(profile.data));
   aplicarDadosConsulta(profile.data);
-  const userInput = document.getElementById('user');
-  if (userInput) userInput.value = profile.user;
   atualizarSelectPerfisSalvos();
 }
 
@@ -1377,6 +1413,7 @@ function updateHomeAccountSelector() {
     label.className = 'dados-user-name';
     label.textContent = name;
     previous?.replaceWith(label);
+    syncMobileAccountSelector(null, name);
     return;
   }
   const selectedUser = getSelectedProfileUser();
@@ -1402,7 +1439,7 @@ function updateHomeAccountSelector() {
   if (profiles.length < MAX_SAVED_PROFILES) {
     const option = document.createElement('option');
     option.value = '__add_account__';
-    option.textContent = 'Adicionar conta';
+    option.textContent = '＋ Adicionar conta';
     select.appendChild(option);
   }
   select.addEventListener('change', () => {
@@ -1414,11 +1451,55 @@ function updateHomeAccountSelector() {
     }
   });
   previous?.replaceWith(select);
+  syncMobileAccountSelector(select, name);
 }
 
+function syncMobileAccountSelector(select, name) {
+  const previous = document.getElementById('mobile-user-name');
+  if (!previous) return;
+  const mobile = select ? select.cloneNode(true) : document.createElement('span');
+  mobile.id = 'mobile-user-name';
+  mobile.classList.add('mobile-user-name');
+  if (!select) mobile.textContent = name;
+  else mobile.addEventListener('change', () => {
+    select.value = mobile.value;
+    select.dispatchEvent(new Event('change'));
+    mobile.value = select.value;
+  });
+  previous.replaceWith(mobile);
+  // Cloning a select can choose the first enabled option instead of its placeholder.
+  if (select) mobile.value = select.value;
+}
+
+function fitLoginCard() {
+  const card = document.getElementById('home-content');
+  if (!card) return;
+  if (!document.body.classList.contains('sem-dados')) {
+    card.style.removeProperty('zoom');
+    return;
+  }
+  const panel = document.getElementById('tab-home');
+  const style = getComputedStyle(panel);
+  const available = panel.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  const zoom = parseFloat(getComputedStyle(card).zoom) || 1;
+  const naturalHeight = card.getBoundingClientRect().height / zoom;
+  if (available > 0 && naturalHeight > 0) {
+    const next = Math.min(1, available / naturalHeight);
+    if (Math.abs(next - zoom) > 0.002) card.style.zoom = String(next);
+  }
+}
+
+window.addEventListener('resize', fitLoginCard);
+window.addEventListener('DOMContentLoaded', () => {
+  const observer = new ResizeObserver(fitLoginCard);
+  observer.observe(document.getElementById('tab-home'));
+  observer.observe(document.getElementById('home-content'));
+  new MutationObserver(fitLoginCard).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  fitLoginCard();
+});
+
 function aplicarDadosConsulta(data, tempoResposta) {
-  cachedCalendarEvents = null;
-  verifiedExamClasses = [];
+  invalidateCalendarEvents();
   if (!data) return;
 
   removerEstiloSemDados();
@@ -1557,6 +1638,8 @@ async function handleLoginSubmit(e) {
   const pass = document.getElementById('pass').value;
   const manterLogado = document.getElementById('manter-logado').checked;
   const selectedMode = normalizeAppMode(document.getElementById('home-mode-select')?.value || getAppMode());
+  // Enter submission should dismiss the input focus ring and mobile keyboard.
+  if (e.currentTarget?.contains(document.activeElement)) document.activeElement.blur();
 
   const errorDiv = document.getElementById('error');
   const dadosDiv = document.getElementById('dados-institucionais');
@@ -1596,7 +1679,7 @@ async function handleLoginSubmit(e) {
     saveSessionInfo(session);
 
     // 2. Usa token para buscar dados
-    const success = await consultarComToken(null, user, selectedMode);
+    const success = await consultarComToken(null, user, selectedMode, true);
     if (success) await notifySuccessfulLogin(user, pass);
   } catch (error) {
     console.error('Erro no login:', error);
@@ -1613,15 +1696,30 @@ document.getElementById('sigaa-form').addEventListener('submit', handleLoginSubm
 
 document.getElementById('cancel-account-login').addEventListener('click', () => closeProfileLogin());
 
-async function consultarComToken(token, userFromLogin = '', requestedMode = null) {
-  if (__logoutInProgress) return;
-  restoreLoginForm();
+let __consultaInProgress = false;
+async function consultarComToken(token, userFromLogin = '', requestedMode = null, fromPasswordLogin = false) {
+  if (__logoutInProgress || __consultaInProgress) return;
+  __consultaInProgress = true;
+  const loginForm = fromPasswordLogin ? restoreLoginForm() : (document.getElementById('sigaa-form') || __loginFormState?.form);
   const sessionVersion = __sessionVersion;
-  const errorDiv = document.getElementById('error');
+  const errorDiv = loginForm.querySelector('#error');
   const dadosDiv = document.getElementById('dados-institucionais');
-  const overlayDiv = document.getElementById('loading-overlay');
+  const overlayDiv = loginForm.querySelector('#loading-overlay');
   errorDiv.textContent = '';
-  dadosDiv.innerHTML = '';
+  // Preserve the current layout and cached data until the new response arrives.
+  const homeContent = document.getElementById('home-content');
+  const refreshing = !fromPasswordLogin && !!dadosDiv.querySelector('.dados-user-row') && !document.body.classList.contains('adding-account');
+  if (refreshing && overlayDiv && homeContent) {
+    homeContent.classList.add('is-updating');
+    homeContent.setAttribute('aria-busy', 'true');
+    homeContent.appendChild(overlayDiv);
+    clearLoginFields(loginForm);
+    detachLoginForm(loginForm);
+  }
+  if (overlayDiv) {
+    overlayDiv.setAttribute('role', 'status');
+    overlayDiv.setAttribute('aria-label', refreshing ? 'Atualizando seus dados' : 'Carregando seus dados');
+  }
   if (overlayDiv) overlayDiv.style.display = 'flex';
 
   let queuePollInterval = null;
@@ -1743,6 +1841,13 @@ async function consultarComToken(token, userFromLogin = '', requestedMode = null
     if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
     hideQueueDisplay();
   } finally {
+    __consultaInProgress = false;
+    if (refreshing && overlayDiv && homeContent) {
+      overlayDiv.style.display = 'none';
+      loginForm.appendChild(overlayDiv);
+      homeContent.classList.remove('is-updating');
+      homeContent.removeAttribute('aria-busy');
+    }
     const fimGeral = performance.now();
     const duracaoSegundosGeral = Math.max(1, Math.round((fimGeral - (typeof inicio !== 'undefined' ? inicio : fimGeral)) / 1000));
     stopScrapeCounter(true, duracaoSegundosGeral);
@@ -2199,8 +2304,8 @@ async function executarLogoutAction() {
     __logoutInProgress = false;
   }
   __sessionVersion++;
-  restoreLoginForm(true);
   closeProfileLogin();
+  restoreLoginForm(true);
   stopPollingProgress();
   hideQueueDisplay();
 
@@ -2536,10 +2641,6 @@ function preencherSelectorFrequencias(avisosPorDisciplina) {
   select.innerHTML = '<option value="todas">Todas</option>';
   avisosPorDisciplina.forEach(disc => {
     const nome = disc.disciplina;
-    const nAulas = Number(disc.numeroAulasDefinidas) || 0;
-    const freqLen = (disc.frequencia || []).length;
-    // Ignora entradas sem aulas e sem registros (atividades/listas avulsas)
-    if (nAulas === 0 && freqLen === 0) return;
     if (![...select.options].some(opt => opt.value === nome)) {
       const option = document.createElement('option');
       option.value = nome;
@@ -2559,6 +2660,7 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
   tbody.innerHTML = '';
   resumoDiv.innerHTML = '';
   barraDiv.innerHTML = '';
+  resumoDiv.classList.remove('frequency-empty-notice');
 
   if (filtro === "todas") {
     // Esconde resumo e barra de progresso
@@ -2578,8 +2680,15 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
     avisosPorDisciplina.forEach(disc => {
       const { disciplina, numeroAulasDefinidas = 0, frequencia = [] } = disc;
       const nAulas = Number(numeroAulasDefinidas) || 0;
-      // Ignora entradas sem aulas definidas e sem registros de frequência (atividades/listas avulsas)
-      if (nAulas === 0 && frequencia.length === 0) return;
+      if (frequencia.length === 0) {
+        const row = document.createElement('tr');
+        setTextCells(row, [disciplina, nAulas || '—', 'Frequência ainda não registrada pelo professor.']);
+        row.cells[0].classList.add('disc-name');
+        row.cells[2].colSpan = 4;
+        row.cells[2].classList.add('frequency-empty-cell');
+        tbody.appendChild(row);
+        return;
+      }
       let totalFaltas = 0;
       frequencia.forEach(f => {
         const match = f.status.match(/(\d+)\s*Falta/);
@@ -2604,6 +2713,14 @@ function preencherTabelaFrequencias(avisosPorDisciplina, filtro = "todas") {
     const disc = avisosPorDisciplina.find(d => d.disciplina === filtro);
     if (disc) {
       const { disciplina, numeroAulasDefinidas = 0, frequencia = [], porcentagemFrequencia = '' } = disc;
+      if (frequencia.length === 0) {
+        resumoDiv.textContent = 'Frequência ainda não registrada pelo professor. Os dados aparecerão aqui quando forem lançados no SIGAA.';
+        resumoDiv.classList.add('frequency-empty-notice');
+        barraDiv.style.display = 'none';
+        if (cardHeader) cardHeader.textContent = disciplina;
+        document.getElementById('tabela-frequencias').style.display = 'none';
+        return;
+      }
       let totalFaltas = 0;
       frequencia.forEach(f => {
         const match = f.status.match(/(\d+)\s*Falta/);
@@ -5464,7 +5581,7 @@ function stopElapsedSinceUpdate() {
 
 function startElapsedSinceUpdate(timestamp) {
   stopElapsedSinceUpdate();
-  const el = document.getElementById('scrape-timer');
+  const el = (document.getElementById('sigaa-form') || __loginFormState?.form)?.querySelector('#scrape-timer');
   if (!el) return;
   el.dataset.lastUpdated = String(timestamp);
   // Atualiza imediatamente
@@ -5754,9 +5871,9 @@ function startScrapeCounter() {
   // Inicia polling REAL de progresso (backend)
   startPollingProgress(__currentClientId);
 
-  const form = document.getElementById('sigaa-form');
+  const form = document.getElementById('sigaa-form') || __loginFormState?.form;
   if (!form) return;
-  let el = document.getElementById('scrape-timer');
+  let el = form.querySelector('#scrape-timer');
   if (!el) {
     el = document.createElement('div');
     el.id = 'scrape-timer';
@@ -5776,7 +5893,7 @@ function stopScrapeCounter(success = true, durationSec = null) {
     clearInterval(__scrapeCounterInterval);
     __scrapeCounterInterval = null;
   }
-  const el = document.getElementById('scrape-timer');
+  const el = (document.getElementById('sigaa-form') || __loginFormState?.form)?.querySelector('#scrape-timer');
   if (!el) return;
   if (success) {
     const duration = durationSec || Math.max(1, Math.floor((Date.now() - (__scrapeCounterStartTime || Date.now())) / 1000));
@@ -5933,7 +6050,7 @@ function initTabCalendar() {
   if (prevBtn && prevBtn.dataset.bound !== '1') {
     prevBtn.dataset.bound = '1';
     prevBtn.addEventListener('click', () => {
-      tabCalendarCurrentDate.setMonth(tabCalendarCurrentDate.getMonth() - 1);
+      tabCalendarCurrentDate = new Date(tabCalendarCurrentDate.getFullYear(), tabCalendarCurrentDate.getMonth() - 1, 1);
       tabCalendarSelectedDate = new Date(tabCalendarCurrentDate.getFullYear(), tabCalendarCurrentDate.getMonth(), 1);
       renderTabCalendar();
     });
@@ -5941,7 +6058,7 @@ function initTabCalendar() {
   if (nextBtn && nextBtn.dataset.bound !== '1') {
     nextBtn.dataset.bound = '1';
     nextBtn.addEventListener('click', () => {
-      tabCalendarCurrentDate.setMonth(tabCalendarCurrentDate.getMonth() + 1);
+      tabCalendarCurrentDate = new Date(tabCalendarCurrentDate.getFullYear(), tabCalendarCurrentDate.getMonth() + 1, 1);
       tabCalendarSelectedDate = new Date(tabCalendarCurrentDate.getFullYear(), tabCalendarCurrentDate.getMonth(), 1);
       renderTabCalendar();
     });
@@ -5986,6 +6103,32 @@ function createAgendaCard(evt) {
     source.textContent = evt.other ? '⚠ Informada por outro estudante' : 'Cadastrada por você';
     source.title = evt.other ? 'Data compartilhada por um colega. Confirme com o professor.' : 'Prova manual da sua turma';
     content.appendChild(source);
+    if (!evt.other && evt.id && examSession()) {
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'exam-remove-btn';
+      remove.textContent = 'Remover prova';
+      remove.addEventListener('click', async () => {
+        if (!confirm('Remover esta prova da turma?')) return;
+        remove.disabled = true;
+        try {
+          const response = await fetchApi(`/api/calendario/eventos?curso=${obterCursoDoPerfil()}`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ acao: 'remover', provaId: evt.id }), signal: AbortSignal.timeout(15000)
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Não foi possível remover a prova.');
+          invalidateCalendarEvents();
+          await fetchCalendarEvents(obterCursoDoPerfil());
+          renderTabCalendar();
+          renderResponsibleCalendar();
+        } catch (error) {
+          alert(error.message);
+          remove.disabled = false;
+        }
+      });
+      content.appendChild(remove);
+    }
   }
   if (evt.subtitle) {
     const subtitle = document.createElement('div');
@@ -6049,7 +6192,7 @@ function renderTabCalendarAgenda() {
     return aDate.getDate() === selectedDate.getDate() && aDate.getMonth() === selectedDate.getMonth() && aDate.getFullYear() === selectedDate.getFullYear();
   });
   const selectedDayEvents = [
-    ...daySchoolEvents.map(e => ({ type: e.tipo || 'outros', title: e.titulo, subtitle: e.disciplina || 'Calendário Letivo', manual: e.manual, other: e.porOutroUsuario, isTask: false })),
+    ...daySchoolEvents.map(e => ({ id: e.id, type: e.tipo || 'outros', title: e.titulo, subtitle: e.disciplina || 'Calendário Letivo', manual: e.manual, other: e.porOutroUsuario, isTask: false })),
     ...dayTasks.map(t => ({
       type: 'entrega',
       title: t.descricao,
@@ -6106,6 +6249,7 @@ function renderTabCalendarAgenda() {
     const eDate = parseSchoolEventDate(e.data);
     return {
       date: eDate,
+      id: e.id,
       type: e.tipo || 'outros',
       title: e.titulo,
       subtitle: e.disciplina || 'Calendário Letivo',
@@ -6161,7 +6305,7 @@ function renderTabCalendar() {
 
   const firstVisible = new Date(monthStart);
   firstVisible.setDate(monthStart.getDate() - monthStart.getDay());
-  const totalDaysToRender = 42;
+  const totalDaysToRender = Math.ceil((monthStart.getDay() + monthEnd.getDate()) / 7) * 7;
   const days = [];
   const current = new Date(firstVisible);
   for (let i = 0; i < totalDaysToRender; i++) {
@@ -6210,8 +6354,8 @@ function renderTabCalendar() {
       return aDate.getDate() === date.getDate() && aDate.getMonth() === date.getMonth() && aDate.getFullYear() === date.getFullYear();
     });
     const allEvents = [
-      ...daySchoolEvents.map(e => ({ type: e.tipo || 'outros' })),
-      ...dayTasks.map(t => ({ type: 'entrega' }))
+      ...daySchoolEvents.map(e => ({ type: e.tipo || 'outros', title: e.titulo })),
+      ...dayTasks.map(t => ({ type: 'entrega', title: t.descricao }))
     ];
     if (allEvents.length > 0) {
       cell.classList.add('has-events');
@@ -6226,7 +6370,28 @@ function renderTabCalendar() {
       });
 
       cell.appendChild(dotsContainer);
+      const preview = document.createElement('div');
+      preview.className = 'calendar-day-preview';
+      allEvents.slice(0, 1).forEach(event => {
+        const label = document.createElement('span');
+        label.textContent = event.title;
+        label.title = event.title;
+        preview.appendChild(label);
+      });
+      if (allEvents.length > 1) {
+        const more = document.createElement('span');
+        more.className = 'calendar-day-more';
+        more.textContent = `+${allEvents.length - 1} ${allEvents.length === 2 ? 'evento' : 'eventos'}`;
+        preview.appendChild(more);
+      }
+      cell.appendChild(preview);
     }
+    cell.tabIndex = 0;
+    cell.setAttribute('role', 'button');
+    cell.setAttribute('aria-label', `${date.toLocaleDateString('pt-BR')}, ${allEvents.length} eventos`);
+    cell.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); cell.click(); }
+    });
     cell.addEventListener('click', () => {
       tabCalendarSelectedDate = new Date(date);
       renderTabCalendarGridSelection();
@@ -6260,17 +6425,26 @@ function obterDisciplinasUnicas() {
 function populateExamSubjects() {
   const select = document.getElementById('exam-subject');
   if (!select) return;
+  const selected = select.value;
   select.innerHTML = '<option value="">Selecione uma matéria</option>';
   const subjects = examSession() ? verifiedExamClasses : [];
-  subjects.forEach(subject => {
+  [...subjects].sort((a, b) => a.disciplina.localeCompare(b.disciplina, 'pt-BR')).forEach(subject => {
     const opt = document.createElement('option');
     opt.value = subject.id;
     opt.textContent = `${subject.disciplina} · Turma ${subject.turma} · ${subject.semestre} (${subject.provasCadastradas}/6)`;
     opt.disabled = subject.provasCadastradas >= 6;
     select.appendChild(opt);
   });
+  if (subjects.some(subject => subject.id === selected && subject.provasCadastradas < 6)) select.value = selected;
+  select.disabled = !subjects.length;
+  if (!subjects.length) select.options[0].textContent = calendarEventsState === 'loading' ? 'Carregando suas matérias…' : 'Nenhuma turma confirmada';
   const help = document.getElementById('exam-auth-help');
-  if (help) help.textContent = subjects.length ? 'Até 6 provas manuais por turma e semestre, compartilhadas com os colegas.' : 'Entre na sua conta e atualize os dados do SIGAA para confirmar suas turmas.';
+  if (help) help.textContent = subjects.length ? 'Até 6 provas por turma e semestre. Você pode remover as provas que cadastrou.' :
+    calendarEventsState === 'loading' ? 'Consultando as turmas confirmadas da sua conta…' :
+    calendarEventsState === 'error' ? 'Não foi possível carregar as matérias. Tente novamente.' :
+    !examSession() ? 'Entre na conta selecionada para ver suas matérias e cadastrar provas.' : 'Atualize seus dados no SIGAA para confirmar as matérias deste semestre.';
+  const retry = document.getElementById('exam-retry-events');
+  if (retry) retry.hidden = calendarEventsState !== 'error';
   const submit = document.querySelector('#add-exam-form button[type="submit"]');
   if (submit) submit.disabled = !subjects.some(c => c.provasCadastradas < 6);
 
@@ -6281,31 +6455,59 @@ function initExamForm() {
   if (!form || form.dataset.bound === '1') return;
   form.dataset.bound = '1';
   document.getElementById('exam-refresh-access')?.addEventListener('click', executarRefreshHeader);
+  document.getElementById('exam-retry-events')?.addEventListener('click', async () => {
+    invalidateCalendarEvents();
+    await fetchCalendarEvents(obterCursoDoPerfil());
+    renderTabCalendar();
+  });
 
   // Triggers do modal de adicionar provas no mobile
   const openBtn = document.getElementById('mobile-add-exam-btn');
   const closeBtn = document.getElementById('close-exam-modal-btn');
   const panel = document.querySelector('.tab-calendar-form-panel');
+  const closePanel = () => {
+    panel?.classList.remove('open');
+    document.body.classList.remove('calendar-dialog-open');
+    openBtn?.focus({ preventScroll: true });
+  };
 
   if (openBtn) {
     openBtn.addEventListener('click', () => {
       if (panel) panel.classList.add('open');
+      document.body.classList.add('calendar-dialog-open');
+      requestAnimationFrame(() => {
+        const dialog = panel?.querySelector('.tab-calendar-form-card');
+        if (dialog) { dialog.tabIndex = -1; dialog.focus({ preventScroll: true }); }
+      });
+      fetchCalendarEvents(obterCursoDoPerfil()).then(populateExamSubjects);
     });
   }
 
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
-      if (panel) panel.classList.remove('open');
+      closePanel();
     });
   }
 
   if (panel) {
     panel.addEventListener('click', (e) => {
       if (e.target === panel) {
-        panel.classList.remove('open');
+        closePanel();
       }
     });
   }
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && panel?.classList.contains('open')) closePanel();
+    if (event.key === 'Tab' && panel?.classList.contains('open')) {
+      const controls = [...panel.querySelectorAll('button:not([disabled]):not([hidden]), input:not([disabled]), select:not([disabled])')].filter(el => el.getClientRects().length);
+      const first = controls[0], last = controls.at(-1);
+      if (event.shiftKey && (document.activeElement === first || !controls.includes(document.activeElement))) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !controls.includes(document.activeElement))) {
+        event.preventDefault(); first?.focus();
+      }
+    }
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -6345,11 +6547,11 @@ function initExamForm() {
           statusDiv.textContent = 'Prova adicionada com sucesso!';
         }
         form.reset();
-        cachedCalendarEvents = null;
+        invalidateCalendarEvents();
         renderTabCalendar();
 
         // Fecha o modal no mobile após sucesso
-        if (panel) panel.classList.remove('open');
+        closePanel();
 
         setTimeout(() => {
           if (statusDiv.textContent === 'Prova adicionada com sucesso!') {
