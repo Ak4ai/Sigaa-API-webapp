@@ -1,63 +1,65 @@
-# Consulta SIGAA - WebApp
+# Consulta SIGAA – Web app
 
-Este projeto é um aplicativo web moderno para consulta rápida, segura e offline de horários, frequências, notas e novidades do SIGAA (Sistema Integrado de Gestão de Atividades Acadêmicas).
+Aplicativo web (**PWA**) para consultar de forma rápida e offline os horários, frequências, notas, calendário e novidades do SIGAA do CEFET-MG. É o front-end do projeto de extensão **SAFE – Sistema de Acompanhamento Familiar do Estudante**.
+
+🌐 **Demo:** [ak4ai.github.io/Sigaa-API-webapp](https://ak4ai.github.io/Sigaa-API-webapp/)  
+⚙️ **Back-end:** [sigaa-api-backend](https://github.com/Ak4ai/sigaa-api-backend)
+
+> Projeto acadêmico e não oficial. O login usa as credenciais do próprio SIGAA, que são enviadas apenas ao back-end do projeto.
 
 ## Funcionalidades
 
-- **Login seguro:** Seus dados nunca ficam salvos no navegador, apenas o token de acesso.
-- **Consulta de horários:** Visualize horários detalhados e simplificados por dia da semana.
-- **Frequências:** Veja sua presença, faltas e cálculo automático de limites.
-- **Notas:** Tabelas organizadas por disciplina, com detalhes de avaliações e filtros.
-- **Novidades:** Avisos e notícias recentes das disciplinas.
-- **PWA:** Funciona offline, pode ser instalado no celular ou computador.
-- **Modo "sem dados":** Interface adaptada para novos usuários ou sem dados salvos.
-- **Atualização automática:** Sempre que abrir, tenta atualizar seus dados usando o login salvo.
-
-## Como usar
-
-1. **Abra o app em seu navegador** (preferencialmente Chrome ou Edge).
-2. **Faça login** com seu CPF e senha do SIGAA.
-3. **Escolha se deseja manter logado** (opcional).
-4. **Navegue pelas abas**: Home, Tabela Simplificada, Horários, Frequências, Notas e Novidades.
-5. **No mobile**, a interface é adaptada e novidades da home são ocultadas para melhor experiência.
-
-## Instalação como PWA
-
-- No Chrome/Edge, clique no ícone de instalação na barra de endereços ou no menu.
-- O app funcionará offline após o primeiro acesso.
+- **Horários** detalhados e em tabela simplificada, por dia da semana.
+- **Frequências** com faltas e cálculo automático dos limites.
+- **Notas** organizadas por disciplina, com detalhes de avaliações e filtros, e **exportação do boletim em PDF**.
+- **Calendário** acadêmico e agenda de eventos.
+- **Novidades** e avisos das disciplinas.
+- **Modo offline:** funciona sem internet depois do primeiro acesso e pode ser instalado no celular ou no computador.
+- **Cache inteligente:** dados institucionais (24 h), horários (6 h) e novidades e frequências (30 a 60 min), com consulta progressiva e uso do cache se a rede falhar (veja [`PERFORMANCE_OPTIMIZATIONS.md`](PERFORMANCE_OPTIMIZATIONS.md)).
 
 ## Segurança
 
-- O login é feito diretamente com a API, e apenas o token é salvo localmente.
-- Nenhuma senha ou dado sensível é armazenado no navegador.
-- Você pode sair a qualquer momento clicando em "Sair".
+- **Sessão no servidor:** o navegador guarda só um cookie `HttpOnly`. Senha e usuário **não ficam salvos** no navegador.
+- **CSRF:** toda requisição que altera estado envia um token `X-CSRF-Token`.
+- **Conteúdo do SIGAA** é exibido com `textContent` (ou escapado) para evitar injeção de HTML.
+- Bibliotecas de PDF distribuídas junto do app (`vendor/`), com versões e licenças registradas.
+
+## Como usar
+
+1. Abra o app (Chrome ou Edge, de preferência).
+2. Entre com seu CPF e senha do SIGAA e escolha se quer manter a sessão.
+3. Navegue pelas abas: Home, Tabela simplificada, Horários, Frequências, Notas, Calendário e Novidades.
+4. Para instalar, use o ícone de instalação na barra de endereços (ou o menu do navegador).
+
+## Rodando localmente
+
+Não tem etapa de build. Sirva a pasta com um servidor estático e aponte para um back-end em execução:
+
+```bash
+python -m http.server 3000
+```
+
+## Testes
+
+```bash
+node --test tests/session-security.test.js     # segurança da sessão
+node tests/login-profile-browser.cjs           # fluxo de login e perfil no navegador
+```
 
 ## Tecnologias
 
-- HTML5, CSS3, JavaScript (ES6)
-- Service Worker (PWA)
-- API SIGAA (backend externo)
+HTML5, CSS3 e JavaScript (ES6), Service Worker e manifesto PWA, jsPDF para o PDF do boletim.
 
-## Estrutura de Pastas
+## Estrutura
 
-├── index.html 
-├── style.css 
-├── script.js 
-├── manifest.json 
-├── service-worker.js 
-├── icon-web.png 
-├── icon-192.png 
-├── icon-512.png
-
-
-## Bugs conhecidos
-
-- O tamanho do bloco de dados institucionais pode diminuir após uma nova pesquisa (verificar ajuste de altura).
-
-## Contribuição
-
-Pull requests são bem-vindos! Sinta-se à vontade para sugerir melhorias ou reportar bugs.
+```
+index.html · style.css · script.js     Interface e lógica
+boletim.js                             Exportação do boletim em PDF
+service-worker.js · pwa.js · manifest.json   PWA e offline
+vendor/                                jsPDF e jsPDF-AutoTable (com licenças)
+tests/                                 Testes de sessão e de login
+```
 
 ---
 
-**Desenvolvido por Henrique de Freitas Araújo**
+Feito por [Henrique de Freitas Araújo](https://github.com/Ak4ai) no CEFET-MG, Campus Divinópolis.
