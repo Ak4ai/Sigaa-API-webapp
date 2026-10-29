@@ -1,0 +1,18 @@
+# Dependencias e builds
+node_modules/
+build/
+dist/
+
+# Segredos e ambiente local
+.env
+.env.*
+!.env.example
+
+# Editor e sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
